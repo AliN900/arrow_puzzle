@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Ali Hussein (AliN900)
+ * Copyright (C) 2026 AHB.Dev (Ali Hussein)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *
  * Original work: ArrowEscape by sidhant947 (https://github.com/sidhant947/ArrowEscape)
  * Licensed under GPL-3.0.
- * Modifications: Native Flutter rewrite, UI redesign, theme system, and additional features by AliN900.
+ * Modifications: Flutter fork with UI redesign, theme system, and additional features by AHB.Dev.
  */
 
 import 'package:flutter/material.dart';

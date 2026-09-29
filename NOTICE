@@ -1,8 +1,18 @@
 Arrow Puzzle: Tap Maze Escape
-Copyright (C) 2026 [Your Name]
+Copyright (C) 2026 AHB.Dev
 
-This project is a derivative work based on ArrowEscape (https://github.com/sidhant947/ArrowEscape),
+This project is a derivative work based on ArrowEscape
+(https://github.com/sidhant947/ArrowEscape),
 Copyright (C) 2026 Sidhant.
 Licensed under the GNU General Public License v3.0.
 
-Modifications by [Your Name] include: Rewritten in Flutter/Dart, new UI, added features.
+Modifications by AHB.Dev include:
+  - Complete UI redesign (light theme, clean card layout)
+  - New Settings screen with Light/Dark mode toggle
+  - Accent color picker
+  - Persistent sound, music, and arrow speed preferences
+  - Refactored navigation (MainScreen + IndexedStack)
+  - Custom bottom navigation bar
+
+Contact: alialzwghaibi6@gmail.com
+GitHub:  https://github.com/AliN900
