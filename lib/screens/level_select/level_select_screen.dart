@@ -28,35 +28,39 @@ class LevelSelectScreen extends ConsumerWidget {
           child: Column(
             children: [
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Stack(
                   children: [
                     Align(
                       alignment: Alignment.centerLeft,
                       child: GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Icon(Icons.arrow_back_ios_new_rounded,
-                              color: AppColors.textPrimary, size: 20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.textPrimary(context),
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
-                    const Center(
-                      child: Text('Levels',
-                          style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary)),
+                    Center(
+                      child: Text(
+                        'Levels',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary(context),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: GridView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 4,
                     mainAxisSpacing: 10,
@@ -78,21 +82,20 @@ class LevelSelectScreen extends ConsumerWidget {
                       themeColors: themeColors,
                       onTap: isUnlocked
                           ? () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => GameScreen(level: levelNum),
-                                ),
-                              );
-                            }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => GameScreen(level: levelNum),
+                          ),
+                        );
+                      }
                           : null,
                     )
-                        .animate(
-                            delay: Duration(milliseconds: (index % 20) * 20))
+                        .animate(delay: Duration(milliseconds: (index % 20) * 20))
                         .fadeIn(duration: 200.ms)
                         .scale(
-                            begin: const Offset(0.7, 0.7),
-                            end: const Offset(1, 1));
+                        begin: const Offset(0.7, 0.7),
+                        end: const Offset(1, 1));
                   },
                 ),
               ),
@@ -123,6 +126,9 @@ class _LevelCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textPrimary = AppColors.textPrimary(context);
+    final textMuted = AppColors.textMuted(context);
+
     Color bgColor;
     Color borderColor;
     Color shadowColor;
@@ -142,12 +148,12 @@ class _LevelCell extends StatelessWidget {
       bgColor = themeColors.surface;
       borderColor = themeColors.accentColor.withValues(alpha: 0.25);
       shadowColor = themeColors.surface.withValues(alpha: 0.8);
-      textColor = AppColors.textPrimary;
+      textColor = textPrimary;
     } else {
       bgColor = themeColors.surface.withValues(alpha: 0.4);
       borderColor = Colors.transparent;
       shadowColor = Colors.transparent;
-      textColor = AppColors.textMuted;
+      textColor = textMuted;
     }
 
     return GestureDetector(
@@ -162,24 +168,22 @@ class _LevelCell extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(10),
-          border:
-              isUnlocked ? Border.all(color: borderColor, width: 1.5) : null,
+          border: isUnlocked ? Border.all(color: borderColor, width: 1.5) : null,
           boxShadow: isUnlocked
               ? [
-                  BoxShadow(
-                    color: shadowColor,
-                    offset: const Offset(0, 3),
-                    blurRadius: 0,
-                  ),
-                ]
+            BoxShadow(
+              color: shadowColor,
+              offset: const Offset(0, 3),
+              blurRadius: 0,
+            ),
+          ]
               : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (!isUnlocked)
-              const Icon(Icons.lock_outline_rounded,
-                  color: AppColors.textMuted, size: 20)
+              Icon(Icons.lock_outline_rounded, color: textMuted, size: 20)
             else
               Text(
                 '$levelNumber',

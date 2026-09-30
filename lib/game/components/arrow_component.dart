@@ -175,7 +175,20 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   }
 
   void _startExitAnimation() {
-    _exitDuration = 0.4 + arrowModel.path.length * 0.08;
+    final double speedMultiplier;
+    switch (gameState.arrowSpeed) {
+      case 0:
+        speedMultiplier = 1.5; // Slow
+        break;
+      case 2:
+        speedMultiplier = 0.6; // Fast
+        break;
+      case 1:
+      default:
+        speedMultiplier = 1.0; // Normal
+        break;
+    }
+    _exitDuration = (0.4 + arrowModel.path.length * 0.08) * speedMultiplier;
     _exitProgress = 0.0;
     _isExiting = true;
     _deflectedExtension = _buildDeflectedExtension();

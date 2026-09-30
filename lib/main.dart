@@ -22,6 +22,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/app_colors.dart';
 import 'core/audio_haptic_helper.dart';
@@ -38,8 +39,7 @@ final levelRepositoryProvider = Provider<LevelRepository>((ref) {
   throw UnimplementedError('Must be overridden');
 });
 
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
-final accentColorProvider = StateProvider<Color>((ref) => const Color(0xFF6C4CF1));
+final currentTabProvider = StateProvider<int>((ref) => 0);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,8 +73,9 @@ class ArrowPuzzle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
-    final accentColor = ref.watch(accentColorProvider);
+    final progress = ref.watch(progressRepositoryProvider);
+    final themeMode = progress.themeMode;
+    final accentColor = progress.accentColor;
 
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -94,7 +95,7 @@ class ArrowPuzzle extends ConsumerWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: accentColor,
           brightness: Brightness.light,
-        ),
+        ).copyWith(primary: accentColor), // <-- ADD THIS
       ),
 
       // DARK THEME
@@ -105,7 +106,7 @@ class ArrowPuzzle extends ConsumerWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: accentColor,
           brightness: Brightness.dark,
-        ),
+        ).copyWith(primary: accentColor), // <-- ADD THIS
       ),
 
       home: const MainScreen(),

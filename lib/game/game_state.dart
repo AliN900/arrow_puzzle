@@ -18,6 +18,7 @@ class GameState extends ChangeNotifier {
   final GameMode gameMode;
   final bool heartRemover;
   final bool assistMode;
+  final int arrowSpeed;
 
   late Map<String, OrphanDotType> _orphanDots;
 
@@ -49,6 +50,7 @@ class GameState extends ChangeNotifier {
     this.onCombo,
     this.onParticleBurst,
     this.onCameraShake,
+    this.arrowSpeed = 1,
   }) {
     _currentLevel = level;
     _arrows = level.arrows.map((a) => a.copyWith()).toList();

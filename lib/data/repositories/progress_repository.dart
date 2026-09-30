@@ -22,7 +22,9 @@ class ProgressRepository extends ChangeNotifier {
   bool _complexPaths = false;
   bool _soundEnabled = true;
   bool _musicEnabled = true;
-  int _arrowSpeed = 0; // 0 = Slow, 1 = Normal, 2 = Fast
+  int _arrowSpeed = 0;
+  ThemeMode _themeMode = ThemeMode.light;
+  Color _accentColor = const Color(0xFF6C4CF1);
 
   final Map<int, LevelResult> _levelResults = {};
 
@@ -38,6 +40,8 @@ class ProgressRepository extends ChangeNotifier {
   bool get heartRemover => _heartRemover;
   bool get assistMode => _assistMode;
   bool get complexPaths => _complexPaths;
+  ThemeMode get themeMode => _themeMode;
+  Color get accentColor => _accentColor;
 
   // NEW GETTERS (used by SettingsScreen)
   bool get soundEnabled => _soundEnabled;
@@ -96,6 +100,16 @@ class ProgressRepository extends ChangeNotifier {
     _heartRemover = _box.get('heartRemover', defaultValue: false);
     _assistMode = _box.get('assistMode', defaultValue: false);
     _complexPaths = _box.get('complexPaths', defaultValue: false);
+    // Theme mode (stored as string)
+    final themeModeStr = _box.get('themeMode', defaultValue: 'light');
+    _themeMode = ThemeMode.values.firstWhere(
+          (m) => m.name == themeModeStr,
+      orElse: () => ThemeMode.light,
+    );
+
+    // Accent color (stored as int)
+    final accentInt = _box.get('accentColor', defaultValue: 0xFF6C4CF1);
+    _accentColor = Color(accentInt);
 
     // Load new fields
     _soundEnabled = _box.get('soundEnabled', defaultValue: true);
@@ -130,6 +144,8 @@ class ProgressRepository extends ChangeNotifier {
       'heartRemover': _heartRemover,
       'assistMode': _assistMode,
       'complexPaths': _complexPaths,
+      'themeMode': _themeMode.name,
+      'accentColor': _accentColor.toARGB32(),
       // Save new fields
       'soundEnabled': _soundEnabled,
       'musicEnabled': _musicEnabled,
@@ -143,6 +159,18 @@ class ProgressRepository extends ChangeNotifier {
 
   Future<void> setTheme(GameTheme theme) async {
     _selectedTheme = theme;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    _themeMode = mode;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> setAccentColor(Color color) async {
+    _accentColor = color;
     await _save();
     notifyListeners();
   }

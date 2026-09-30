@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/app_colors.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -12,18 +13,23 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Hardcoded light theme colors
-    const Color cardColor = Colors.white;
-    const Color primaryPurple = Color(0xFF6C4CF1);
-    const Color textSecondary = Color(0xFF8A8D93);
-    const Color navActiveBg = Color(0xFFD6E4FF);
+    final cardColor = AppColors.surface(context);
+    final accent = AppColors.accent(context);
+    final textSecondary = AppColors.textSecondary(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Nav active pill: light purple-ish in light mode, tinted accent in dark
+    final navActiveBg = isDark
+        ? accent.withValues(alpha: 0.18)
+        : const Color(0xFFD6E4FF);
 
     return BottomNavigationBar(
       backgroundColor: cardColor,
-      selectedItemColor: primaryPurple,
+      selectedItemColor: accent,
       unselectedItemColor: textSecondary,
-      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+      selectedLabelStyle:
+      const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+      unselectedLabelStyle:
+      const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
       currentIndex: currentIndex,
       type: BottomNavigationBarType.fixed,
       elevation: 10,
@@ -33,7 +39,6 @@ class CustomBottomNavBar extends StatelessWidget {
           icon: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              // Only show the active pill on the selected tab
               color: currentIndex == 0 ? navActiveBg : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
             ),
@@ -51,7 +56,7 @@ class CustomBottomNavBar extends StatelessWidget {
         ),
         const BottomNavigationBarItem(
           icon: Icon(Icons.settings_rounded),
-          label: 'Setting',
+          label: 'Settings',
         ),
       ],
     );

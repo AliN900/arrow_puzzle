@@ -11,7 +11,8 @@ class LivesBar extends StatefulWidget {
   State<LivesBar> createState() => _LivesBarState();
 }
 
-class _LivesBarState extends State<LivesBar> with SingleTickerProviderStateMixin {
+class _LivesBarState extends State<LivesBar>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
 
@@ -50,6 +51,7 @@ class _LivesBarState extends State<LivesBar> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final isLowLives = widget.lives == 1;
+    final surfaceLight = AppColors.surfaceLight(context);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -69,24 +71,24 @@ class _LivesBarState extends State<LivesBar> with SingleTickerProviderStateMixin
               ),
             isFull
                 ? ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
-                      colors: isLowLives
-                          ? [const Color(0xFFFF5252), const Color(0xFFFF1744)]
-                          : [Colors.white, const Color(0xFFB0B0B0)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ).createShader(bounds),
-                    child: const Icon(
-                      Icons.favorite,
-                      color: Colors.white,
-                      size: 25,
-                    ),
-                  )
-                : const Icon(
-                    Icons.favorite_border,
-                    color: AppColors.surfaceLight,
-                    size: 24,
-                  ),
+              shaderCallback: (bounds) => LinearGradient(
+                colors: isLowLives
+                    ? [const Color(0xFFFF5252), const Color(0xFFFF1744)]
+                    : [Colors.white, const Color(0xFFB0B0B0)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ).createShader(bounds),
+              child: const Icon(
+                Icons.favorite,
+                color: Colors.white,
+                size: 25,
+              ),
+            )
+                : Icon(
+              Icons.favorite_border,
+              color: surfaceLight,
+              size: 24,
+            ),
             if (isFull)
               Positioned(
                 top: 5,
@@ -113,14 +115,14 @@ class _LivesBarState extends State<LivesBar> with SingleTickerProviderStateMixin
             ),
             child: isFull
                 ? ScaleTransition(
-                    key: ValueKey('heart_${i}_full'),
-                    scale: _scaleAnimation,
-                    child: heartWidget,
-                  )
+              key: ValueKey('heart_${i}_full'),
+              scale: _scaleAnimation,
+              child: heartWidget,
+            )
                 : SizedBox(
-                    key: ValueKey('heart_${i}_empty'),
-                    child: heartWidget,
-                  ),
+              key: ValueKey('heart_${i}_empty'),
+              child: heartWidget,
+            ),
           ),
         );
       }),

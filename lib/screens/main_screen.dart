@@ -1,40 +1,35 @@
 import 'package:flutter/material.dart';
-import 'home/home_screen.dart';
-import 'settings/settings_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../main.dart';
 import '../widgets/bottom_nav_bar.dart';
+import 'daily/daily_screen.dart';
+import 'home/home_screen.dart';
+import 'inventory/inventory_screen.dart';
+import 'settings/settings_screen.dart';
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
 
-  @override
-  State<MainScreen> createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
-
-
-  final List<Widget> _pages = [
-    const HomeScreen(),
-    const Center(child: Text('Daily (Coming Soon)')),
-    const Center(child: Text('Inventory (Coming Soon)')),
-    const SettingsScreen(),
+  static const List<Widget> _pages = [
+    HomeScreen(),
+    DailyScreen(),
+    InventoryScreen(),
+    SettingsScreen(),
   ];
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentIndex = ref.watch(currentTabProvider);
 
+    return Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
+        index: currentIndex,
         children: _pages,
       ),
       bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _currentIndex,
+        currentIndex: currentIndex,
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          ref.read(currentTabProvider.notifier).state = index;
         },
       ),
     );

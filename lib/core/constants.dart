@@ -1,12 +1,12 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'Arrow Escape';
+  static const String appName = 'Arrow Puzzle';
 
   static const int maxLives = 3;
 
-  static const int bossLevelEvery = 5;   
-  static const int godLevelEvery  = 10;  
+  static const int bossLevelEvery = 25;
+  static const int godLevelEvery  = 50;
 
   static const Duration arrowShakeDuration = Duration(milliseconds: 400);
 
