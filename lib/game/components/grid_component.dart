@@ -52,17 +52,37 @@ class GridComponent extends PositionComponent with TapCallbacks {
 
   @override
   bool containsLocalPoint(Vector2 point) {
-    if (!gameState.assistMode) {
-      return super.containsLocalPoint(point);
+    if (gameState.isBombArmed || gameState.assistMode) {
+      return point.x >= -cellSize &&
+          point.x <= size.x + cellSize &&
+          point.y >= -cellSize &&
+          point.y <= size.y + cellSize;
     }
-    return point.x >= -cellSize &&
-        point.x <= size.x + cellSize &&
-        point.y >= -cellSize &&
-        point.y <= size.y + cellSize;
+    return super.containsLocalPoint(point);
   }
 
   @override
   void onTapUp(TapUpEvent event) {
+
+    // ── Bomb targeting ──
+    if (gameState.isBombArmed) {
+      final localPos = event.localPosition;
+      final c = (localPos.x / cellSize).floor();
+      final r = (localPos.y / cellSize).floor();
+      final gridSize = gameState.level.gridSize;
+      if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) return;
+
+      for (final rock in gameState.rocks) {
+        if (rock.row == r && rock.col == c) {
+          gameState.destroyRock(rock.id);
+          gameState.setBombArmed(false);
+          return;
+        }
+      }
+      return;
+    }
+
+    // ── Existing assist handling ──
     if (!gameState.assistMode) return;
 
     final localPos = event.localPosition;
@@ -424,12 +444,14 @@ class GridComponent extends PositionComponent with TapCallbacks {
   @override
   void update(double dt) {
     super.update(dt);
+
     for (int i = _shockwaves.length - 1; i >= 0; i--) {
       _shockwaves[i].update(dt);
       if (_shockwaves[i].isFinished) {
         _shockwaves.removeAt(i);
       }
     }
+
     if (!_entryCompleted) {
       _entryTime += dt;
       if (_entryTime >= 0.5) {
@@ -441,14 +463,31 @@ class GridComponent extends PositionComponent with TapCallbacks {
         scale = Vector2.all(bounce);
       }
     }
-    if (_arrowComponents.length != gameState.arrows.length) {
-      final current = gameState.arrows.map((a) => a.id).toSet();
-      final gone =
-          _arrowComponents.keys.where((id) => !current.contains(id)).toList();
-      for (final id in gone) {
-        _arrowComponents[id]?.removeFromParent();
-        _arrowComponents.remove(id);
+
+    // ── Rebuild component map to match gameState.arrows ──
+    final currentIds = gameState.arrows.map((a) => a.id).toSet();
+
+    // 1. Add new/restored arrows
+    for (final arrow in gameState.arrows) {
+      if (!_arrowComponents.containsKey(arrow.id)) {
+        final comp = ArrowComponent(
+          arrowModel: arrow,
+          cellSize: cellSize,
+          gameState: gameState,
+          onExitCompleted: () => _arrowComponents.remove(arrow.id),
+        )..position = Vector2(0, 0);
+        comp.startRestoreAnimation();
+        _arrowComponents[arrow.id] = comp;
+        add(comp);
       }
+    }
+
+    // 2. Remove arrows that escaped
+    final gone =
+    _arrowComponents.keys.where((id) => !currentIds.contains(id)).toList();
+    for (final id in gone) {
+      _arrowComponents[id]?.removeFromParent();
+      _arrowComponents.remove(id);
     }
   }
 }

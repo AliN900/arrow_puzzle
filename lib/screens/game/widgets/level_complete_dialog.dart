@@ -6,6 +6,7 @@ import '../../../core/app_colors.dart';
 import '../../../data/models/level.dart';
 import '../../../main.dart';
 import '../../../unity_rewarded_ad.dart';
+import '../../../widgets/pop_dialog.dart';
 import 'game_dialog_button.dart';
 
 class LevelCompleteDialog extends ConsumerStatefulWidget {
@@ -105,8 +106,7 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
     final remaining = coinsRepo.adWatchesRemaining;
     final hasAdReward = widget.baseCoins > 0 && !widget.isRandom;
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
+    return PopDialog(
       child: Container(
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
@@ -180,15 +180,19 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                     children: [
                       const Text('🎁', style: TextStyle(fontSize: 16)),
                       const SizedBox(width: 8),
-                      Text(
-                        _doubled
-                            ? '+${widget.baseItems * 2} RANDOM ITEMS'
-                            : '+${widget.baseItems} RANDOM ITEM',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: accent,
-                          letterSpacing: 1,
+                      // WRAP IN FLEXIBLE TO PREVENT OVERFLOW
+                      Flexible(
+                        child: Text(
+                          _doubled
+                              ? '+${widget.baseItems * 2} RANDOM ITEMS'
+                              : '+${widget.baseItems} RANDOM ITEM',
+                          overflow: TextOverflow.ellipsis, // Prevents the overflow error
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: accent,
+                            letterSpacing: 1,
+                          ),
                         ),
                       ),
                     ],

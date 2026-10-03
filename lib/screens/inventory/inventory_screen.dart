@@ -6,6 +6,7 @@ import '../../core/board_themes.dart';
 import '../../core/items.dart';
 import '../../core/store_prices.dart';
 import '../../main.dart';
+import '../../widgets/pop_dialog.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
@@ -671,27 +672,31 @@ class _ItemsGrid extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '×${bundle.count}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w900,
+                        // WRAP IN FITTEDBOX TO PREVENT OVERFLOW
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '×${bundle.count}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.circle, color: Color(0xFF5D4A1A), size: 8),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${bundle.price}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w900,
+                              const SizedBox(width: 6),
+                              const Icon(Icons.circle, color: Color(0xFF5D4A1A), size: 8),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${bundle.price}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -717,13 +722,13 @@ class _ItemsGrid extends ConsumerWidget {
 
     return showDialog<bool>(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: AppColors.surface(context),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Padding(
+      builder: (ctx) => PopDialog(
+        child: Container(
           padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(24),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -820,13 +825,13 @@ Future<bool?> _showConfirmDialog(
 
   return showDialog<bool>(
     context: context,
-    builder: (ctx) => Dialog(
-      backgroundColor: AppColors.surface(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Padding(
+    builder: (ctx) => PopDialog( // Changed from Dialog to PopDialog
+      child: Container(
         padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(24),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

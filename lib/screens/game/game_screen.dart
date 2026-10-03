@@ -11,6 +11,7 @@ import '../../core/coin_rewards.dart';
 import '../../core/constants.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../core/game_mode.dart';
+import '../../core/items.dart';
 import '../../data/models/arrow.dart';
 import '../../data/models/level.dart';
 import '../../data/models/level_result.dart';
@@ -19,6 +20,7 @@ import '../../game/arrow_puzzle_game.dart';
 import '../../game/game_state.dart';
 import '../../main.dart';
 
+import '../../widgets/game_item_bar.dart';
 import '../../widgets/unlock_celebration_screen.dart';
 import 'widgets/game_top_bar.dart';
 import 'widgets/game_bottom_bar.dart';
@@ -68,7 +70,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
   bool _showBonusAnimation = false;
   String _bonusText = '';
   bool _usedAdRewardThisLevel = false;
+  final Map<ItemType, int> _itemUsesThisLevel = {};
   int _pendingMilestoneItems = 0;
+  int _rocksBeforeBomb = 0;
 
   @override
   void initState() {
@@ -184,6 +188,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _showingGameOver = false;
     _usedAdRewardThisLevel = false;
     _pendingMilestoneItems = 0;
+    _itemUsesThisLevel.clear();
+    _rocksBeforeBomb = 0;
     _gameState?.removeListener(_onGameStateChanged);
     _gameState = GameState(
       level: _level,
@@ -210,10 +216,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
     );
 
     _resetTimerForLevel();
+
   }
 
   void _onGameStateChanged() {
     if (!mounted) return;
+
+    // Detect bomb target hit — rock count dropped while armed
+    if (_rocksBeforeBomb > 0 &&
+        _gameState!.rocks.length < _rocksBeforeBomb) {
+      final bombsUsed = _itemUsesThisLevel[ItemType.bomb] ?? 0;
+      _rocksBeforeBomb = 0;
+      setState(() {
+        _itemUsesThisLevel[ItemType.bomb] = bombsUsed + 1;
+      });
+      ref.read(coinsRepositoryProvider).spendItem(ItemType.bomb);
+    }
+
     setState(() => _lives = _gameState!.lives);
   }
 
@@ -376,8 +395,131 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _game.resetLevel();
         _lives = isLifeFree ? 999 : AppConstants.maxLives;
         _resetTimerForLevel();
+        _itemUsesThisLevel.clear();
       });
     }
+  }
+
+  Future<void> _useItem(ItemType item) async {
+    final coinsRepo = ref.read(coinsRepositoryProvider);
+    if (coinsRepo.getItemCount(item) <= 0) return;
+    if (_gameState == null) return;
+
+    final isTimed =
+        _totalTime > 0 || widget.gameMode == GameMode.timeAttack;
+
+    // ── 1) Compute max uses for this item ──
+    int maxUses;
+    switch (item) {
+      case ItemType.hint:
+        maxUses = 999;
+        break;
+      case ItemType.undo:
+        maxUses = isTimed ? 2 : 1;
+        break;
+      case ItemType.bomb:
+        maxUses = 1;
+        break;
+      case ItemType.heartFlask:
+      case ItemType.timeFreeze:
+        maxUses = 1;
+        break;
+    }
+
+    final currentUses = _itemUsesThisLevel[item] ?? 0;
+    if (currentUses >= maxUses) return;
+
+    // Timed level: Heart Flask + Time Freeze share 1 combined use
+    if (isTimed &&
+        (item == ItemType.heartFlask || item == ItemType.timeFreeze)) {
+      final heartUsed = _itemUsesThisLevel[ItemType.heartFlask] ?? 0;
+      final timeUsed = _itemUsesThisLevel[ItemType.timeFreeze] ?? 0;
+      if (heartUsed + timeUsed >= 1) return;
+    }
+
+    // ── 2) Apply effect ──
+    switch (item) {
+      case ItemType.heartFlask:
+      // Don't waste if hearts are already full
+        if (_gameState!.lives >= AppConstants.maxLives) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hearts are already full'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return; // do NOT consume
+        }
+        _gameState!.restoreLife();
+        setState(() => _lives = _gameState!.lives);
+        break;
+
+      case ItemType.timeFreeze:
+      // Don't waste before 30s has elapsed on classic timed levels
+        if (widget.gameMode == GameMode.classic && _totalTime > 0) {
+          final elapsed = _totalTime - _timeRemaining;
+          if (elapsed < 30) {
+            final wait = 30 - elapsed;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Wait ${wait}s more before using Time Freeze'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            return; // do NOT consume
+          }
+        }
+        setState(() => _timeRemaining += 30);
+        break;
+
+      case ItemType.bomb:
+        _rocksBeforeBomb = _gameState!.rocks.length;
+        _gameState!.setBombArmed(true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tap a rock to destroy it'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return; // Do NOT consume here — `_onGameStateChanged` handles it after the rock tap.
+
+      case ItemType.hint:
+        final arrowId = _gameState!.findNextSolvableArrowId();
+        if (arrowId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No solvable arrow found'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return; // do NOT consume
+        }
+        _gameState!.setHintArrow(arrowId);
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) _gameState?.setHintArrow(null);
+        });
+        break;
+
+      case ItemType.undo:
+        final ok = _gameState!.undoLastExit();
+        if (!ok) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nothing to undo'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return; // do NOT consume
+        }
+        break;
+    }
+
+    // ── 3) Consume the item + track the use ──
+    await coinsRepo.spendItem(item);
+    if (!mounted) return;
+    setState(() {
+      _itemUsesThisLevel[item] = currentUses + 1;
+    });
   }
 
   void _togglePause() {
@@ -407,83 +549,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     Navigator.popUntil(context, (route) => route.isFirst);
   }
 
-  // Future<bool> _confirmLeaveLevel() async {
-  //   if (_showingComplete || _showingGameOver) return true;
-  //   final progress = ref.read(progressRepositoryProvider);
-  //   final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
-  //   final textPrimary = AppColors.textPrimary(context);
-  //   final textSecondary = AppColors.textSecondary(context);
-  //
-  //   final result = await showDialog<bool>(
-  //     context: context,
-  //     builder: (ctx) => Dialog(
-  //       backgroundColor: Colors.transparent,
-  //       child: Container(
-  //         padding: const EdgeInsets.all(24),
-  //         decoration: BoxDecoration(
-  //           color: themeColors.surface,
-  //           borderRadius: BorderRadius.circular(24),
-  //           border: Border.all(
-  //             color: themeColors.accentColor.withValues(alpha: 0.35),
-  //             width: 2.5,
-  //           ),
-  //           boxShadow: [
-  //             BoxShadow(
-  //               color: themeColors.accentColor.withValues(alpha: 0.18),
-  //               blurRadius: 32,
-  //             ),
-  //           ],
-  //         ),
-  //         child: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           children: [
-  //             Icon(
-  //               Icons.exit_to_app_rounded,
-  //               color: themeColors.accentColor,
-  //               size: 48,
-  //             ),
-  //             const SizedBox(height: 12),
-  //             Text(
-  //               'Leave Level?',
-  //               style: TextStyle(
-  //                 fontSize: 22,
-  //                 fontWeight: FontWeight.w900,
-  //                 color: textPrimary,
-  //               ),
-  //             ),
-  //             const SizedBox(height: 8),
-  //             Text(
-  //               'Your current level progress will be lost.',
-  //               textAlign: TextAlign.center,
-  //               style: TextStyle(
-  //                 fontSize: 14,
-  //                 fontWeight: FontWeight.w500,
-  //                 color: textSecondary,
-  //               ),
-  //             ),
-  //             const SizedBox(height: 20),
-  //             GameDialogButton(
-  //               label: 'Resume',
-  //               icon: Icons.play_arrow_rounded,
-  //               textColor: textPrimary,
-  //               iconColor: themeColors.accentColor,
-  //               onTap: () => Navigator.pop(ctx, false),
-  //             ),
-  //             const SizedBox(height: 10),
-  //             GameDialogButton(
-  //               label: 'Leave',
-  //               icon: Icons.close_rounded,
-  //               textColor: textSecondary,
-  //               iconColor: themeColors.accentColor,
-  //               onTap: () => Navigator.pop(ctx, true),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  //   return result ?? false;
-  // }
 
 
   void _handleNextLevel() {
@@ -528,8 +593,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Future<void> _showGameOverDialog() async {
     final levelType = AppConstants.levelTypeFor(_level.levelNumber);
-    final hasTimer = (levelType == LevelType.god && _level.levelNumber > 100) ||
-        (levelType == LevelType.boss && _level.levelNumber > 200);
+
 
     int continueTime = 0;
     int heartReward = 0;
@@ -623,19 +687,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     return 0;
   }
 
-  int _calculateContinueDuration(int levelNum, int remainingArrows) {
-    final type = AppConstants.levelTypeFor(levelNum);
-    if (type == LevelType.god) {
-      final secondsPerArrow =
-      (2.2 - (levelNum - 100) * (0.7 / 400.0)).clamp(1.5, 2.2);
-      return (20.0 + secondsPerArrow * remainingArrows).round();
-    } else if (type == LevelType.boss) {
-      final secondsPerArrow =
-      (2.0 - (levelNum - 200) * (0.6 / 300.0)).clamp(1.4, 2.0);
-      return (15.0 + secondsPerArrow * remainingArrows).round();
-    }
-    return 45;
-  }
 
   void _resetTimerForLevel() {
     _levelTimer?.cancel();
@@ -868,6 +919,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     ),
                   ],
                 ),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              bottom: 12,
+              child: GameItemBar(
+                isTimedLevel: _totalTime > 0 ||
+                    widget.gameMode == GameMode.timeAttack,
+                hasRocks: (_gameState?.rocks.isNotEmpty) ?? false,
+                usesThisLevel: _itemUsesThisLevel,
+                onUseItem: _useItem,
               ),
             ),
             if (_isPaused)

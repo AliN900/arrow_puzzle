@@ -18,6 +18,7 @@ class CoinsRepository extends ChangeNotifier {
   DateTime? _lastDailyClaimDate;
   String? _lastWeekItemType;
   int _lastWeekItemCount = 0;
+  DateTime? _lastPopupShownDate;
 
 // Item inventory
   final Map<String, int> _items = {};
@@ -57,6 +58,25 @@ class CoinsRepository extends ChangeNotifier {
     return 1;
   }
 
+  /// True if the daily popup should be shown on this app launch:
+  /// the player hasn't claimed today AND we haven't already popped it today.
+  bool get shouldShowDailyPopup {
+    if (!canClaimDailyToday) return false;
+    if (_lastPopupShownDate == null) return true;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final last = DateTime(_lastPopupShownDate!.year,
+        _lastPopupShownDate!.month, _lastPopupShownDate!.day);
+    return !today.isAtSameMomentAs(last);
+  }
+
+  /// Call after the popup is displayed (claimed or dismissed).
+  Future<void> markDailyPopupShown() async {
+    _lastPopupShownDate = DateTime.now();
+    await _save();
+    notifyListeners();
+  }
+
   Duration get timeUntilTomorrow {
     final now = DateTime.now();
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
@@ -93,6 +113,7 @@ class CoinsRepository extends ChangeNotifier {
   }
 
   Future<int> claimDailyReward({bool withAd = false}) async {
+    _lastPopupShownDate = null;
     if (!canClaimDailyToday) return 0;
 
     final now = DateTime.now();
@@ -185,6 +206,10 @@ class CoinsRepository extends ChangeNotifier {
     }
     _lastWeekItemType = _box.get('lastWeekItemType');
     _lastWeekItemCount = _box.get('lastWeekItemCount', defaultValue: 0);
+    final lastPopupStr = _box.get('lastPopupShownDate');
+    if (lastPopupStr != null) {
+      _lastPopupShownDate = DateTime.tryParse(lastPopupStr);
+    }
 
     _items.clear();
     final itemsMap = _box.get('items', defaultValue: <String, int>{});
@@ -206,6 +231,7 @@ class CoinsRepository extends ChangeNotifier {
       'lastWeekItemType': _lastWeekItemType,
       'lastWeekItemCount': _lastWeekItemCount,
       'items': _items,
+      'lastPopupShownDate': _lastPopupShownDate?.toIso8601String(),
     });
   }
 

@@ -21,6 +21,9 @@ class GameState extends ChangeNotifier {
   final bool assistMode;
   final int arrowSpeed;
   final BoardTheme boardTheme;
+  final List<ArrowModel> _escapedHistory = [];
+  String? _hintArrowId;
+  bool _isBombArmed = false;
 
   late Map<String, OrphanDotType> _orphanDots;
 
@@ -74,10 +77,17 @@ class GameState extends ChangeNotifier {
   bool get isGameOver => _isGameOver;
   bool get isDeadlocked => _isDeadlocked;
   LevelModel get level => _currentLevel;
+  List<ArrowModel> get escapedHistory => List.unmodifiable(_escapedHistory);
+  String? get hintArrowId => _hintArrowId;
+  bool get isBombArmed => _isBombArmed;
 
   Map<String, OrphanDotType> get orphanDots => _orphanDots;
 
   void handleArrowExitCompleted(String arrowId) {
+    final idx = _arrows.indexWhere((a) => a.id == arrowId);
+    if (idx != -1) {
+      _escapedHistory.add(_arrows[idx]);
+    }
     _arrows.removeWhere((a) => a.id == arrowId);
     _consumedDotsByArrow.remove(arrowId);
 
@@ -298,7 +308,48 @@ class GameState extends ChangeNotifier {
     return _ExitInfo(false, consumed);
   }
 
+  void setBombArmed(bool armed) {
+    _isBombArmed = armed;
+    notifyListeners();
+  }
+
+  void setHintArrow(String? id) {
+    _hintArrowId = id;
+    notifyListeners();
+  }
+
+  /// Restores the last escaped arrow back to the board.
+  bool undoLastExit() {
+    if (_escapedHistory.isEmpty) return false;
+    final arrow = _escapedHistory.removeLast();
+    _arrows.add(arrow.copyWith(state: ArrowState.idle));
+    notifyListeners();
+    return true;
+  }
+
+  /// Destroys a rock by ID. Returns true if it existed.
+  bool destroyRock(String rockId) {
+    final before = _rocks.length;
+    _rocks.removeWhere((r) => r.id == rockId);
+    if (_rocks.length == before) return false;
+    notifyListeners();
+    return true;
+  }
+
+  /// Returns the next arrow that can escape right now (for hint).
+  String? findNextSolvableArrowId() {
+    for (final arrow in _arrows) {
+      if (arrow.state != ArrowState.idle) continue;
+      final exit = _computeExitInfo(arrow);
+      if (!exit.blocked) return arrow.id;
+    }
+    return null;
+  }
+
   void resetLevel() {
+    _escapedHistory.clear();
+    _hintArrowId = null;
+    _isBombArmed = false;
     _arrows = _currentLevel.arrows
         .map((a) => a.copyWith(state: ArrowState.idle))
         .toList();

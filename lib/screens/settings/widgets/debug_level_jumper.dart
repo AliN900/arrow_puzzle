@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/board_themes.dart';
+import '../../../core/items.dart';
 import '../../../main.dart';
 import '../../../unity_rewarded_ad.dart';
 import '../../../widgets/unlock_celebration_screen.dart';
@@ -109,7 +110,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
   @override
   Widget build(BuildContext context) {
     final progress = ref.watch(progressRepositoryProvider);
-    final levelRepo = ref.read(levelRepositoryProvider);
+
     final accent = AppColors.accent(context);
     const surface = Color(0xFF1E1E1E);
     const textPrimary = Colors.white;
@@ -203,6 +204,38 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
               },
               child: const Text('Advance Daily (DEV)'),
             ),
+            const SizedBox(height: 8),
+            _btn(
+              label: '💰 Add 1000 Coins',
+              icon: Icons.monetization_on_rounded,
+              color: const Color(0xFFFFD54F),
+              onTap: () async {
+                await ref.read(coinsRepositoryProvider).addCoins(1000);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('+1000 coins added')),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            _btn(
+              label: '🎁 Grant All Items ×5',
+              icon: Icons.inventory_2_rounded,
+              color: const Color(0xFF7C4DFF),
+              onTap: () async {
+                final coinsRepo = ref.read(coinsRepositoryProvider);
+                for (final item in ItemType.values) {
+                  await coinsRepo.addItem(item, count: 5);
+                }
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Granted 5 of each item')),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 8),
             _btn(
               label: 'Reset Progress',
               icon: Icons.warning_amber_rounded,

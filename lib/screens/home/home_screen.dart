@@ -5,8 +5,10 @@ import '../../core/app_colors.dart';
 import '../../core/game_mode.dart';
 import '../../main.dart';
 import '../../widgets/coin_pill.dart';
+import '../../widgets/daily_reward_popup.dart';
 import '../game/game_screen.dart';
 import '../leaderboard/leaderboard_screen.dart';
+import '../profile/profile_screen.dart';
 import '../trophies/trophies_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -22,10 +24,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       _preWarmLevels();
+      // Show the daily popup after a short delay so the app finishes
+      // first frame rendering before the dialog appears.
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (!mounted) return;
+      await _maybeShowDailyPopup();
     });
+  }
+
+
+  Future<void> _maybeShowDailyPopup() async {
+    final coinsRepo = ref.read(coinsRepositoryProvider);
+    if (!coinsRepo.shouldShowDailyPopup) return;
+    if (!mounted) return;
+
+    // Mark shown BEFORE displaying so a crash doesn't re-show it
+    await coinsRepo.markDailyPopupShown();
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => const DailyRewardPopup(),
+    );
   }
 
   void _preWarmLevels() {
@@ -72,20 +96,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               // --- Top Header ---
               Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'P',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                      );
+                    },
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'P',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
