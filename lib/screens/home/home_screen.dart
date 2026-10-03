@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../core/game_mode.dart';
 import '../../main.dart';
+import '../../widgets/coin_pill.dart';
 import '../game/game_screen.dart';
+import '../leaderboard/leaderboard_screen.dart';
+import '../trophies/trophies_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -110,6 +113,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ],
                     ),
                   ),
+                  // Coin pill
+                  const CoinPill(),
                 ],
               ),
 
@@ -204,52 +209,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
               const SizedBox(height: 16),
 
-              // --- Progress Card ---
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.cardShadow(context),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.trending_up_rounded, color: accent, size: 24),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Progress',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'You\'ve unlocked $highestLevel level${highestLevel == 1 ? '' : 's'} and earned $starsEarned star${starsEarned == 1 ? '' : 's'} so far.',
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.4,
-                        color: textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
 
               // --- 2x2 Grid Section ---
               Row(
@@ -272,16 +231,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Expanded(
                     child: _buildGridCard(
                       context: context,
-                      title: 'Stars',
-                      subtitle: '$starsEarned earned',
-                      icon: Icons.star_rounded,
+                      title: 'Leaderboard',
+                      subtitle: 'Coming soon',
+                      icon: Icons.leaderboard_rounded,
                       iconColor: coinYellow,
                       badgeColor: trophyRed,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Star stats coming soon'),
-                            duration: Duration(seconds: 2),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LeaderboardScreen(),
                           ),
                         );
                       },
@@ -317,11 +276,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       iconColor: trophyRed,
                       badgeColor: trophyRed,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Trophies coming soon'),
-                            duration: Duration(seconds: 2),
-                          ),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const TrophiesScreen()),
                         );
                       },
                     ),

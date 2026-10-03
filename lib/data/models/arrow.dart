@@ -53,9 +53,15 @@ enum ArrowDirection {
 }
 
 enum ArrowState {
-  idle,       
-  sliding,    
-  blocked,    
+  idle,
+  sliding,
+  blocked,
+}
+
+/// NEW — distinguishes normal arrows from bomb arrows.
+enum ArrowType {
+  normal,
+  bomb,
 }
 
 class ArrowModel {
@@ -65,6 +71,13 @@ class ArrowModel {
   ArrowDirection direction;
   ArrowState state;
 
+  /// NEW — 'normal' by default; 'bomb' when paired with a rock.
+  final ArrowType type;
+
+  /// NEW — for bomb arrows, the id of the RockModel this arrow destroys.
+  /// Null for normal arrows.
+  final String? targetRockId;
+
   final List<List<int>> path;
 
   ArrowModel({
@@ -73,6 +86,8 @@ class ArrowModel {
     required this.col,
     required this.direction,
     this.state = ArrowState.idle,
+    this.type = ArrowType.normal,
+    this.targetRockId,
     List<List<int>>? path,
   }) : path = path ?? [[row, col]];
 
@@ -82,6 +97,8 @@ class ArrowModel {
     int? col,
     ArrowDirection? direction,
     ArrowState? state,
+    ArrowType? type,
+    String? targetRockId,
     List<List<int>>? path,
   }) {
     return ArrowModel(
@@ -90,6 +107,8 @@ class ArrowModel {
       col: col ?? this.col,
       direction: direction ?? this.direction,
       state: state ?? this.state,
+      type: type ?? this.type,
+      targetRockId: targetRockId ?? this.targetRockId,
       path: path ?? this.path,
     );
   }
@@ -100,6 +119,8 @@ class ArrowModel {
     'col': col,
     'direction': direction.index,
     'state': state.index,
+    'type': type.index,
+    'targetRockId': targetRockId,
     'path': path,
   };
 
@@ -109,11 +130,16 @@ class ArrowModel {
     col: json['col'] as int,
     direction: ArrowDirection.values[json['direction'] as int],
     state: ArrowState.values[json['state'] as int],
+    type: json['type'] != null
+        ? ArrowType.values[json['type'] as int]
+        : ArrowType.normal,
+    targetRockId: json['targetRockId'] as String?,
     path: (json['path'] as List<dynamic>?)
         ?.map((e) => (e as List<dynamic>).map((x) => x as int).toList())
         .toList(),
   );
 
   @override
-  String toString() => 'Arrow($id @ [$row,$col] ${direction.name}, path: $path)';
+  String toString() =>
+      'Arrow($id @ [$row,$col] ${direction.name}, type: ${type.name}, path: $path)';
 }

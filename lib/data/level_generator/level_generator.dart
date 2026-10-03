@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:flutter/cupertino.dart';
+
 import '../models/arrow.dart';
 import '../models/level.dart';
 import '../../core/constants.dart';
@@ -8,6 +10,7 @@ import 'mask_generator.dart';
 
 class LevelGenerator {
   static LevelModel generateLevel(int levelNumber, {bool complexPaths = false}) {
+    debugPrint('🔥 GENERATING LEVEL $levelNumber');
     final type = AppConstants.levelTypeFor(levelNumber);
     int gridSize = AppConstants.gridSizeForLevel(levelNumber);
     if (levelNumber == 213) gridSize = 32;
@@ -57,6 +60,8 @@ class LevelGenerator {
     final occupiedPacked = <int>{};
     final reverseArrows = <ArrowModel>[];
 
+
+
     final double tangleFactor;
     double baseTangle;
     if (complexPaths) {
@@ -79,6 +84,12 @@ class LevelGenerator {
     } else if (type == LevelType.god) {
       baseTangle = (baseTangle + 0.25).clamp(0.40, 1.0);
     }
+
+    // Snake levels always max out tangle for maximum winding
+    if (AppConstants.isSnakeLevel(levelNumber)) {
+      baseTangle = 1.0;
+    }
+
     tangleFactor = baseTangle;
 
     int veryLongMin = 5 + (gridSize ~/ 6);
@@ -115,7 +126,7 @@ class LevelGenerator {
     int longCount = 0;
     int medCount = 0;
     int failures = 0;
-    const int maxFailures = 40;
+    final int maxFailures = AppConstants.isSnakeLevel(levelNumber) ? 100 : 40;
 
     while (failures < maxFailures && occupiedPacked.length < mask.length) {
       final candidates = _exitCandidates(
@@ -268,6 +279,342 @@ class LevelGenerator {
       arrows.add(a.copyWith(id: 'a_${levelNumber}_${arrows.length}'));
     }
 
+
+    // === Place rocks on blocker arrows ===
+    // A rock replaces a blocker arrow's cell. The bomb arrow is placed
+    // on the BLOCKED arrow's exit path (guaranteed empty up to the blocker).
+    final rocks = <RockModel>[];
+    final bombArrows = <ArrowModel>[];
+    final rockCount = AppConstants.rockCountForLevel(levelNumber);
+
+    if (rockCount > 0 && arrows.isNotEmpty) {
+      // Find (blocked arrow A, blocker cell Q) pairs where A's exit path
+      // hits Q and Q is at least 3 cells from A's head.
+      final candidates = <({int aIdx, int qR, int qC, ArrowDirection dir})>[];
+
+      for (int i = 0; i < arrows.length; i++) {
+        final arrow = arrows[i];
+        final head = arrow.path[0];
+        final d = arrow.direction.delta;
+        int nr = head[0] + d[0];
+        int nc = head[1] + d[1];
+        int steps = 1;
+        final visited = <int>{};
+
+        while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+          final packed = nr * 1000 + nc;
+          if (visited.contains(packed)) break;
+          visited.add(packed);
+
+          if (occupiedPacked.contains(packed)) {
+            if (steps >= 2) {
+              candidates.add((
+              aIdx: i,
+              qR: nr,
+              qC: nc,
+              dir: arrow.direction,
+              ));
+            }
+            break;
+          }
+          nr += d[0];
+          nc += d[1];
+          steps++;
+        }
+      }
+
+
+      if (candidates.isEmpty && rockCount > 0) {
+        for (int i = 0; i < arrows.length; i++) {
+          final arrow = arrows[i];
+          final head = arrow.path[0];
+          final d = arrow.direction.delta;
+          int nr = head[0] + d[0];
+          int nc = head[1] + d[1];
+          int steps = 1;
+          final visited = <int>{};
+
+          while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+            final packed = nr * 1000 + nc;
+            if (visited.contains(packed)) break;
+            visited.add(packed);
+
+
+            if (occupiedPacked.contains(packed)) break;
+
+
+            if (steps >= 2) {
+              candidates.add((
+              aIdx: i,
+              qR: nr,
+              qC: nc,
+              dir: arrow.direction,
+              ));
+            }
+
+            nr += d[0];
+            nc += d[1];
+            steps++;
+          }
+        }
+      }
+
+      debugPrint('⚙️ LEVEL $levelNumber: ${candidates.length} valid candidates');
+
+      int rocksPlaced = 0;
+      for (final cand in candidates) {
+        if (rocksPlaced >= rockCount) break;
+
+        final rockR = cand.qR;
+        final rockC = cand.qC;
+
+        bool tooClose = false;
+        for (final rock in rocks) {
+          if ((rock.row - rockR).abs() + (rock.col - rockC).abs() < 4) {
+            tooClose = true;
+            break;
+          }
+        }
+        if (tooClose) continue;
+
+        // The rock cell might be occupied by a blocker arrow (original
+        // case) or empty (fallback case). Handle both.
+        final rockPackedHere = rockR * 1000 + rockC;
+        final rockIsEmpty = !occupiedPacked.contains(rockPackedHere);
+
+        int blockerIdx = -1;
+        if (!rockIsEmpty) {
+          for (int j = 0; j < arrows.length; j++) {
+            if (arrows[j].path.any((pt) => pt[0] == rockR && pt[1] == rockC)) {
+              blockerIdx = j;
+              break;
+            }
+          }
+          if (blockerIdx == -1) continue;
+        }
+
+        // Try bomb placements in multiple directions, 2-cell first, then 1-cell
+        // Score every possible bomb placement 3-7 cells from the rock.
+        // Prefer placements where 1-2 normal arrows block the path.
+        final placements = <({
+        int headR,
+        int headC,
+        int tailR,
+        int tailC,
+        ArrowDirection dir,
+        int score,
+        int blockers,
+        })>[];
+
+        for (final tryDir in ArrowDirection.values) {
+          final td = tryDir.delta;
+
+          for (int dist = 2; dist <= 8; dist++) {
+            final hR = rockR - td[0] * dist;
+            final hC = rockC - td[1] * dist;
+
+            if (hR < 0 || hR >= gridSize) continue;
+            if (hC < 0 || hC >= gridSize) continue;
+            if (!mask.contains('$hR,$hC')) continue;
+            if (occupiedPacked.contains(hR * 1000 + hC)) continue;
+
+            // Try 2-cell body, fall back to 1-cell
+            final tR = hR - td[0];
+            final tC = hC - td[1];
+
+            int finalTailR = hR;
+            int finalTailC = hC;
+            bool twoCell = false;
+
+            if (tR >= 0 &&
+                tR < gridSize &&
+                tC >= 0 &&
+                tC < gridSize &&
+                mask.contains('$tR,$tC') &&
+                !occupiedPacked.contains(tR * 1000 + tC)) {
+              finalTailR = tR;
+              finalTailC = tC;
+              twoCell = true;
+            }
+
+            // Find which arrows block the path from bomb head to rock.
+            // Only count them if they can be cleared WITHOUT the rock
+            // being destroyed first — otherwise it's a deadlock.
+            int blockers = 0;
+            bool deadlock = false;
+
+
+            // We also need to check the rock itself + any existing placed rocks
+            final rocksForCheck = <RockModel>[
+              ...rocks,
+              RockModel(id: 'future_${rocks.length}', row: rockR, col: rockC),
+            ];
+
+            for (int s = 1; s < dist; s++) {
+              final pr = hR + td[0] * s;
+              final pc = hC + td[1] * s;
+              final packed = pr * 1000 + pc;
+
+              if (occupiedPacked.contains(packed)) {
+                // Which arrow occupies this cell?
+                int blockerArrowIdx = -1;
+                for (int b = 0; b < arrows.length; b++) {
+                  if (arrows[b].path.any((pt) => pt[0] == pr && pt[1] == pc)) {
+                    blockerArrowIdx = b;
+                    break;
+                  }
+                }
+                if (blockerArrowIdx != -1) {
+                  final blockerArrow = arrows[blockerArrowIdx];
+
+                  // The bomb arrow we're about to place also blocks.
+                  // Include its cells so the blocker's own path is
+                  // checked against them too.
+                  final bombCells = <int>{
+                    hR * 1000 + hC,
+                    finalTailR * 1000 + finalTailC,
+                  };
+
+                  final clearable = _arrowPathClearOfRocks(
+                    blockerArrow,
+                    rocksForCheck,
+                    gridSize,
+                    extraBlocked: bombCells,
+                  );
+                  if (clearable) {
+                    blockers++;
+                  } else {
+                    deadlock = true;
+                    break;
+                  }
+                }
+              }
+            }
+
+            if (deadlock) continue;
+
+            // Score
+            int score = 0;
+            if (blockers == 1) {
+              score = 100; // sweet spot — one arrow to clear
+            } else if (blockers == 2) {
+              score = 90; // still good
+            } else if (blockers == 3) {
+              score = 60;
+            } else if (blockers > 3) {
+              score = 20; // too many, but still allowed
+            } else {
+              score = 5; // 0 blockers — last resort
+            }
+            if (twoCell) score += 10;
+            if (tryDir == cand.dir) score += 3;
+
+            placements.add((
+            headR: hR,
+            headC: hC,
+            tailR: finalTailR,
+            tailC: finalTailC,
+            dir: tryDir,
+            score: score,
+            blockers: blockers,
+            ));
+          }
+        }
+
+        if (placements.isEmpty) continue;
+        placements.sort((a, b) => b.score.compareTo(a.score));
+        final best = placements.first;
+
+        final int headR = best.headR;
+        final int headC = best.headC;
+        final int tailR = best.tailR;
+        final int tailC = best.tailC;
+        final ArrowDirection dir = best.dir;
+
+        // Only remove a blocker arrow if the rock cell was occupied
+        ArrowModel? removedBlocker;
+        if (blockerIdx != -1) {
+          removedBlocker = arrows[blockerIdx];
+          for (final pt in removedBlocker.path) {
+            occupiedPacked.remove(pt[0] * 1000 + pt[1]);
+            occupied.remove('${pt[0]},${pt[1]}');
+          }
+          arrows.removeAt(blockerIdx);
+        }
+
+        // Place rock
+        final rockId = 'rock_${levelNumber}_$rocksPlaced';
+        rocks.add(RockModel(id: rockId, row: rockR, col: rockC));
+        occupiedPacked.add(rockR * 1000 + rockC);
+        occupied.add('$rockR,$rockC');
+
+        // Place bomb arrow
+        final bombId = 'bomb_${levelNumber}_$rocksPlaced';
+        final List<List<int>> bombPath =
+        (headR == tailR && headC == tailC)
+            ? [
+          [headR, headC]
+        ]
+            : [
+          [headR, headC],
+          [tailR, tailC]
+        ];
+
+        bombArrows.add(ArrowModel(
+          id: bombId,
+          row: headR,
+          col: headC,
+          direction: dir,
+          type: ArrowType.bomb,
+          targetRockId: rockId,
+          path: bombPath,
+        ));
+
+        occupiedPacked.add(headR * 1000 + headC);
+        occupiedPacked.add(tailR * 1000 + tailC);
+        occupied.add('$headR,$headC');
+        occupied.add('$tailR,$tailC');
+
+        // Verify the placement didn't create a deadlock cycle.
+        // If it did, undo everything and try the next candidate.
+        final trialArrows = <ArrowModel>[...bombArrows, ...arrows];
+        final solvable = _isSolvableWithRocks(
+          trialArrows,
+          rocks,
+          gridSize,
+        );
+
+        if (!solvable) {
+          // Roll back this placement
+          rocks.removeLast();
+          bombArrows.removeLast();
+
+          occupiedPacked.remove(headR * 1000 + headC);
+          occupiedPacked.remove(tailR * 1000 + tailC);
+          occupiedPacked.remove(rockR * 1000 + rockC);
+          occupied.remove('$headR,$headC');
+          occupied.remove('$tailR,$tailC');
+          occupied.remove('$rockR,$rockC');
+
+          // Restore the blocker arrow we removed earlier
+          if (removedBlocker != null) {
+            arrows.insert(blockerIdx, removedBlocker);
+            for (final pt in removedBlocker.path) {
+              occupiedPacked.add(pt[0] * 1000 + pt[1]);
+              occupied.add('${pt[0]},${pt[1]}');
+            }
+          }
+
+          debugPrint('⚙️ LEVEL $levelNumber: rolled back rock (deadlock)');
+          continue;
+        }
+
+        rocksPlaced++;
+      }
+
+      debugPrint('⚙️ LEVEL $levelNumber: placed ${rocks.length} rocks');
+    }
+
     if (arrows.isEmpty) {
       final mid = gridSize ~/ 2;
       arrows.add(ArrowModel(
@@ -286,6 +633,35 @@ class LevelGenerator {
 
     final emptyCount = mask.length - occupied.length;
     final orphanDots = <OrphanDot>[];
+
+
+    // === Mark bomb paths as off-limits for redirector dots ===
+    // A bomb arrow must travel straight to its target rock. If a redirector
+    // sits on that line, the bomb turns and misses. So we forbid orphan dots
+    // anywhere on a bomb's straight line between head and rock.
+    final bombPathCells = <int>{};
+    for (final bomb in bombArrows) {
+      if (bomb.targetRockId == null) continue;
+      final head = bomb.path[0];
+      final d = bomb.direction.delta;
+      int nr = head[0] + d[0];
+      int nc = head[1] + d[1];
+      while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+        bombPathCells.add(nr * 1000 + nc);
+        // Stop at the target rock
+        bool hitRock = false;
+        for (final rock in rocks) {
+          if (rock.row == nr && rock.col == nc &&
+              rock.id == bomb.targetRockId) {
+            hitRock = true;
+            break;
+          }
+        }
+        if (hitRock) break;
+        nr += d[0];
+        nc += d[1];
+      }
+    }
 
     if (emptyCount > 0) {
       final emptyKeysPacked = maskCells
@@ -350,6 +726,15 @@ class LevelGenerator {
           visited.add(keyPacked);
 
           if (emptyKeysPacked.contains(keyPacked)) {
+            // Never place a redirector on a bomb arrow's path
+            if (bombPathCells.contains(keyPacked)) {
+              orphanMap[keyPacked] = OrphanDotType.neutral;
+              // Continue tracing the path — other arrows may still benefit
+              d = currentDir.delta;
+              nr += d[0];
+              nc += d[1];
+              continue;
+            }
             if (!orphanMap.containsKey(keyPacked)) {
               final bool shouldColor = rng.nextDouble() < colorProb;
               if (shouldColor) {
@@ -416,7 +801,7 @@ class LevelGenerator {
               } else {
                 orphanMap[keyPacked] = OrphanDotType.neutral;
               }
-            } else {
+            } else if (!bombPathCells.contains(keyPacked)) {
               final dotType = orphanMap[keyPacked]!;
               if (dotType == OrphanDotType.up) {
                 currentDir = ArrowDirection.up;
@@ -474,10 +859,14 @@ class LevelGenerator {
       }
     }
 
+    // Prepend bomb arrows so they're processed first
+    final allArrows = <ArrowModel>[...bombArrows, ...arrows];
+
     return LevelModel(
       levelNumber: levelNumber,
       gridSize: gridSize,
-      arrows: arrows,
+      arrows: allArrows,
+      rocks: rocks,
       maskShape: maskShape,
       mask: mask,
       orphanDots: orphanDots,
@@ -495,6 +884,125 @@ class LevelGenerator {
       case ArrowDirection.right:
         return gridSize - 1 - c;
     }
+  }
+
+
+  /// Returns true if this arrow's exit path is clear of all rocks AND
+  /// all cells in [extraBlocked] (used to check the future bomb arrow).
+  static bool _arrowPathClearOfRocks(
+      ArrowModel arrow,
+      List<RockModel> rocks,
+      int gridSize, {
+        Set<int>? extraBlocked,
+      }) {
+    ArrowDirection dir = arrow.direction;
+    final head = arrow.path[0];
+    var d = dir.delta;
+    int nr = head[0] + d[0];
+    int nc = head[1] + d[1];
+    final visited = <int>{};
+
+    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+      final packed = nr * 1000 + nc;
+      if (visited.contains(packed)) return false;
+      visited.add(packed);
+
+      if (extraBlocked != null && extraBlocked.contains(packed)) {
+        return false;
+      }
+
+      for (final rock in rocks) {
+        if (rock.row == nr && rock.col == nc) return false;
+      }
+
+      nr += d[0];
+      nc += d[1];
+    }
+    return true;
+  }
+
+
+  /// Simulates clearing the level with arrows + rocks + bombs.
+  /// Returns true if every arrow can eventually escape.
+  static bool _isSolvableWithRocks(
+      List<ArrowModel> arrows,
+      List<RockModel> rocks,
+      int gridSize,
+      ) {
+    final remainingArrows = List<ArrowModel>.from(arrows);
+    final remainingRocks = List<RockModel>.from(rocks);
+    final active = List<bool>.filled(remainingArrows.length, true);
+    int remaining = remainingArrows.length;
+
+    bool progress = true;
+    while (progress && remaining > 0) {
+      progress = false;
+      for (int i = 0; i < remainingArrows.length; i++) {
+        if (!active[i]) continue;
+        final arrow = remainingArrows[i];
+        final isBomb = arrow.type == ArrowType.bomb && arrow.targetRockId != null;
+
+        final head = arrow.path[0];
+        final d = arrow.direction.delta;
+        int nr = head[0] + d[0];
+        int nc = head[1] + d[1];
+        final visited = <int>{};
+        bool canExit = true;
+        String? rockHit;
+
+        while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+          final packed = nr * 1000 + nc;
+          if (visited.contains(packed)) {
+            canExit = false;
+            break;
+          }
+          visited.add(packed);
+
+          RockModel? hitRock;
+          for (final rock in remainingRocks) {
+            if (rock.row == nr && rock.col == nc) {
+              hitRock = rock;
+              break;
+            }
+          }
+          if (hitRock != null) {
+            if (isBomb && hitRock.id == arrow.targetRockId) {
+              rockHit = hitRock.id;
+              break;
+            }
+            canExit = false;
+            break;
+          }
+
+          bool hitArrow = false;
+          for (int j = 0; j < remainingArrows.length; j++) {
+            if (j == i || !active[j]) continue;
+            if (remainingArrows[j].path.any((pt) => pt[0] == nr && pt[1] == nc)) {
+              hitArrow = true;
+              break;
+            }
+          }
+          if (hitArrow) {
+            canExit = false;
+            break;
+          }
+
+          nr += d[0];
+          nc += d[1];
+        }
+
+        if (canExit) {
+          active[i] = false;
+          remaining--;
+          progress = true;
+          if (rockHit != null) {
+            remainingRocks.removeWhere((r) => r.id == rockHit);
+          }
+        }
+      }
+    }
+
+    return remaining == 0;
   }
 
   static void _shuffleCandidates(
@@ -559,8 +1067,23 @@ class LevelGenerator {
     var growDir = exitDir.opposite; 
     int straight = 0;
 
-    final double turnBias = complexPaths ? 0.88 : (0.65 + tangleFactor * 0.20);
-    final int maxStraight = complexPaths ? 2 : (tangleFactor >= 0.7 ? 2 : 3);
+    final bool isSnake = complexPaths ||
+        (tangleFactor >= 0.99 && !complexPaths);
+
+    final double turnBias = isSnake
+        ? 0.94
+        : (0.70 + tangleFactor * 0.25);
+
+    final int maxStraight;
+    if (isSnake) {
+      maxStraight = 1;
+    } else if (tangleFactor >= 0.85) {
+      maxStraight = 1;
+    } else if (tangleFactor >= 0.50) {
+      maxStraight = 2;
+    } else {
+      maxStraight = 3;
+    }
 
     for (int step = 1; step < targetLen; step++) {
       final valid = <ArrowDirection>[];
@@ -771,6 +1294,29 @@ class LevelGenerator {
     int avgLen;
     int arrowCount;
 
+    // Snake level — long winding arrows
+    if (AppConstants.isSnakeLevel(level) && !complexPaths) {
+      // Longer arrows on bigger boards
+      if (gridSize <= 12) {
+        avgLen = 10;
+      } else if (gridSize <= 16) {
+        avgLen = 14;
+      } else if (gridSize <= 20) {
+        avgLen = 18;
+      } else if (gridSize <= 25) {
+        avgLen = 22;
+      } else {
+        avgLen = 26;
+      }
+
+      final totalCells = mask.length;
+      // Leave ~8% of cells empty for visual breathing room
+      final targetOccupied = (totalCells * 0.92).round();
+      arrowCount = (targetOccupied / avgLen).round().clamp(6, 60);
+
+      return _Params(arrowCount, avgLen);
+    }
+
     if (level <= 3 && !complexPaths) {
       avgLen = 2;
       arrowCount = 4;
@@ -786,8 +1332,12 @@ class LevelGenerator {
         avgLen = 3;
       } else if (level <= 50) {
         avgLen = 4;
+      } else if (level <= 150) {
+        avgLen = 6;
+      } else if (level <= 300) {
+        avgLen = 7;
       } else {
-        avgLen = 5;
+        avgLen = 8;
       }
 
       if (complexPaths) {
@@ -821,6 +1371,22 @@ class LevelGenerator {
   static MaskShape _shapeFor(LevelType type, Random rng) {
     switch (type) {
       case LevelType.normal:
+      // 30% chance of a fun shape on normal levels
+        if (rng.nextDouble() < 0.30) {
+          const normalShapes = [
+            MaskShape.heart,
+            MaskShape.star,
+            MaskShape.diamond,
+            MaskShape.hexagon,
+            MaskShape.circle,
+            MaskShape.blob,
+            MaskShape.frog,
+            MaskShape.fish,
+            MaskShape.bird,
+            MaskShape.tree,
+          ];
+          return normalShapes[rng.nextInt(normalShapes.length)];
+        }
         return MaskShape.square;
       case LevelType.boss:
         const bossShapes = [

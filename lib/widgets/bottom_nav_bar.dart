@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import '../core/app_colors.dart';
 
-class CustomBottomNavBar extends StatelessWidget {
+class CustomBottomNavBar extends HookWidget {
   final int currentIndex;
   final Function(int) onTap;
 
@@ -17,10 +18,21 @@ class CustomBottomNavBar extends StatelessWidget {
     final accent = AppColors.accent(context);
     final textSecondary = AppColors.textSecondary(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Nav active pill: light purple-ish in light mode, tinted accent in dark
     final navActiveBg = isDark
         ? accent.withValues(alpha: 0.18)
         : const Color(0xFFD6E4FF);
+
+    Widget buildIcon(IconData icon, int index) {
+      final isSelected = currentIndex == index;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? navActiveBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(icon),
+      );
+    }
 
     return BottomNavigationBar(
       backgroundColor: cardColor,
@@ -36,26 +48,19 @@ class CustomBottomNavBar extends StatelessWidget {
       onTap: onTap,
       items: [
         BottomNavigationBarItem(
-          icon: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: currentIndex == 0 ? navActiveBg : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(Icons.home_rounded),
-          ),
+          icon: buildIcon(Icons.home_rounded, 0),
           label: 'Home',
         ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_today_rounded),
+        BottomNavigationBarItem(
+          icon: buildIcon(Icons.calendar_today_rounded, 1),
           label: 'Daily',
         ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.inventory_2_rounded),
+        BottomNavigationBarItem(
+          icon: buildIcon(Icons.inventory_2_rounded, 2),
           label: 'Inventory',
         ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.settings_rounded),
+        BottomNavigationBarItem(
+          icon: buildIcon(Icons.settings_rounded, 3),
           label: 'Settings',
         ),
       ],

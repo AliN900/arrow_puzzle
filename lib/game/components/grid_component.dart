@@ -1,8 +1,9 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
-
+import '../../core/board_themes.dart';
 import '../../data/models/level.dart';
 import '../../data/models/arrow.dart';
 import '../../core/app_themes.dart';
@@ -28,6 +29,7 @@ class GridComponent extends PositionComponent with TapCallbacks {
   ui.Picture? _cachedDotGridPicture;
   double _entryTime = 0.0;
   bool _entryCompleted = false;
+
 
   void _invalidateDotGrid() {
     _cachedDotGridPicture?.dispose();
@@ -185,8 +187,17 @@ class GridComponent extends PositionComponent with TapCallbacks {
     final inR = baseDot;
     final outR = inR * 0.55;
 
-    final themeColors = AppThemes.getThemeColors(gameState.theme);
-    final dotColor = themeColors.arrowColor;
+    final boardColors = BoardThemes.get(gameState.boardTheme);
+    final dotColor = boardColors.dotColor;
+
+    // Draw the board's signature pattern first
+    BoardThemes.paintPattern(
+      canvas,
+      Rect.fromLTWH(0, 0, gridSize * cs, gridSize * cs),
+      boardColors.pattern,
+      boardColors.patternColor,
+      gameState.boardTheme.index * 9137 + 42,
+    );
 
     final isShaped = gameState.level.maskShape != MaskShape.square;
     if (isShaped) {
@@ -260,6 +271,16 @@ class GridComponent extends PositionComponent with TapCallbacks {
       );
     }
 
+    // Draw rocks
+    for (final rock in gameState.rocks) {
+      _drawRock(
+        canvas,
+        Offset((rock.col + 0.5) * cs, (rock.row + 0.5) * cs),
+        cs,
+        themeColors,
+      );
+    }
+
     super.render(canvas);
   }
 
@@ -319,6 +340,85 @@ class GridComponent extends PositionComponent with TapCallbacks {
     canvas.drawPath(arrowheadPath, _orphanArrowheadPaint);
 
     canvas.restore();
+  }
+
+
+  void _drawRock(Canvas canvas, Offset center, double cs, ThemeColors themeColors) {
+    final size = cs * 0.82;
+    final halfSize = size / 2;
+
+    // Shadow underneath
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center + Offset(0, cs * 0.16),
+        width: size * 0.85,
+        height: size * 0.3,
+      ),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+
+    // Hexagonal rock body
+    final path = Path();
+    const points = 6;
+    for (int i = 0; i < points; i++) {
+      final angle = (i / points) * 2 * math.pi - math.pi / 2;
+      final px = center.dx + math.cos(angle) * halfSize;
+      final py = center.dy + math.sin(angle) * halfSize;
+      if (i == 0) {
+        path.moveTo(px, py);
+      } else {
+        path.lineTo(px, py);
+      }
+    }
+    path.close();
+
+    // Fill with a subtle gradient (light from top-left)
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF9A9A9A), Color(0xFF4A4A4A)],
+        ).createShader(Rect.fromCircle(center: center, radius: halfSize)),
+    );
+
+    // Dark outline
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFF1F1F1F)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = cs * 0.06
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    // Crack lines
+    final crackPaint = Paint()
+      ..color = const Color(0xFF1F1F1F).withValues(alpha: 0.7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = cs * 0.045
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(
+      center + Offset(-halfSize * 0.5, -halfSize * 0.15),
+      center + Offset(0, halfSize * 0.15),
+      crackPaint,
+    );
+    canvas.drawLine(
+      center + Offset(0, halfSize * 0.15),
+      center + Offset(halfSize * 0.35, halfSize * 0.45),
+      crackPaint,
+    );
+
+    // Top-left highlight dot
+    canvas.drawCircle(
+      center + Offset(-halfSize * 0.35, -halfSize * 0.4),
+      cs * 0.06,
+      Paint()..color = Colors.white.withValues(alpha: 0.35),
+    );
   }
 
   @override

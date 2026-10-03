@@ -2,6 +2,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'Arrow Puzzle';
+  static const String appFullName = 'Arrow Puzzle: Tap Maze Escape';
 
   static const int maxLives = 3;
 
@@ -16,6 +17,13 @@ class AppConstants {
       if (levelTypeFor(l) == LevelType.boss) count++;
     }
     return count;
+  }
+
+  /// Returns true if this level should be a snake-style layout
+  /// (few long winding arrows filling the board).
+  static bool isSnakeLevel(int level) {
+    if (level < 10) return false;
+    return level % 5 == 3;
   }
 
   static int godCycleCount(int level) {
@@ -66,6 +74,33 @@ class AppConstants {
       case LevelType.boss: return 0.93;
       default:             return 0.90;
     }
+  }
+
+  /// How many rocks appear on a level.
+  static int rockCountForLevel(int level) {
+    final type = levelTypeFor(level);
+
+    if (type == LevelType.god) {
+      if (level < 100) return 2;
+      if (level < 200) return 3;
+      if (level < 350) return 4;
+      return 5;
+    }
+    if (type == LevelType.boss) {
+      if (level < 100) return 1;
+      if (level < 300) return 2;
+      return 3;
+    }
+
+    if (level < 20) return 0;
+
+    if (level % 10 == 0) return 2;
+    if (level % 4 == 0) return 1;
+
+    if (level >= 100 && level % 7 == 3) return 1;
+    if (level >= 200 && level % 11 == 5) return 2;
+
+    return 0;
   }
 
   static const int randomEasyMin = 11;

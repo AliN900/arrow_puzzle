@@ -1,62 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import '../core/app_colors.dart';
 
-class LivesBar extends StatefulWidget {
+class LivesBar extends HookWidget {
   final int lives;
   final int maxLives;
 
   const LivesBar({super.key, required this.lives, required this.maxLives});
 
   @override
-  State<LivesBar> createState() => _LivesBarState();
-}
-
-class _LivesBarState extends State<LivesBar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
-
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-  }
-
-  @override
-  void didUpdateWidget(LivesBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.lives <= 1) {
-      _animationController.duration = const Duration(milliseconds: 400);
-    } else {
-      _animationController.duration = const Duration(milliseconds: 1000);
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isLowLives = widget.lives == 1;
+    final controller = useAnimationController(
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    // Start the looping animation once on mount
+    useEffect(() {
+      controller.repeat(reverse: true);
+      return null;
+    }, const []);
+
+    // Adjust speed when lives drop to 1
+    useEffect(() {
+      controller.duration = lives <= 1
+          ? const Duration(milliseconds: 400)
+          : const Duration(milliseconds: 1000);
+      return null;
+    }, [lives]);
+
+    final scaleAnim = useMemoized(
+          () => Tween<double>(begin: 1.0, end: 1.15).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeInOut),
+      ),
+      [controller],
+    );
+
+    final isLowLives = lives == 1;
     final surfaceLight = AppColors.surfaceLight(context);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(widget.maxLives, (i) {
-        final isFull = i < widget.lives;
+      children: List.generate(maxLives, (i) {
+        final isFull = i < lives;
 
         final heartWidget = Stack(
           alignment: Alignment.center,
@@ -69,26 +54,27 @@ class _LivesBarState extends State<LivesBar>
                     : Colors.black.withValues(alpha: 0.15),
                 size: 27,
               ),
-            isFull
-                ? ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
-                colors: isLowLives
-                    ? [const Color(0xFFFF5252), const Color(0xFFFF1744)]
-                    : [Colors.white, const Color(0xFFB0B0B0)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ).createShader(bounds),
-              child: const Icon(
-                Icons.favorite,
-                color: Colors.white,
-                size: 25,
+            if (isFull)
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: isLowLives
+                      ? [const Color(0xFFFF5252), const Color(0xFFFF1744)]
+                      : [Colors.white, const Color(0xFFB0B0B0)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ).createShader(bounds),
+                child: const Icon(
+                  Icons.favorite,
+                  color: Colors.white,
+                  size: 25,
+                ),
+              )
+            else
+              Icon(
+                Icons.favorite_border,
+                color: surfaceLight,
+                size: 24,
               ),
-            )
-                : Icon(
-              Icons.favorite_border,
-              color: surfaceLight,
-              size: 24,
-            ),
             if (isFull)
               Positioned(
                 top: 5,
@@ -116,7 +102,7 @@ class _LivesBarState extends State<LivesBar>
             child: isFull
                 ? ScaleTransition(
               key: ValueKey('heart_${i}_full'),
-              scale: _scaleAnimation,
+              scale: scaleAnim,
               child: heartWidget,
             )
                 : SizedBox(

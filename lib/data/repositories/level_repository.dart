@@ -33,11 +33,11 @@ class LevelRepository {
 
   Future<void> _init() async {
     _cacheBox = await Hive.openBox('levelCache');
-    final storedVersion = _cacheBox.get('generator_version');
-    if (storedVersion != cacheVersion) {
-      await _cacheBox.clear();
-      await _cacheBox.put('generator_version', cacheVersion);
-    }
+    // DEV ONLY — always clear so every launch regenerates fresh
+    await _cacheBox.clear();
+    await _cacheBox.put('generator_version', cacheVersion);
+    // ignore: avoid_print
+    debugPrint('🧹 Cache cleared');
   }
 
   LevelModel? _tryLoadCached(int levelNumber) {
@@ -150,6 +150,14 @@ class LevelRepository {
 
   bool isCached(int levelNumber) {
     return _tryLoadCached(levelNumber) != null;
+  }
+
+
+  /// DEV ONLY — clears the cached levels so they regenerate.
+  Future<void> clearCache() async {
+    await _cacheBox.clear();
+    await _cacheBox.put('generator_version', cacheVersion);
+    _cache.clear();
   }
 
   void _saveToDisk(int levelNumber, LevelModel level) {

@@ -5,8 +5,9 @@ import 'package:flame/game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../core/app_colors.dart';
-import '../../core/app_themes.dart';
+import '../../core/ad_rewards.dart';
+import '../../core/board_themes.dart';
+import '../../core/coin_rewards.dart';
 import '../../core/constants.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../core/game_mode.dart';
@@ -18,13 +19,13 @@ import '../../game/arrow_puzzle_game.dart';
 import '../../game/game_state.dart';
 import '../../main.dart';
 
+import '../../widgets/unlock_celebration_screen.dart';
 import 'widgets/game_top_bar.dart';
 import 'widgets/game_bottom_bar.dart';
 import 'widgets/timer_display.dart';
 import 'widgets/pause_overlay.dart';
 import 'widgets/level_complete_dialog.dart';
 import 'widgets/game_over_dialog.dart';
-import 'widgets/game_dialog_button.dart';
 import 'widgets/level_loading_screen.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
@@ -32,11 +33,13 @@ class GameScreen extends ConsumerStatefulWidget {
   final bool isRandom;
   final GameMode gameMode;
 
+
   const GameScreen({
     super.key,
     required this.level,
     this.isRandom = false,
     this.gameMode = GameMode.classic,
+
   });
 
   @override
@@ -64,6 +67,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int _timeAttackScore = 0;
   bool _showBonusAnimation = false;
   String _bonusText = '';
+  bool _usedAdRewardThisLevel = false;
+  int _pendingMilestoneItems = 0;
 
   @override
   void initState() {
@@ -80,6 +85,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _loadLevelAsync(levelNum);
     }
   }
+
+
 
   Future<void> _loadLevelAsync(int levelNum) async {
     final levelRepo = ref.read(levelRepositoryProvider);
@@ -119,8 +126,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   double _shakeOffset = 0.0;
   Timer? _shakeTimer;
-  String? _comboText;
-  Timer? _comboTimer;
+  // String? _comboText;
+  // Timer? _comboTimer;
 
   void _triggerShake() {
     _shakeTimer?.cancel();
@@ -138,15 +145,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
-  void _triggerCombo() {
-    if (_gameState == null) return;
-    final combo = _gameState!.comboCount;
-    _comboTimer?.cancel();
-    setState(() => _comboText = '$combo x COMBO');
-    _comboTimer = Timer(const Duration(milliseconds: 900), () {
-      if (mounted) setState(() => _comboText = null);
-    });
-  }
+  // void _triggerCombo() {
+  //   if (_gameState == null) return;
+  //   final combo = _gameState!.comboCount;
+  //   _comboTimer?.cancel();
+  //   setState(() => _comboText = '$combo x COMBO');
+  //   _comboTimer = Timer(const Duration(milliseconds: 900), () {
+  //     if (mounted) setState(() => _comboText = null);
+  //   });
+  // }
 
   void _triggerTimeAttackBonusAnimation() {
     setState(() {
@@ -175,18 +182,21 @@ class _GameScreenState extends ConsumerState<GameScreen>
         progress.heartRemover;
     _lives = isLifeFree ? 999 : AppConstants.maxLives;
     _showingGameOver = false;
+    _usedAdRewardThisLevel = false;
+    _pendingMilestoneItems = 0;
     _gameState?.removeListener(_onGameStateChanged);
     _gameState = GameState(
       level: _level,
       theme: progress.selectedTheme,
       heartRemover: progress.heartRemover,
+      boardTheme: progress.selectedBoard,
       assistMode: progress.assistMode,
       arrowSpeed: progress.arrowSpeed,
       onLevelComplete: _onLevelComplete,
       onGameOver: _onGameOver,
       onLifeLost: isLifeFree ? () {} : _onLifeLost,
       gameMode: widget.gameMode,
-      onCombo: _triggerCombo,
+      // onCombo: _triggerCombo,
       onCameraShake: _triggerShake,
     );
     _gameState!.addListener(_onGameStateChanged);
@@ -212,25 +222,72 @@ class _GameScreenState extends ConsumerState<GameScreen>
     setState(() => _lives = _gameState!.lives);
   }
 
-  void _onLevelComplete() {
+  Future<void> _onLevelComplete() async {
     if (!mounted || _showingComplete) return;
     _levelTimer?.cancel();
     AudioHapticHelper.playSuccess(isLast: true);
     setState(() => _showingComplete = true);
 
     final progress = ref.read(progressRepositoryProvider);
+    final coinsRepo = ref.read(coinsRepositoryProvider);
     final stars = ProgressRepository.calculateStars(_gameState!.livesLost);
 
+    int coinsEarned = 0;
+    int itemsEarned = 0;
+
+    // Award coins only for non-random classic levels
     if (!widget.isRandom && widget.gameMode == GameMode.classic) {
-      progress.recordLevelComplete(LevelResult(
-        levelNumber: _level.levelNumber,
+      final levelNum = _level.levelNumber;
+      final wasAlreadyBeaten = progress.isLevelCompleted(levelNum);
+
+      if (!wasAlreadyBeaten) {
+        // First clear
+        coinsEarned = CoinRewards.firstClearCoins(levelNum) +
+            CoinRewards.starBonus(stars) +
+            CoinRewards.milestoneCoins(levelNum);
+
+        // 5% random item drop
+        if (Random().nextDouble() < 0.05) {
+          await coinsRepo.addRandomItems(1);
+        }
+      } else {
+        // Replay — tier-locked (0 if outside current tier)
+        coinsEarned = CoinRewards.replayCoins(
+          level: levelNum,
+          stars: stars,
+          currentLevel: progress.currentLevel,
+        );
+      }
+
+      // 1) Record completion FIRST so threeStarCount reflects this level
+      await progress.recordLevelComplete(LevelResult(
+        levelNumber: levelNum,
         stars: stars,
         livesLost: _gameState!.livesLost,
         completed: true,
         completedAt: DateTime.now(),
       ));
+
+      // 2) Check for milestone item packs (every 5 three-star levels)
+      final packsEarned = await progress.consumePendingItemMilestones();
+      if (packsEarned > 0) {
+        itemsEarned = packsEarned;
+        _pendingMilestoneItems = packsEarned;
+        await coinsRepo.addRandomItems(itemsEarned);
+        debugPrint('🎁 Milestone: +$itemsEarned random item(s)');
+      } else {
+        _pendingMilestoneItems = 0;
+      }
+
+      // 3) Award coins
+      if (coinsEarned > 0) {
+        await coinsRepo.addCoins(coinsEarned);
+        debugPrint('💰 Earned $coinsEarned coins (level $levelNum, '
+            '${wasAlreadyBeaten ? "replay" : "first clear"})');
+      }
     }
 
+    // Route to the correct UI based on game mode
     if (widget.gameMode == GameMode.timeAttack) {
       setState(() {
         _timeRemaining = (_timeRemaining + 15).clamp(0, 99);
@@ -246,9 +303,57 @@ class _GameScreenState extends ConsumerState<GameScreen>
       });
     } else {
       Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) _showLevelCompleteDialog(stars);
+        if (mounted) _showLevelCompleteDialog(stars, coinsEarned);
       });
     }
+  }
+
+  Future<void> _checkForUnlocks({required VoidCallback after}) async {
+    final progress = ref.read(progressRepositoryProvider);
+    final pending = progress.getPendingCelebration();
+
+    if (pending.isEmpty) {
+      after();
+      return;
+    }
+
+    for (final board in pending) {
+      if (!mounted) return;
+      await progress.markCelebrationShown(board);
+
+      bool shouldContinue = false;
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          opaque: true,
+          transitionDuration: const Duration(milliseconds: 400),
+          pageBuilder: (_, __, ___) => UnlockCelebrationScreen(
+            board: board,
+            coinsEarned: 0, // wire up coins later
+            onResume: () {
+              Navigator.pop(context);
+              shouldContinue = true;
+            },
+            onMainMenu: () {
+              Navigator.pop(context);
+              Navigator.popUntil(context, (r) => r.isFirst);
+              ref.read(currentTabProvider.notifier).state = 0;
+            },
+            onCheckInventory: () {
+              Navigator.pop(context);
+              Navigator.popUntil(context, (r) => r.isFirst);
+              ref.read(currentTabProvider.notifier).state = 2;
+            },
+          ),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
+
+      if (!shouldContinue) return;
+    }
+
+    after();
   }
 
   void _onGameOver() {
@@ -267,6 +372,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       setState(() {
         _showingGameOver = false;
         _showingComplete = false;
+        _usedAdRewardThisLevel = false;
         _game.resetLevel();
         _lives = isLifeFree ? 999 : AppConstants.maxLives;
         _resetTimerForLevel();
@@ -301,101 +407,99 @@ class _GameScreenState extends ConsumerState<GameScreen>
     Navigator.popUntil(context, (route) => route.isFirst);
   }
 
-  Future<bool> _confirmLeaveLevel() async {
-    if (_showingComplete || _showingGameOver) return true;
-    final progress = ref.read(progressRepositoryProvider);
-    final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
-    final textPrimary = AppColors.textPrimary(context);
-    final textSecondary = AppColors.textSecondary(context);
+  // Future<bool> _confirmLeaveLevel() async {
+  //   if (_showingComplete || _showingGameOver) return true;
+  //   final progress = ref.read(progressRepositoryProvider);
+  //   final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
+  //   final textPrimary = AppColors.textPrimary(context);
+  //   final textSecondary = AppColors.textSecondary(context);
+  //
+  //   final result = await showDialog<bool>(
+  //     context: context,
+  //     builder: (ctx) => Dialog(
+  //       backgroundColor: Colors.transparent,
+  //       child: Container(
+  //         padding: const EdgeInsets.all(24),
+  //         decoration: BoxDecoration(
+  //           color: themeColors.surface,
+  //           borderRadius: BorderRadius.circular(24),
+  //           border: Border.all(
+  //             color: themeColors.accentColor.withValues(alpha: 0.35),
+  //             width: 2.5,
+  //           ),
+  //           boxShadow: [
+  //             BoxShadow(
+  //               color: themeColors.accentColor.withValues(alpha: 0.18),
+  //               blurRadius: 32,
+  //             ),
+  //           ],
+  //         ),
+  //         child: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             Icon(
+  //               Icons.exit_to_app_rounded,
+  //               color: themeColors.accentColor,
+  //               size: 48,
+  //             ),
+  //             const SizedBox(height: 12),
+  //             Text(
+  //               'Leave Level?',
+  //               style: TextStyle(
+  //                 fontSize: 22,
+  //                 fontWeight: FontWeight.w900,
+  //                 color: textPrimary,
+  //               ),
+  //             ),
+  //             const SizedBox(height: 8),
+  //             Text(
+  //               'Your current level progress will be lost.',
+  //               textAlign: TextAlign.center,
+  //               style: TextStyle(
+  //                 fontSize: 14,
+  //                 fontWeight: FontWeight.w500,
+  //                 color: textSecondary,
+  //               ),
+  //             ),
+  //             const SizedBox(height: 20),
+  //             GameDialogButton(
+  //               label: 'Resume',
+  //               icon: Icons.play_arrow_rounded,
+  //               textColor: textPrimary,
+  //               iconColor: themeColors.accentColor,
+  //               onTap: () => Navigator.pop(ctx, false),
+  //             ),
+  //             const SizedBox(height: 10),
+  //             GameDialogButton(
+  //               label: 'Leave',
+  //               icon: Icons.close_rounded,
+  //               textColor: textSecondary,
+  //               iconColor: themeColors.accentColor,
+  //               onTap: () => Navigator.pop(ctx, true),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  //   return result ?? false;
+  // }
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: themeColors.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: themeColors.accentColor.withValues(alpha: 0.35),
-              width: 2.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: themeColors.accentColor.withValues(alpha: 0.18),
-                blurRadius: 32,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.exit_to_app_rounded,
-                color: themeColors.accentColor,
-                size: 48,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Leave Level?',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Your current level progress will be lost.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: textSecondary,
-                ),
-              ),
-              const SizedBox(height: 20),
-              GameDialogButton(
-                label: 'Resume',
-                icon: Icons.play_arrow_rounded,
-                textColor: textPrimary,
-                iconColor: themeColors.accentColor,
-                onTap: () => Navigator.pop(ctx, false),
-              ),
-              const SizedBox(height: 10),
-              GameDialogButton(
-                label: 'Leave',
-                icon: Icons.close_rounded,
-                textColor: textSecondary,
-                iconColor: themeColors.accentColor,
-                onTap: () => Navigator.pop(ctx, true),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    return result ?? false;
-  }
-
-  Future<void> _handleBack() async {
-    final shouldLeave = await _confirmLeaveLevel();
-    if (!shouldLeave || !mounted) return;
-    Navigator.popUntil(context, (route) => route.isFirst);
-  }
 
   void _handleNextLevel() {
     Navigator.pop(context);
-    _goToNextLevelInPlace();
+    _checkForUnlocks(after: _goToNextLevelInPlace);
   }
 
   void _handleMenu() {
     Navigator.pop(context);
-    Navigator.popUntil(context, (route) => route.isFirst);
+    _checkForUnlocks(after: () {
+      Navigator.popUntil(context, (r) => r.isFirst);
+      ref.read(currentTabProvider.notifier).state = 0;
+    });
   }
 
-  Future<void> _showLevelCompleteDialog(int stars) async {
+  Future<void> _showLevelCompleteDialog(int stars, int coinsEarned) async {
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -403,6 +507,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
         level: _level,
         stars: stars,
         isRandom: widget.isRandom,
+        baseCoins: coinsEarned,
+        baseItems: _pendingMilestoneItems,
         onNextLevel: _handleNextLevel,
         onMenu: _handleMenu,
       ),
@@ -426,11 +532,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
         (levelType == LevelType.boss && _level.levelNumber > 200);
 
     int continueTime = 0;
-    if (hasTimer && _gameState != null) {
+    int heartReward = 0;
+
+    if (_isTimeoutState) {
       final remainingArrows =
           _gameState!.arrows.where((a) => a.state != ArrowState.sliding).length;
-      continueTime =
-          _calculateContinueDuration(_level.levelNumber, remainingArrows);
+      continueTime = AdRewards.secondsForRemainingArrows(remainingArrows);
+    } else {
+      heartReward = AdRewards.heartsForLevel(_level.levelNumber);
     }
 
     await showDialog(
@@ -440,19 +549,24 @@ class _GameScreenState extends ConsumerState<GameScreen>
         level: _level,
         isTimeout: _isTimeoutState,
         continueTime: continueTime,
+        heartReward: heartReward,
+        adRewardAvailable: !_usedAdRewardThisLevel,   // ← NEW
         gameMode: widget.gameMode,
         score: _timeAttackScore,
         onContinue: () {
           Navigator.pop(context);
           setState(() {
             _showingGameOver = false;
+            _usedAdRewardThisLevel = true;             // ← NEW
             if (_isTimeoutState) {
               _timeRemaining = continueTime;
               _isTimeoutState = false;
               _gameState!.resumeFromTimeout();
               _startLevelTimer();
             } else {
-              _gameState!.restoreLife();
+              for (int i = 0; i < heartReward; i++) {
+                _gameState!.restoreLife();
+              }
               _lives = _gameState!.lives;
             }
           });
@@ -589,7 +703,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   @override
   Widget build(BuildContext context) {
     final progressState = ref.watch(progressRepositoryProvider);
-    final themeColors = AppThemes.getThemeColors(progressState.selectedTheme);
+    // final themeColors = AppThemes.getThemeColors(progressState.selectedTheme);
 
     if (_isLoadingLevel || !_isLevelReady) {
       return const LevelLoadingScreen();
@@ -616,7 +730,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
         body: Stack(
           children: [
             Container(
-              decoration: BoxDecoration(gradient: themeColors.bgGradient),
+              decoration: BoxDecoration(
+                gradient: BoardThemes.get(progressState.selectedBoard).gradient,
+              ),
               child: SafeArea(
                 child: Column(
                   children: [
@@ -626,6 +742,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
                       onPause: _togglePause,
                       gameMode: widget.gameMode,
                       score: _timeAttackScore,
+                      lives: _lives,
+                      heartRemover: progressState.heartRemover,
                     ),
                     if (_totalTime > 0 ||
                         widget.gameMode == GameMode.timeAttack)
@@ -665,45 +783,45 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                     ),
                                   ),
                                 ),
-                                if (_comboText != null)
-                                  Positioned(
-                                    top: 20,
-                                    child: RepaintBoundary(
-                                      child: Text(
-                                        _comboText!,
-                                        style: TextStyle(
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.w900,
-                                          color: AppColors.accent(context),
-                                          letterSpacing: 1.5,
-                                          shadows: [
-                                            const Shadow(
-                                              color: Colors.black87,
-                                              blurRadius: 12,
-                                              offset: Offset(0, 2),
-                                            ),
-                                            Shadow(
-                                              color: AppColors.accent(context),
-                                              blurRadius: 16,
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                          .animate()
-                                          .scale(
-                                        begin: const Offset(0.5, 0.5),
-                                        end: const Offset(1.15, 1.15),
-                                        duration: 200.ms,
-                                        curve: Curves.elasticOut,
-                                      )
-                                          .then()
-                                          .scale(
-                                        begin: const Offset(1.15, 1.15),
-                                        end: const Offset(1.0, 1.0),
-                                        duration: 100.ms,
-                                      ),
-                                    ),
-                                  ),
+                                // if (_comboText != null)
+                                //   Positioned(
+                                //     top: 20,
+                                //     child: RepaintBoundary(
+                                //       child: Text(
+                                //         _comboText!,
+                                //         style: TextStyle(
+                                //           fontSize: 26,
+                                //           fontWeight: FontWeight.w900,
+                                //           color: AppColors.accent(context),
+                                //           letterSpacing: 1.5,
+                                //           shadows: [
+                                //             const Shadow(
+                                //               color: Colors.black87,
+                                //               blurRadius: 12,
+                                //               offset: Offset(0, 2),
+                                //             ),
+                                //             Shadow(
+                                //               color: AppColors.accent(context),
+                                //               blurRadius: 16,
+                                //             ),
+                                //           ],
+                                //         ),
+                                //       )
+                                //           .animate()
+                                //           .scale(
+                                //         begin: const Offset(0.5, 0.5),
+                                //         end: const Offset(1.15, 1.15),
+                                //         duration: 200.ms,
+                                //         curve: Curves.elasticOut,
+                                //       )
+                                //           .then()
+                                //           .scale(
+                                //         begin: const Offset(1.15, 1.15),
+                                //         end: const Offset(1.0, 1.0),
+                                //         duration: 100.ms,
+                                //       ),
+                                //     ),
+                                //   ),
                                 if (_showBonusAnimation)
                                   Positioned(
                                     top: 60,

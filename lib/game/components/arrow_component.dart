@@ -20,6 +20,12 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   double _blockTime = 0.0;
   double _maxBlockSlide = 0.0;
   double _slideOffset = 0.0;
+  bool _isBombExiting = false;
+  Offset? _bombRockCenterPx;
+  double _bombSlideDuration = 0.0;
+  double _bombPopDuration = 0.0;
+  double _bombSlideThreshold = 0.0;
+  bool _bombImpactFired = false;
 
   static const double _kLongPressThreshold = 0.30; 
   double _longPressAccum = 0.0;
@@ -178,20 +184,54 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     final double speedMultiplier;
     switch (gameState.arrowSpeed) {
       case 0:
-        speedMultiplier = 1.5; // Slow
+        speedMultiplier = 1.5;
         break;
       case 2:
-        speedMultiplier = 0.6; // Fast
+        speedMultiplier = 0.6;
         break;
       case 1:
       default:
-        speedMultiplier = 1.0; // Normal
+        speedMultiplier = 1.0;
         break;
     }
-    _exitDuration = (0.4 + arrowModel.path.length * 0.08) * speedMultiplier;
+
+    if (arrowModel.type == ArrowType.bomb) {
+      // Locate the target rock for the slide destination
+      final rock = gameState.level.rocks.firstWhere(
+            (r) => r.id == arrowModel.targetRockId,
+        orElse: () => RockModel(
+          id: '',
+          row: arrowModel.path[0][0],
+          col: arrowModel.path[0][1],
+        ),
+      );
+
+      final head = arrowModel.path[0];
+      final distanceCells =
+          (rock.row - head[0]).abs() + (rock.col - head[1]).abs();
+
+      _bombSlideDuration = (0.12 + distanceCells * 0.06) * speedMultiplier;
+      _bombPopDuration = 0.4 * speedMultiplier;
+      _exitDuration = _bombSlideDuration + _bombPopDuration;
+      _bombSlideThreshold = _bombSlideDuration / _exitDuration;
+
+      _bombRockCenterPx = Offset(
+        (rock.col + 0.5) * cellSize,
+        (rock.row + 0.5) * cellSize,
+      );
+
+      _isBombExiting = true;
+      _bombImpactFired = false;
+      _deflectedExtension = null;
+    } else {
+      _isBombExiting = false;
+      _bombRockCenterPx = null;
+      _exitDuration = (0.4 + arrowModel.path.length * 0.08) * speedMultiplier;
+      _deflectedExtension = _buildDeflectedExtension();
+    }
+
     _exitProgress = 0.0;
     _isExiting = true;
-    _deflectedExtension = _buildDeflectedExtension();
     _invalidateCache();
   }
 
@@ -357,6 +397,15 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     if (_isExiting) {
       _exitProgress += dt / _exitDuration;
+
+      // Bomb impact: fire the rock removal the moment we hit the slide threshold
+      if (_isBombExiting &&
+          !_bombImpactFired &&
+          _exitProgress >= _bombSlideThreshold) {
+        _bombImpactFired = true;
+        gameState.removeRockOnImpact(arrowModel.id);
+      }
+
       if (_exitProgress >= 1.0) {
         removeFromParent();
         gameState.handleArrowExitCompleted(arrowModel.id);
@@ -384,29 +433,78 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   }
 
   @override
+  @override
   void render(Canvas canvas) {
     if (arrowModel.path.isEmpty) return;
 
     final bool hasPressScale = _pressScale != 1.0;
     if (hasPressScale) {
       final head = arrowModel.path[0];
-      final center = Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
+      final center =
+      Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
       canvas.save();
       canvas.translate(center.dx, center.dy);
       canvas.scale(_pressScale, _pressScale);
       canvas.translate(-center.dx, -center.dy);
     }
 
+    // Bomb slide + pop transform
+    final bool bombTransformActive =
+        _isBombExiting && _bombRockCenterPx != null;
+    if (bombTransformActive) {
+      final t = _exitProgress.clamp(0.0, 1.0);
+      final headCell = arrowModel.path.first;
+      final headCenterPx = Offset(
+        (headCell[1] + 0.5) * cellSize,
+        (headCell[0] + 0.5) * cellSize,
+      );
+
+      Offset slideOffset;
+      double popScale = 1.0;
+
+      if (t < _bombSlideThreshold) {
+        // Slide phase — ease toward the rock
+        final slideT = _bombSlideThreshold > 0
+            ? (t / _bombSlideThreshold).clamp(0.0, 1.0)
+            : 1.0;
+        slideOffset = (_bombRockCenterPx! - headCenterPx) * slideT;
+      } else {
+        // Pop phase — arrow is exactly at the rock
+        slideOffset = _bombRockCenterPx! - headCenterPx;
+        final popT = _bombSlideThreshold < 1.0
+            ? ((t - _bombSlideThreshold) / (1.0 - _bombSlideThreshold))
+            .clamp(0.0, 1.0)
+            : 1.0;
+
+        if (popT < 0.3) {
+          // Grow: 1.0 → 1.5
+          popScale = 1.0 + (popT / 0.3) * 0.5;
+        } else {
+          // Shrink: 1.5 → 0.0
+          final k = (popT - 0.3) / 0.7;
+          popScale = 1.5 * (1.0 - k);
+        }
+      }
+
+      canvas.save();
+      canvas.translate(slideOffset.dx, slideOffset.dy);
+      canvas.translate(_bombRockCenterPx!.dx, _bombRockCenterPx!.dy);
+      canvas.scale(popScale.clamp(0.01, 3.0));
+      canvas.translate(-_bombRockCenterPx!.dx, -_bombRockCenterPx!.dy);
+    }
+
     _cachedPathPx ??= arrowModel.path
-        .map((pt) => Offset((pt[1] + 0.5) * cellSize, (pt[0] + 0.5) * cellSize))
+        .map((pt) =>
+        Offset((pt[1] + 0.5) * cellSize, (pt[0] + 0.5) * cellSize))
         .toList();
     final pathPx = _cachedPathPx!;
 
     final List<Offset> pts;
     final bool isAnimatingNow = _isExiting || _isBlockedAnimating;
 
-    if (isAnimatingNow) {
-      
+    if (_isBombExiting) {
+      pts = pathPx;
+    } else if (isAnimatingNow) {
       if (_cachedTrack == null) {
         final delta = arrowModel.direction.delta;
         final headPx = pathPx.first;
@@ -419,7 +517,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
         } else {
           extCount = gameState.level.gridSize + 2;
           for (int i = extCount; i >= 1; i--) {
-            track.add(headPx + Offset(delta[1] * i * cellSize, delta[0] * i * cellSize));
+            track.add(headPx +
+                Offset(delta[1] * i * cellSize, delta[0] * i * cellSize));
           }
         }
         track.addAll(pathPx);
@@ -455,7 +554,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       if (_isExiting) {
         final consumedDots = gameState.getConsumedDotsForArrow(arrowModel.id);
         for (final dot in consumedDots) {
-          final dotPx = Offset((dot.col + 0.5) * cellSize, (dot.row + 0.5) * cellSize);
+          final dotPx =
+          Offset((dot.col + 0.5) * cellSize, (dot.row + 0.5) * cellSize);
           double? dotDist;
           for (int i = 0; i < track.length; i++) {
             if ((track[i] - dotPx).distanceSquared < 0.01) {
@@ -469,14 +569,14 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
         }
       }
     } else {
-      
       pts = pathPx;
     }
 
     if (pts.isEmpty) return;
 
     final mainColor = _color();
-    final sw = cellSize * 0.13; 
+    final isBombArrow = arrowModel.type == ArrowType.bomb;
+    final sw = cellSize * (isBombArrow ? 0.18 : 0.13);
 
     final Path bodyPath;
     if (isAnimatingNow) {
@@ -523,12 +623,92 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     _drawHead(canvas, pts, mainColor, sw);
 
+    // Bomb arrow — giant glowing ball, unmissable
+    if (arrowModel.type == ArrowType.bomb && pts.isNotEmpty) {
+      final glowPaint = Paint()
+        ..color = const Color(0xFFFF3D00).withValues(alpha: 0.55)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = sw * 4.0
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+      canvas.drawPath(bodyPath, glowPaint);
+
+      canvas.drawPath(
+        bodyPath,
+        Paint()
+          ..color = const Color(0xFFFF3D00)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = sw * 1.3
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
+      );
+
+      final tail = pts.last;
+      final ballRadius = cellSize * 0.42;
+
+      canvas.drawCircle(
+        tail,
+        ballRadius * 1.15,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.5)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+      );
+
+      canvas.drawCircle(
+          tail, ballRadius, Paint()..color = const Color(0xFF111111));
+
+      canvas.drawCircle(
+        tail,
+        ballRadius,
+        Paint()
+          ..color = const Color(0xFFFF3D00)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = ballRadius * 0.35,
+      );
+
+      canvas.drawCircle(
+        tail,
+        ballRadius * 0.55,
+        Paint()
+          ..color = const Color(0xFFFFD54F)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = ballRadius * 0.25,
+      );
+
+      final sparkCenter = tail + Offset(ballRadius * 0.9, -ballRadius * 0.9);
+
+      canvas.drawCircle(
+        sparkCenter,
+        ballRadius * 0.45,
+        Paint()
+          ..color = const Color(0xFFFFD54F)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      );
+
+      canvas.drawCircle(
+        sparkCenter,
+        ballRadius * 0.28,
+        Paint()..color = const Color(0xFFFF6F00),
+      );
+
+      canvas.drawCircle(
+        sparkCenter,
+        ballRadius * 0.12,
+        Paint()..color = Colors.white,
+      );
+    }
+
     if (_isPreviewMode) {
       final preview = _previewPath;
       if (preview != null && preview.length >= 2) {
         final isBlocked = gameState.isArrowBlocked(arrowModel.id);
         _drawPreviewPath(canvas, preview, isBlocked);
       }
+    }
+
+    if (bombTransformActive) {
+      canvas.restore();
     }
 
     if (hasPressScale) {
@@ -661,6 +841,9 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   }
 
   Color _color() {
+    if (arrowModel.type == ArrowType.bomb) {
+      return const Color(0xFFFF3D00);
+    }
     if (arrowModel.state == ArrowState.blocked || _isBlockedAnimating) {
       return const Color(0xFF606060);
     }

@@ -1,8 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="Arrow Escape"
+        android:label="Arrow Puzzle: Tap Maze Escape"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+
+        <meta-data
+            android:name="com.unity3d.ads.unity.game.id"
+            android:value="800386220" />
+
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

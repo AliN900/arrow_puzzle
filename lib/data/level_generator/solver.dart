@@ -11,6 +11,28 @@ class LevelSolver {
     final orphanDots = level.orphanDots;
 
     final board = Uint16List(gridSize * gridSize);
+
+    // Rock cells that are still alive (destroyed rocks are removed by their bomb arrow)
+    final rockCells = <int>{};
+    final rocksById = <String, RockModel>{};
+    for (final rock in level.rocks) {
+      rockCells.add(rock.row * gridSize + rock.col);
+      rocksById[rock.id] = rock;
+    }
+
+    // Precompute target-rock cell per bomb arrow (or -1 if not a bomb)
+    final targetRockCellByArrow = <int, int>{};
+    for (int i = 0; i < arrows.length; i++) {
+      final a = arrows[i];
+      if (a.type == ArrowType.bomb && a.targetRockId != null) {
+        final rock = rocksById[a.targetRockId];
+        if (rock != null) {
+          targetRockCellByArrow[i] = rock.row * gridSize + rock.col;
+        }
+      }
+    }
+
+
     for (int i = 0; i < arrows.length; i++) {
       final arrow = arrows[i];
       for (final pt in arrow.path) {
@@ -71,7 +93,7 @@ class LevelSolver {
             exitVisited.fillRange(0, exitVisited.length, 0);
             exitToken = 1;
           }
-          final consumed = _simulateExit(i, gridSize, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken);
+          final consumed = _simulateExit(i, gridSize, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken, rockCells, targetRockCellByArrow);
           if (consumed == null) continue;
 
           bool consumesRedirector = false;
@@ -121,7 +143,7 @@ class LevelSolver {
           exitVisited.fillRange(0, exitVisited.length, 0);
           exitToken = 1;
         }
-        final consumed = _simulateExit(i, gridSize, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken);
+        final consumed = _simulateExit(i, gridSize, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken, rockCells, targetRockCellByArrow);
         if (consumed == null) continue;
 
         activeArrows[i] = false;
@@ -175,7 +197,9 @@ class LevelSolver {
       Uint8List orphanTypes,
       List<ArrowModel> arrows,
       Uint32List exitVisited,
-      int token) {
+      int token,
+      Set<int> rockCells,
+      Map<int, int> targetRockCellByArrow) {
     final arrow = arrows[arrowIdx];
     ArrowDirection currentDir = arrow.direction;
     final head = arrow.path[0];
@@ -184,8 +208,21 @@ class LevelSolver {
     int nc = head[1] + d[1];
     final consumed = <int>[];
 
+    final targetRockCell = targetRockCellByArrow[arrowIdx];
+
     while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
       final idx = nr * gridSize + nc;
+
+      // Bomb arrow reaching its target rock → success, rock is destroyed
+      if (targetRockCell != null && idx == targetRockCell) {
+        return consumed;
+      }
+
+      // Any other rock blocks the arrow
+      if (rockCells.contains(idx)) {
+        return null;
+      }
+
       if (exitVisited[idx] == token) return null;
       exitVisited[idx] = token;
 

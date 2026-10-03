@@ -1,6 +1,8 @@
+import 'package:arrow_puzzle/screens/settings/widgets/debug_level_jumper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
+import '../../core/constants.dart';
 import '../../main.dart';
 import 'widgets/settings_section_header.dart';
 import 'widgets/settings_card.dart';
@@ -164,48 +166,25 @@ class SettingsScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            // --- GENERAL ---
-            SettingsSectionHeader(title: 'GENERAL', color: textSecondary),
-            SettingsCard(
-              cardColor: cardColor,
-              children: [
-                SettingsNavTile(
-                  icon: Icons.share_outlined,
-                  title: 'Share with friends',
-                  onTap: () {/* TODO: Share */},
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                ),
-                divider,
-                SettingsNavTile(
-                  icon: Icons.star_outline_rounded,
-                  title: 'Rate the app',
-                  onTap: () {/* TODO: Rate */},
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                ),
-                divider,
-                SettingsNavTile(
-                  icon: Icons.favorite_border_rounded,
-                  title: 'Contact support',
-                  onTap: () {/* TODO: Contact */},
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
             // --- ABOUT ---
             SettingsSectionHeader(title: 'ABOUT', color: textSecondary),
             SettingsCard(
               cardColor: cardColor,
               children: [
                 SettingsNavTile(
+                  icon: Icons.share_outlined,
+                  title: 'Share with friends',
+                  onTap: () {
+                    // TODO: Share logic
+                  },
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                ),
+                divider,
+                SettingsNavTile(
                   icon: Icons.shield_outlined,
                   title: 'Privacy Policy',
-                  onTap: () {/* TODO: Privacy */},
+                  onTap: () {/* TODO */},
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
                 ),
@@ -213,7 +192,7 @@ class SettingsScreen extends ConsumerWidget {
                 SettingsNavTile(
                   icon: Icons.description_outlined,
                   title: 'Terms & Conditions',
-                  onTap: () {/* TODO: Terms */},
+                  onTap: () {/* TODO */},
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
                 ),
@@ -223,22 +202,31 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 40),
 
             Center(
-              child: Column(
-                children: [
-                  Text(
-                    'Arrows — Puzzle Escape',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: textPrimary,
+              child: GestureDetector(
+                // Long-press the version text to open the DEV menu
+                onLongPress: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => const DebugLevelJumper(),
+                  );
+                },
+                child: Column(
+                  children: [
+                    Text(
+                      AppConstants.appFullName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Version 1.0.0 (1)',
-                    style: TextStyle(fontSize: 14, color: textSecondary),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      'Version 1.0.0 (1)',
+                      style: TextStyle(fontSize: 14, color: textSecondary),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 40),

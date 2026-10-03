@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/board_themes.dart';
 import '../data/models/arrow.dart';
 import '../data/models/level.dart';
 import '../core/constants.dart';
@@ -6,9 +7,9 @@ import '../core/app_themes.dart';
 import '../core/game_mode.dart';
 
 class GameState extends ChangeNotifier {
-  
   late LevelModel _currentLevel;
   late List<ArrowModel> _arrows;
+  late List<RockModel> _rocks;
   int _lives = AppConstants.maxLives;
   int _livesLost = 0;
   bool _isComplete = false;
@@ -19,6 +20,7 @@ class GameState extends ChangeNotifier {
   final bool heartRemover;
   final bool assistMode;
   final int arrowSpeed;
+  final BoardTheme boardTheme;
 
   late Map<String, OrphanDotType> _orphanDots;
 
@@ -31,10 +33,10 @@ class GameState extends ChangeNotifier {
   final void Function()? onCombo;
   final void Function(Offset globalPos, Color color)? onParticleBurst;
   final void Function()? onCameraShake;
-  
+
   DateTime? _lastExitTime;
   int _comboCount = 0;
-  
+
   int get comboCount => _comboCount;
 
   GameState({
@@ -51,21 +53,28 @@ class GameState extends ChangeNotifier {
     this.onParticleBurst,
     this.onCameraShake,
     this.arrowSpeed = 1,
+    this.boardTheme = BoardTheme.minimal,
   }) {
     _currentLevel = level;
     _arrows = level.arrows.map((a) => a.copyWith()).toList();
+    _rocks = level.rocks.map((r) => r.copyWith()).toList();
     _orphanDots = {for (final od in level.orphanDots) od.key: od.type};
-    _lives = (gameMode == GameMode.zen || gameMode == GameMode.timeAttack || heartRemover) ? 999 : AppConstants.maxLives;
+    _lives = (gameMode == GameMode.zen ||
+        gameMode == GameMode.timeAttack ||
+        heartRemover)
+        ? 999
+        : AppConstants.maxLives;
   }
 
   List<ArrowModel> get arrows => _arrows;
+  List<RockModel> get rocks => _rocks;
   int get lives => _lives;
   int get livesLost => _livesLost;
   bool get isComplete => _isComplete;
   bool get isGameOver => _isGameOver;
   bool get isDeadlocked => _isDeadlocked;
   LevelModel get level => _currentLevel;
-  
+
   Map<String, OrphanDotType> get orphanDots => _orphanDots;
 
   void handleArrowExitCompleted(String arrowId) {
@@ -111,7 +120,7 @@ class GameState extends ChangeNotifier {
     final dots = <OrphanDot>[];
     for (final key in consumedKeys) {
       final match = _currentLevel.orphanDots.firstWhere(
-        (od) => od.key == key,
+            (od) => od.key == key,
         orElse: () {
           final parts = key.split(',');
           return OrphanDot(
@@ -145,7 +154,8 @@ class GameState extends ChangeNotifier {
     }
 
     final now = DateTime.now();
-    if (_lastExitTime != null && now.difference(_lastExitTime!).inMilliseconds < 1500) {
+    if (_lastExitTime != null &&
+        now.difference(_lastExitTime!).inMilliseconds < 1500) {
       _comboCount++;
       if (_comboCount >= 2) {
         onCombo?.call();
@@ -157,7 +167,11 @@ class GameState extends ChangeNotifier {
 
     _arrows[index] = arrow.copyWith(state: ArrowState.sliding);
     _recordConsumedDots(arrowId, exitInfo.consumed);
-    
+
+    // if (exitInfo.rockToDestroy != null) {
+    //   _rocks.removeWhere((r) => r.id == exitInfo.rockToDestroy);
+    // }
+
     for (final k in exitInfo.consumed) {
       _orphanDots.remove(k);
     }
@@ -166,14 +180,25 @@ class GameState extends ChangeNotifier {
     return TapResult.exited;
   }
 
+  void removeRockOnImpact(String arrowId) {
+    final idx = _arrows.indexWhere((a) => a.id == arrowId);
+    if (idx == -1) return;
+    final arrow = _arrows[idx];
+    if (arrow.targetRockId == null) return;
+    _rocks.removeWhere((r) => r.id == arrow.targetRockId);
+    notifyListeners();
+  }
+
   TapResult _handleBlocked(int index, ArrowModel arrow, String arrowId) {
     _arrows[index] = arrow.copyWith(state: ArrowState.blocked);
-    if (gameMode != GameMode.zen && gameMode != GameMode.timeAttack && !heartRemover) {
+    if (gameMode != GameMode.zen &&
+        gameMode != GameMode.timeAttack &&
+        !heartRemover) {
       _lives--;
       _livesLost++;
       onLifeLost();
     }
- 
+
     Future.delayed(AppConstants.arrowShakeDuration, () {
       final idx = _arrows.indexWhere((a) => a.id == arrowId);
       if (idx != -1) {
@@ -181,14 +206,17 @@ class GameState extends ChangeNotifier {
         notifyListeners();
       }
     });
- 
-    if (gameMode != GameMode.zen && gameMode != GameMode.timeAttack && !heartRemover && _lives <= 0) {
+
+    if (gameMode != GameMode.zen &&
+        gameMode != GameMode.timeAttack &&
+        !heartRemover &&
+        _lives <= 0) {
       _isGameOver = true;
       onGameOver();
       notifyListeners();
       return TapResult.blocked;
     }
- 
+
     notifyListeners();
     return TapResult.blocked;
   }
@@ -203,30 +231,60 @@ class GameState extends ChangeNotifier {
     final consumed = <String>[];
     final visited = <String>{};
 
+    final isBomb =
+        arrow.type == ArrowType.bomb && arrow.targetRockId != null;
+
     while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
       final key = '$nr,$nc';
       if (visited.contains(key)) return const _ExitInfo(true);
       visited.add(key);
 
+      // Rocks
+      RockModel? hitRock;
+      for (final rock in _rocks) {
+        if (rock.row == nr && rock.col == nc) {
+          hitRock = rock;
+          break;
+        }
+      }
+      if (hitRock != null) {
+        if (isBomb && hitRock.id == arrow.targetRockId) {
+          return _ExitInfo(false, consumed, hitRock.id);
+        }
+        return const _ExitInfo(true);
+      }
+
+      // Orphan dots (redirectors)
       if (_orphanDots.containsKey(key)) {
         consumed.add(key);
         final dotType = _orphanDots[key]!;
-        if (dotType == OrphanDotType.up) {
-          currentDir = ArrowDirection.up;
-        } else if (dotType == OrphanDotType.down) {
-          currentDir = ArrowDirection.down;
-        } else if (dotType == OrphanDotType.left) {
-          currentDir = ArrowDirection.left;
-        } else if (dotType == OrphanDotType.right) {
-          currentDir = ArrowDirection.right;
+        switch (dotType) {
+          case OrphanDotType.up:
+            currentDir = ArrowDirection.up;
+            break;
+          case OrphanDotType.down:
+            currentDir = ArrowDirection.down;
+            break;
+          case OrphanDotType.left:
+            currentDir = ArrowDirection.left;
+            break;
+          case OrphanDotType.right:
+            currentDir = ArrowDirection.right;
+            break;
+          case OrphanDotType.neutral:
+            break;
         }
       } else {
+        // Other arrows block
         bool hit = false;
         for (final other in _arrows) {
           if (other.id == arrow.id) continue;
           if (other.state == ArrowState.sliding) continue;
           for (final pt in other.path) {
-            if (pt[0] == nr && pt[1] == nc) { hit = true; break; }
+            if (pt[0] == nr && pt[1] == nc) {
+              hit = true;
+              break;
+            }
           }
           if (hit) break;
         }
@@ -241,10 +299,19 @@ class GameState extends ChangeNotifier {
   }
 
   void resetLevel() {
-    _arrows = _currentLevel.arrows.map((a) => a.copyWith(state: ArrowState.idle)).toList();
-    _orphanDots = {for (final od in _currentLevel.orphanDots) od.key: od.type};
+    _arrows = _currentLevel.arrows
+        .map((a) => a.copyWith(state: ArrowState.idle))
+        .toList();
+    _rocks = _currentLevel.rocks.map((r) => r.copyWith()).toList();
+    _orphanDots = {
+      for (final od in _currentLevel.orphanDots) od.key: od.type
+    };
     _consumedDotsByArrow.clear();
-    _lives = (gameMode == GameMode.zen || gameMode == GameMode.timeAttack || heartRemover) ? 999 : AppConstants.maxLives;
+    _lives = (gameMode == GameMode.zen ||
+        gameMode == GameMode.timeAttack ||
+        heartRemover)
+        ? 999
+        : AppConstants.maxLives;
     _livesLost = 0;
     _isComplete = false;
     _isGameOver = false;
@@ -278,6 +345,7 @@ enum TapResult { exited, blocked, ignored }
 
 class _ExitInfo {
   final bool blocked;
-  final List<String> consumed; 
-  const _ExitInfo(this.blocked, [this.consumed = const []]);
+  final List<String> consumed;
+  final String? rockToDestroy;
+  const _ExitInfo(this.blocked, [this.consumed = const [], this.rockToDestroy]);
 }
