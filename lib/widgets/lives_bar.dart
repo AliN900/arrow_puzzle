@@ -10,6 +10,10 @@ class LivesBar extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Ensure maxLives respects the level cap (e.g. 2 for levels 1-25)
+    // while safely accommodating temporary life flasks if lives exceed maxLives.
+    final effectiveMaxLives = maxLives < lives ? lives : maxLives;
+
     final controller = useAnimationController(
       duration: const Duration(milliseconds: 1000),
     );
@@ -40,7 +44,7 @@ class LivesBar extends HookWidget {
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(maxLives, (i) {
+      children: List.generate(effectiveMaxLives, (i) {
         final isFull = i < lives;
 
         final heartWidget = Stack(

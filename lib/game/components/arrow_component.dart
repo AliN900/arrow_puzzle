@@ -113,6 +113,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _invalidateCache();
   }
 
+
   int _minR = 0, _maxR = 0, _minC = 0, _maxC = 0;
 
   void _computeBounds() {
@@ -682,6 +683,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       ..strokeWidth = sw;
     canvas.drawPath(caretPath, _headPaint);
   }
+
+
 
   Path _buildCaretPath(List<Offset> pts, double sw) {
     final prev = pts.length > 1 ? pts[1] : pts.first;

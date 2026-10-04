@@ -6,6 +6,7 @@ import '../../core/board_themes.dart';
 import '../../core/items.dart';
 import '../../core/store_prices.dart';
 import '../../main.dart';
+import '../../widgets/coin_icon.dart';
 import '../../widgets/pop_dialog.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
@@ -24,15 +25,18 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
     final accent = AppColors.accent(context);
+    final coins = ref.watch(coinsRepositoryProvider).coins;
 
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
         child: Column(
           children: [
+            // ── HEADER WITH INVENTORY TITLE & COIN COUNTER ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Inventory',
@@ -42,10 +46,38 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       color: textPrimary,
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD54F).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFFFD54F).withValues(alpha: 0.4),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CoinIcon(size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$coins',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+
+            // ── TABS ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -64,6 +96,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // ── GRIDS / LISTS ──
             Expanded(
               child: _tab == 0
                   ? const _ArrowsGrid()
@@ -163,7 +197,7 @@ class _ArrowsGrid extends ConsumerWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: 0.8,
+              childAspectRatio: 0.76,
             ),
             delegate: SliverChildBuilderDelegate((context, index) {
               final theme = GameTheme.values[index];
@@ -266,11 +300,7 @@ class _ArrowsGrid extends ConsumerWidget {
                               else
                                 Row(
                                   children: [
-                                    const Icon(
-                                      Icons.circle,
-                                      color: coinYellow,
-                                      size: 10,
-                                    ),
+                                    const CoinIcon(size: 12),
                                     const SizedBox(width: 4),
                                     Text(
                                       '$price',
@@ -354,7 +384,7 @@ class _BoardsGrid extends ConsumerWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: 0.8,
+              childAspectRatio: 0.76,
             ),
             delegate: SliverChildBuilderDelegate((context, index) {
               final board = boards[index];
@@ -496,11 +526,7 @@ class _BoardsGrid extends ConsumerWidget {
                               else if (price != null)
                                 Row(
                                   children: [
-                                    const Icon(
-                                      Icons.circle,
-                                      color: coinYellow,
-                                      size: 10,
-                                    ),
+                                    const CoinIcon(size: 12),
                                     const SizedBox(width: 4),
                                     Text(
                                       '$price',
@@ -537,7 +563,7 @@ class _BoardsGrid extends ConsumerWidget {
 }
 
 // ══════════════════════════════════════════════════════════════
-// ITEMS (placeholder)
+// ITEMS
 // ══════════════════════════════════════════════════════════════
 
 class _ItemsGrid extends ConsumerWidget {
@@ -590,7 +616,7 @@ class _ItemsGrid extends ConsumerWidget {
         final owned = coinsRepo.getItemCount(item);
 
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(20),
@@ -599,15 +625,15 @@ class _ItemsGrid extends ConsumerWidget {
             children: [
               // Icon
               Container(
-                width: 56,
-                height: 56,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(item.icon, color: accent, size: 30),
+                child: Icon(item.icon, color: accent, size: 28),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
 
               // Name + description + owned
               Expanded(
@@ -616,27 +642,30 @@ class _ItemsGrid extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          item.displayName,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: textPrimary,
+                        Flexible(
+                          child: Text(
+                            item.displayName,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              color: textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (owned > 0) ...[
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: accent.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               '×$owned',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w900,
                                 color: accent,
                               ),
@@ -648,17 +677,21 @@ class _ItemsGrid extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       item.description,
-                      style: TextStyle(fontSize: 12, color: textSecondary),
+                      style: TextStyle(fontSize: 11.5, color: textSecondary),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
 
-              // Buy button
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  ...ItemPricing.bundlesFor(item).map((bundle) {
+              // Buy buttons (constrained to prevent overflow)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 95),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: ItemPricing.bundlesFor(item).map((bundle) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: ElevatedButton(
@@ -666,13 +699,12 @@ class _ItemsGrid extends ConsumerWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: coinYellow,
                           foregroundColor: const Color(0xFF5D4A1A),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        // WRAP IN FITTEDBOX TO PREVENT OVERFLOW
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Row(
@@ -681,17 +713,17 @@ class _ItemsGrid extends ConsumerWidget {
                               Text(
                                 '×${bundle.count}',
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.circle, color: Color(0xFF5D4A1A), size: 8),
+                              const SizedBox(width: 4),
+                              const CoinIcon(size: 10, backgroundColor: Color(0xFF5D4A1A), textColor: Color(0xFFFFD54F)),
                               const SizedBox(width: 3),
                               Text(
                                 '${bundle.price}',
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -701,7 +733,7 @@ class _ItemsGrid extends ConsumerWidget {
                       ),
                     );
                   }).toList(),
-                ],
+                ),
               ),
             ],
           ),
@@ -752,7 +784,7 @@ class _ItemsGrid extends ConsumerWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.circle, color: coinYellow, size: 14),
+                  const CoinIcon(size: 16),
                   const SizedBox(width: 6),
                   Text(
                     '${bundle.price} coins',
@@ -825,7 +857,7 @@ Future<bool?> _showConfirmDialog(
 
   return showDialog<bool>(
     context: context,
-    builder: (ctx) => PopDialog( // Changed from Dialog to PopDialog
+    builder: (ctx) => PopDialog(
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
@@ -847,7 +879,7 @@ Future<bool?> _showConfirmDialog(
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.circle, color: coinYellow, size: 14),
+                const CoinIcon(size: 16),
                 const SizedBox(width: 6),
                 Text(
                   '$price coins',

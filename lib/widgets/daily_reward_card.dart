@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/app_colors.dart';
 import '../core/daily_rewards.dart';
 import '../main.dart';
+import 'coin_icon.dart';
 
 class DailyRewardCard extends ConsumerStatefulWidget {
   /// Called when the user finishes claiming (or skips) — used by the popup
@@ -56,7 +57,6 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
     final accent = AppColors.accent(context);
-    const coinYellow = Color(0xFFFFD54F);
 
     final canClaim = coinsRepo.canClaimDailyToday;
     final streakDay = coinsRepo.currentStreakDay;
@@ -154,24 +154,7 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: const BoxDecoration(
-                    color: coinYellow,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Text(
-                      '¢',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF5D4A1A),
-                      ),
-                    ),
-                  ),
-                ),
+                const CoinIcon(size: 26),
                 const SizedBox(width: 8),
                 Text(
                   '+$baseCoins coins',

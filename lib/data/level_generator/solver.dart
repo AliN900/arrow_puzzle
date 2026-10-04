@@ -3,14 +3,19 @@ import '../models/arrow.dart';
 import '../models/level.dart';
 
 class LevelSolver {
-  static const int maxStates = 5000; 
+  static const int maxStates = 5000;
 
   static List<String>? solve(LevelModel level, [int maxStatesLimit = maxStates]) {
     final gridSize = level.gridSize;
     final arrows = level.arrows;
     final orphanDots = level.orphanDots;
 
-    final board = Uint16List(gridSize * gridSize);
+    // Allocate buffers dynamically based on level.gridSize
+    final totalCells = gridSize * gridSize;
+    final board = Uint16List(totalCells);
+    final orphanTypes = Uint8List(totalCells);
+    final activeOrphans = List<bool>.filled(totalCells, false);
+    final exitVisited = Uint32List(totalCells);
 
     // Rock cells that are still alive (destroyed rocks are removed by their bomb arrow)
     final rockCells = <int>{};
@@ -32,7 +37,6 @@ class LevelSolver {
       }
     }
 
-
     for (int i = 0; i < arrows.length; i++) {
       final arrow = arrows[i];
       for (final pt in arrow.path) {
@@ -40,8 +44,6 @@ class LevelSolver {
       }
     }
 
-    final orphanTypes = Uint8List(gridSize * gridSize);
-    final activeOrphans = List<bool>.filled(gridSize * gridSize, false);
     for (final od in orphanDots) {
       final idx = od.row * gridSize + od.col;
       orphanTypes[idx] = od.type.index;
@@ -49,7 +51,7 @@ class LevelSolver {
     }
 
     final activeArrows = List<bool>.filled(arrows.length, true);
-    
+
     int arrowHash = 0;
     for (int i = 0; i < arrows.length; i++) {
       arrowHash ^= arrows[i].id.hashCode;
@@ -62,8 +64,6 @@ class LevelSolver {
     final visited = <String>{};
     final path = <String>[];
     int statesVisited = 0;
-
-    final exitVisited = Uint32List(gridSize * gridSize);
     int exitToken = 0;
 
     void undoGreedy(List<int> greedyList) {
@@ -93,12 +93,24 @@ class LevelSolver {
             exitVisited.fillRange(0, exitVisited.length, 0);
             exitToken = 1;
           }
-          final consumed = _simulateExit(i, gridSize, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken, rockCells, targetRockCellByArrow);
+          final consumed = _simulateExit(
+            i,
+            gridSize,
+            board,
+            activeOrphans,
+            orphanTypes,
+            arrows,
+            exitVisited,
+            exitToken,
+            rockCells,
+            targetRockCellByArrow,
+          );
           if (consumed == null) continue;
 
           bool consumesRedirector = false;
           for (final idx in consumed) {
-            if (activeOrphans[idx] && orphanTypes[idx] != OrphanDotType.neutral.index) {
+            if (activeOrphans[idx] &&
+                orphanTypes[idx] != OrphanDotType.neutral.index) {
               consumesRedirector = true;
               break;
             }
@@ -143,7 +155,18 @@ class LevelSolver {
           exitVisited.fillRange(0, exitVisited.length, 0);
           exitToken = 1;
         }
-        final consumed = _simulateExit(i, gridSize, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken, rockCells, targetRockCellByArrow);
+        final consumed = _simulateExit(
+          i,
+          gridSize,
+          board,
+          activeOrphans,
+          orphanTypes,
+          arrows,
+          exitVisited,
+          exitToken,
+          rockCells,
+          targetRockCellByArrow,
+        );
         if (consumed == null) continue;
 
         activeArrows[i] = false;
@@ -199,7 +222,8 @@ class LevelSolver {
       Uint32List exitVisited,
       int token,
       Set<int> rockCells,
-      Map<int, int> targetRockCellByArrow) {
+      Map<int, int> targetRockCellByArrow,
+      ) {
     final arrow = arrows[arrowIdx];
     ArrowDirection currentDir = arrow.direction;
     final head = arrow.path[0];
@@ -213,7 +237,7 @@ class LevelSolver {
     while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
       final idx = nr * gridSize + nc;
 
-      // Bomb arrow reaching its target rock → success, rock is destroyed
+      // Bomb arrow reaching its target rock -> success
       if (targetRockCell != null && idx == targetRockCell) {
         return consumed;
       }

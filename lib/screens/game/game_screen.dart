@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:arrow_puzzle/screens/game/widgets/telegraph_overlay.dart';
 import 'package:flutter/material.dart';
-import 'package:flame/game.dart';
+import 'package:flame/game.dart' hide Matrix4;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-
 import '../../core/ad_rewards.dart';
 import '../../core/board_themes.dart';
 import '../../core/coin_rewards.dart';
@@ -18,8 +18,9 @@ import '../../data/models/level_result.dart';
 import '../../data/repositories/progress_repository.dart';
 import '../../game/arrow_puzzle_game.dart';
 import '../../game/game_state.dart';
+import '../../game/game_state_modes_extension.dart';
+import '../../game/helpers/endless_spawner.dart';
 import '../../main.dart';
-
 import '../../widgets/game_item_bar.dart';
 import '../../widgets/unlock_celebration_screen.dart';
 import 'widgets/game_top_bar.dart';
@@ -35,13 +36,11 @@ class GameScreen extends ConsumerStatefulWidget {
   final bool isRandom;
   final GameMode gameMode;
 
-
   const GameScreen({
     super.key,
     required this.level,
     this.isRandom = false,
     this.gameMode = GameMode.classic,
-
   });
 
   @override
@@ -74,6 +73,83 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int _pendingMilestoneItems = 0;
   int _rocksBeforeBomb = 0;
 
+  // ---------------------------------------------------------------------------
+  // Board sizing / zoom
+  // ---------------------------------------------------------------------------
+  /// Preferred cell size at scale 1.0. Grows the board's intrinsic size
+  /// proportionally with `gridSize`, so large levels don't cram tiny cells.
+  static const double _kCellPx = 64.0;
+  static const double _kBoardPadding = 24.0;
+  static const int _kEndlessSpawnMinMs = 700;
+  static const int _kEndlessSpawnMaxMs = 3500;
+  Object? _lastFitKey;
+
+  final TransformationController _transformationController =
+  TransformationController();
+
+  /// Cell size for the current board. Endless Rush boards start huge
+  /// (16×16+), so we compress cells slightly as the grid grows to keep the
+  /// canvas from ballooning past the viewport.
+  double get _cellPx {
+    if (widget.gameMode == GameMode.endlessRush) {
+      final g = _gameState?.level.gridSize ?? 16;
+      return (64 - (g - 16) * 2).clamp(48, 64).toDouble();
+    }
+    return _kCellPx;
+  }
+
+  double get _contentSize =>
+      (_gameState?.level.gridSize ?? _level.gridSize) * _cellPx;
+  /// Endless Rush tuning.
+  static const int _kEndlessMinArrows = 50;
+  static int _startingGridForLevel(int level) {
+    // TEST: small board
+    return 5;
+  }
+
+  static int _initialArrowCountForLevel(int level, int startGrid) {
+    // TEST: exactly 5 arrows
+    return 5;
+  }
+
+  static int _maxGridForLevel(int level) {
+    // TEST: allow growing from 5 → 9
+    return 9;
+  }
+
+  // static int _startingGridForLevel(int level) {
+  //   return (16 + (level ~/ 150)).clamp(16, 19);
+  // }
+  //
+  // static int _initialArrowCountForLevel(int level, int startGrid) {
+  //   final target = _kEndlessMinArrows + (level ~/ 100) * 5;
+  //   // ~50 % cell fill, averaged at 2.5 cells/arrow.
+  //   final cap = (startGrid * startGrid / 5).floor();
+  //   return target.clamp(_kEndlessMinArrows, cap);
+  // }
+  //
+  // static int _maxGridForLevel(int level) {
+  //   return (_startingGridForLevel(level) + 3).clamp(16, 22);
+  // }
+
+  /// Applies a scale + translation matrix that centres [contentSize] inside a
+  /// viewport of [viewportSize] at the given [fitScale].
+  void _applyFitTransform({
+    required Size viewportSize,
+    required double contentSize,
+    required double fitScale,
+  }) {
+    final tx = (viewportSize.width - contentSize * fitScale) / 2;
+    final ty = (viewportSize.height - contentSize * fitScale) / 2;
+    _transformationController.value = Matrix4.identity()
+      ..translate(tx, ty)
+      ..scale(fitScale);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
   @override
   void initState() {
     super.initState();
@@ -93,6 +169,48 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
 
   Future<void> _loadLevelAsync(int levelNum) async {
+    if (widget.gameMode == GameMode.endlessRush) {
+      final startGrid = _startingGridForLevel(widget.level);
+      final maxGrid = _maxGridForLevel(widget.level);
+      final targetArrows =
+      _initialArrowCountForLevel(widget.level, startGrid);
+
+      final initialMask = <String>{
+        for (int r = 0; r < startGrid; r++)
+          for (int c = 0; c < startGrid; c++) '$r,$c'
+      };
+
+      // Populate via the solver-verified spawner so every arrow is guaranteed
+      // clearable in sequence. We loop until we hit the target or the spawner
+      // can no longer find a valid slot.
+      final generated = <ArrowModel>[];
+      for (int i = 0; i < targetArrows; i++) {
+        final arrow = EndlessSpawner.trySpawnArrow(
+          gridSize: startGrid,
+          existingArrows: generated,
+          rocks: const [],
+        );
+        if (arrow == null) break;
+        generated.add(arrow);
+      }
+
+      _endlessStartGrid = startGrid;
+      _endlessMaxGrid = maxGrid;
+
+      _level = LevelModel(
+        levelNumber: 999,
+        gridSize: startGrid,
+        arrows: generated,
+        rocks: [],
+        maskShape: MaskShape.square,
+        mask: initialMask,
+        orphanDots: [],
+      );
+      _initGame();
+      if (mounted) setState(() => _isLoadingLevel = false);
+      return;
+    }
+
     final levelRepo = ref.read(levelRepositoryProvider);
     final progress = ref.read(progressRepositoryProvider);
 
@@ -130,8 +248,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   double _shakeOffset = 0.0;
   Timer? _shakeTimer;
-  // String? _comboText;
-  // Timer? _comboTimer;
 
   void _triggerShake() {
     _shakeTimer?.cancel();
@@ -149,16 +265,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
-  // void _triggerCombo() {
-  //   if (_gameState == null) return;
-  //   final combo = _gameState!.comboCount;
-  //   _comboTimer?.cancel();
-  //   setState(() => _comboText = '$combo x COMBO');
-  //   _comboTimer = Timer(const Duration(milliseconds: 900), () {
-  //     if (mounted) setState(() => _comboText = null);
-  //   });
-  // }
-
   void _triggerTimeAttackBonusAnimation() {
     setState(() {
       _bonusText = '+15s';
@@ -169,31 +275,182 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
+
+  Timer? _endlessSpawnTimer;
+  int _endlessInitialArrowCount = 0;
+  int _endlessStartGrid = 16;
+  int _endlessMaxGrid = 19;
+  int _lastSeenArrowCount = -1;
+
+  /// Boots the endless-rush pressure loop. Call from _initGame.
+  void _startEndlessRush() {
+    _endlessSpawnTimer?.cancel();
+    final gs = _gameState;
+    if (gs == null) return;
+    _endlessInitialArrowCount = gs.arrows.length;
+    _tickEndlessRush();
+  }
+
+  /// Recursive scheduler. Every tick:
+  ///   1. win if board is empty
+  ///   2. gate spawns until 50% of the initial arrow count is cleared
+  ///   3. otherwise schedule a spawn whose delay shrinks as clearing progresses
+  ///      OR as elapsed time increases (slow background pressure).
+  void _tickEndlessRush() {
+    _endlessSpawnTimer?.cancel();
+    if (!mounted ||
+        _gameState == null ||
+        _isPaused ||
+        _isAppBackgrounded ||
+        _showingGameOver ||
+        _showingComplete) {
+      return;
+    }
+
+    final gs = _gameState!;
+    final realArrows = gs.arrows.length;
+    final telegraphs = gs.telegraphArrows.length;
+
+    // Win: nothing left on the board at all.
+    if (realArrows == 0 && telegraphs == 0) {
+      unawaited(_onLevelComplete());
+      return;
+    }
+
+    // ----------------------------------------------------------------
+    // LAST STAND: telegraphs don't count. Once only one *real* arrow
+    // remains, cancel any in-flight telegraph and stop spawning.
+    // ----------------------------------------------------------------
+    if (realArrows <= 1) {
+      if (telegraphs > 0) {
+        gs.cancelAllTelegraphs();
+        // notifyListeners already fired inside cancelAllTelegraphs.
+        // Re-check: it's possible the only thing left was the telegraph.
+        if (gs.arrows.isEmpty) {
+          unawaited(_onLevelComplete());
+          return;
+        }
+      }
+      _endlessSpawnTimer =
+          Timer(const Duration(milliseconds: 150), _tickEndlessRush);
+      return;
+    }
+
+    final initial = _endlessInitialArrowCount;
+    if (initial == 0) {
+      _endlessSpawnTimer =
+          Timer(const Duration(milliseconds: 300), _tickEndlessRush);
+      return;
+    }
+
+    // Gate: no spawns until 50 % of the initial board is cleared.
+    final clearedTotal = gs.clearedRushArrows;
+    final clearProgress = (clearedTotal / initial).clamp(0.0, 1.0);
+    if (clearProgress < 0.5) {
+      _endlessSpawnTimer =
+          Timer(const Duration(milliseconds: 300), _tickEndlessRush);
+      return;
+    }
+
+    // Pacing: delay scales with total board pressure (arrows + telegraphs).
+    // Telegraphs *do* count for pacing — we just don't let them gate last-stand.
+    final remaining = realArrows + telegraphs;
+    final remainingRatio = (remaining / initial).clamp(0.0, 1.0);
+    final delayMs = (_kEndlessSpawnMinMs +
+        ((_kEndlessSpawnMaxMs - _kEndlessSpawnMinMs) * remainingRatio))
+        .round();
+
+    _endlessSpawnTimer = Timer(Duration(milliseconds: delayMs), () {
+      if (!mounted || _gameState == null) return;
+
+      // Race guard: board may have thinned while the timer was pending.
+      final nowReal = _gameState!.arrows.length;
+      final nowTel = _gameState!.telegraphArrows.length;
+      if (nowReal > 1) {
+        _endlessAttemptSpawn();
+      } else if (nowTel > 0) {
+        // Entered last-stand while we waited — drop the pending telegraph.
+        _gameState!.cancelAllTelegraphs();
+      }
+      _tickEndlessRush();
+    });
+  }
+
+
+  /// One spawn attempt. Grows the grid when the board is getting cramped,
+  /// declares loss when the grid is maxed and still packed, otherwise spawns.
+  void _endlessAttemptSpawn() {
+    final gs = _gameState!;
+    final gridSize = gs.level.gridSize;
+    final maxGrid = _endlessMaxGrid;
+
+    final occupied = <String>{};
+    for (final a in gs.arrows) {
+      for (final p in a.path) occupied.add('${p[0]},${p[1]}');
+    }
+    for (final r in gs.rocks) {
+      occupied.add('${r.row},${r.col}');
+    }
+
+    final fillRatio = occupied.length / (gridSize * gridSize);
+
+    // Overwhelmed.
+    if (gridSize >= maxGrid && fillRatio > 0.95) {
+      _onGameOver();
+      return;
+    }
+
+    // Cramped → grow, but only past 70 % now.
+    if (fillRatio > 0.70 && gridSize < maxGrid) {
+      gs.growGrid(maxGridSize: maxGrid);
+      return;
+    }
+
+    // Normal spawn.
+    final spawned = gs.spawnEndlessArrowWithTelegraph();
+    if (!spawned) {
+      if (gridSize < maxGrid) {
+        gs.growGrid(maxGridSize: maxGrid);
+      } else {
+        _onGameOver();
+      }
+    }
+  }
+
+
   void _goToNextLevelInPlace() {
     final nextLevel = _level.levelNumber + 1;
     setState(() {
       _showingComplete = false;
       _showingGameOver = false;
       _loadedLevelNum = nextLevel;
+      _lastFitKey = null; // force re-fit for the new level
     });
     _loadLevelAsync(nextLevel);
   }
 
   void _initGame() {
     final progress = ref.read(progressRepositoryProvider);
+    final selectedTheme = progress.selectedTheme;
     final isLifeFree = widget.gameMode == GameMode.zen ||
         widget.gameMode == GameMode.timeAttack ||
+        widget.gameMode == GameMode.endlessRush ||
         progress.heartRemover;
-    _lives = isLifeFree ? 999 : AppConstants.maxLives;
+
+    final levelMaxLives = progress.getMaxLivesForLevel(widget.level);
+    _lives = isLifeFree ? 999 : levelMaxLives;
+
     _showingGameOver = false;
     _usedAdRewardThisLevel = false;
     _pendingMilestoneItems = 0;
     _itemUsesThisLevel.clear();
     _rocksBeforeBomb = 0;
     _gameState?.removeListener(_onGameStateChanged);
+
     _gameState = GameState(
       level: _level,
-      theme: progress.selectedTheme,
+      initialLives: _lives,
+      theme: selectedTheme,
       heartRemover: progress.heartRemover,
       boardTheme: progress.selectedBoard,
       assistMode: progress.assistMode,
@@ -202,7 +459,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       onGameOver: _onGameOver,
       onLifeLost: isLifeFree ? () {} : _onLifeLost,
       gameMode: widget.gameMode,
-      // onCombo: _triggerCombo,
       onCameraShake: _triggerShake,
     );
     _gameState!.addListener(_onGameStateChanged);
@@ -217,12 +473,21 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     _resetTimerForLevel();
 
+    // New game ⇒ new board ⇒ reset zoom fit next frame.
+    _lastFitKey = null;
+    _transformationController.value = Matrix4.identity();
+    if (widget.gameMode == GameMode.endlessRush) {
+      _startEndlessRush();
+    }
+    _lastSeenArrowCount = -1;
+    if (widget.gameMode == GameMode.endlessRush) {
+      _startEndlessRush();
+    }
   }
 
   void _onGameStateChanged() {
     if (!mounted) return;
 
-    // Detect bomb target hit — rock count dropped while armed
     if (_rocksBeforeBomb > 0 &&
         _gameState!.rocks.length < _rocksBeforeBomb) {
       final bombsUsed = _itemUsesThisLevel[ItemType.bomb] ?? 0;
@@ -234,6 +499,33 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
 
     setState(() => _lives = _gameState!.lives);
+
+    // Endless Rush: react *immediately* whenever the real-arrow count
+    // drops. Telegraph blinks notify 10×/sec, so we only act on change.
+    if (widget.gameMode == GameMode.endlessRush) {
+      final realArrows = _gameState!.arrows.length;
+      if (realArrows != _lastSeenArrowCount) {
+        _lastSeenArrowCount = realArrows;
+        _onEndlessArrowCountChanged(realArrows);
+      }
+    }
+  }
+
+  /// Fires the instant the count of *real* arrows (not telegraphs) drops.
+  /// If we've reached last-stand, cancel any blinking telegraph and
+  /// drop straight into the polling loop.
+  void _onEndlessArrowCountChanged(int realArrows) {
+    final gs = _gameState;
+    if (gs == null) return;
+
+    if (realArrows <= 1 && gs.telegraphArrows.isNotEmpty) {
+      gs.cancelAllTelegraphs();
+    }
+
+    if (realArrows <= 1) {
+      _endlessSpawnTimer?.cancel();
+      _tickEndlessRush();
+    }
   }
 
   void _onLifeLost() {
@@ -244,6 +536,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   Future<void> _onLevelComplete() async {
     if (!mounted || _showingComplete) return;
     _levelTimer?.cancel();
+    _endlessSpawnTimer?.cancel();
     AudioHapticHelper.playSuccess(isLast: true);
     setState(() => _showingComplete = true);
 
@@ -254,23 +547,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
     int coinsEarned = 0;
     int itemsEarned = 0;
 
-    // Award coins only for non-random classic levels
     if (!widget.isRandom && widget.gameMode == GameMode.classic) {
       final levelNum = _level.levelNumber;
       final wasAlreadyBeaten = progress.isLevelCompleted(levelNum);
 
       if (!wasAlreadyBeaten) {
-        // First clear
         coinsEarned = CoinRewards.firstClearCoins(levelNum) +
             CoinRewards.starBonus(stars) +
             CoinRewards.milestoneCoins(levelNum);
 
-        // 5% random item drop
         if (Random().nextDouble() < 0.05) {
           await coinsRepo.addRandomItems(1);
         }
       } else {
-        // Replay — tier-locked (0 if outside current tier)
         coinsEarned = CoinRewards.replayCoins(
           level: levelNum,
           stars: stars,
@@ -278,7 +567,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
         );
       }
 
-      // 1) Record completion FIRST so threeStarCount reflects this level
       await progress.recordLevelComplete(LevelResult(
         levelNumber: levelNum,
         stars: stars,
@@ -287,26 +575,20 @@ class _GameScreenState extends ConsumerState<GameScreen>
         completedAt: DateTime.now(),
       ));
 
-      // 2) Check for milestone item packs (every 5 three-star levels)
       final packsEarned = await progress.consumePendingItemMilestones();
       if (packsEarned > 0) {
         itemsEarned = packsEarned;
         _pendingMilestoneItems = packsEarned;
         await coinsRepo.addRandomItems(itemsEarned);
-        debugPrint('🎁 Milestone: +$itemsEarned random item(s)');
       } else {
         _pendingMilestoneItems = 0;
       }
 
-      // 3) Award coins
       if (coinsEarned > 0) {
         await coinsRepo.addCoins(coinsEarned);
-        debugPrint('💰 Earned $coinsEarned coins (level $levelNum, '
-            '${wasAlreadyBeaten ? "replay" : "first clear"})');
       }
     }
 
-    // Route to the correct UI based on game mode
     if (widget.gameMode == GameMode.timeAttack) {
       setState(() {
         _timeRemaining = (_timeRemaining + 15).clamp(0, 99);
@@ -347,7 +629,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
           transitionDuration: const Duration(milliseconds: 400),
           pageBuilder: (_, __, ___) => UnlockCelebrationScreen(
             board: board,
-            coinsEarned: 0, // wire up coins later
+            coinsEarned: 0,
             onResume: () {
               Navigator.pop(context);
               shouldContinue = true;
@@ -384,20 +666,40 @@ class _GameScreenState extends ConsumerState<GameScreen>
   }
 
   Future<void> _handleRestart() async {
-    if (mounted) {
-      final isLifeFree = widget.gameMode == GameMode.zen ||
-          widget.gameMode == GameMode.timeAttack ||
-          ref.read(progressRepositoryProvider).heartRemover;
+    if (!mounted) return;
+
+    // Endless rush must fully rebuild — gridSize can grow, so resetLevel()
+    // alone would leave the board expanded.
+    if (widget.gameMode == GameMode.endlessRush) {
+      _endlessSpawnTimer?.cancel();
       setState(() {
         _showingGameOver = false;
         _showingComplete = false;
         _usedAdRewardThisLevel = false;
-        _game.resetLevel();
-        _lives = isLifeFree ? 999 : AppConstants.maxLives;
-        _resetTimerForLevel();
         _itemUsesThisLevel.clear();
+        _lastFitKey = null;
+        _transformationController.value = Matrix4.identity();
       });
+      await _loadLevelAsync(widget.level);
+      return;
     }
+
+    // Classic / zen / time-attack: resetLevel is enough.
+    final isLifeFree = widget.gameMode == GameMode.zen ||
+        widget.gameMode == GameMode.timeAttack ||
+        ref.read(progressRepositoryProvider).heartRemover;
+
+    setState(() {
+      _showingGameOver = false;
+      _showingComplete = false;
+      _usedAdRewardThisLevel = false;
+      _game.resetLevel();
+      _lives = isLifeFree ? 999 : AppConstants.maxLives;
+      _resetTimerForLevel();
+      _itemUsesThisLevel.clear();
+      _lastFitKey = null;
+      _transformationController.value = Matrix4.identity();
+    });
   }
 
   Future<void> _useItem(ItemType item) async {
@@ -408,7 +710,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final isTimed =
         _totalTime > 0 || widget.gameMode == GameMode.timeAttack;
 
-    // ── 1) Compute max uses for this item ──
     int maxUses;
     switch (item) {
       case ItemType.hint:
@@ -429,7 +730,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final currentUses = _itemUsesThisLevel[item] ?? 0;
     if (currentUses >= maxUses) return;
 
-    // Timed level: Heart Flask + Time Freeze share 1 combined use
     if (isTimed &&
         (item == ItemType.heartFlask || item == ItemType.timeFreeze)) {
       final heartUsed = _itemUsesThisLevel[ItemType.heartFlask] ?? 0;
@@ -437,10 +737,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
       if (heartUsed + timeUsed >= 1) return;
     }
 
-    // ── 2) Apply effect ──
     switch (item) {
       case ItemType.heartFlask:
-      // Don't waste if hearts are already full
         if (_gameState!.lives >= AppConstants.maxLives) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -448,14 +746,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
               duration: Duration(seconds: 2),
             ),
           );
-          return; // do NOT consume
+          return;
         }
         _gameState!.restoreLife();
         setState(() => _lives = _gameState!.lives);
         break;
 
       case ItemType.timeFreeze:
-      // Don't waste before 30s has elapsed on classic timed levels
         if (widget.gameMode == GameMode.classic && _totalTime > 0) {
           final elapsed = _totalTime - _timeRemaining;
           if (elapsed < 30) {
@@ -466,7 +763,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 duration: const Duration(seconds: 2),
               ),
             );
-            return; // do NOT consume
+            return;
           }
         }
         setState(() => _timeRemaining += 30);
@@ -481,7 +778,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
             duration: Duration(seconds: 3),
           ),
         );
-        return; // Do NOT consume here — `_onGameStateChanged` handles it after the rock tap.
+        return;
 
       case ItemType.hint:
         final arrowId = _gameState!.findNextSolvableArrowId();
@@ -492,7 +789,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
               duration: Duration(seconds: 2),
             ),
           );
-          return; // do NOT consume
+          return;
         }
         _gameState!.setHintArrow(arrowId);
         Future.delayed(const Duration(seconds: 3), () {
@@ -509,12 +806,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
               duration: Duration(seconds: 2),
             ),
           );
-          return; // do NOT consume
+          return;
         }
         break;
     }
 
-    // ── 3) Consume the item + track the use ──
     await coinsRepo.spendItem(item);
     if (!mounted) return;
     setState(() {
@@ -549,8 +845,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     Navigator.popUntil(context, (route) => route.isFirst);
   }
 
-
-
   void _handleNextLevel() {
     Navigator.pop(context);
     _checkForUnlocks(after: _goToNextLevelInPlace);
@@ -569,7 +863,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       context: context,
       barrierDismissible: false,
       builder: (_) => LevelCompleteDialog(
-        level: _level,
+        level: _gameState?.level ?? _level,
         stars: stars,
         isRandom: widget.isRandom,
         baseCoins: coinsEarned,
@@ -587,14 +881,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _timeRemaining = 60;
       _timeAttackScore = 0;
       _loadedLevelNum = 1;
+      _lastFitKey = null;
     });
     _loadLevelAsync(1);
   }
 
   Future<void> _showGameOverDialog() async {
-    final levelType = AppConstants.levelTypeFor(_level.levelNumber);
-
-
     int continueTime = 0;
     int heartReward = 0;
 
@@ -614,14 +906,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
         isTimeout: _isTimeoutState,
         continueTime: continueTime,
         heartReward: heartReward,
-        adRewardAvailable: !_usedAdRewardThisLevel,   // ← NEW
+        adRewardAvailable: !_usedAdRewardThisLevel,
         gameMode: widget.gameMode,
         score: _timeAttackScore,
         onContinue: () {
           Navigator.pop(context);
           setState(() {
             _showingGameOver = false;
-            _usedAdRewardThisLevel = true;             // ← NEW
+            _usedAdRewardThisLevel = true;
             if (_isTimeoutState) {
               _timeRemaining = continueTime;
               _isTimeoutState = false;
@@ -653,8 +945,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   @override
   void dispose() {
+    _transformationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _levelTimer?.cancel();
+    _endlessSpawnTimer?.cancel();
+    _shakeTimer?.cancel();
     _gameState?.removeListener(_onGameStateChanged);
     super.dispose();
   }
@@ -687,7 +982,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     return 0;
   }
 
-
   void _resetTimerForLevel() {
     _levelTimer?.cancel();
     _isTimeoutState = false;
@@ -700,8 +994,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _startLevelTimer();
     } else if (widget.gameMode == GameMode.classic) {
       final levelType = AppConstants.levelTypeFor(_level.levelNumber);
-      final hasTimer = (levelType == LevelType.god && _level.levelNumber > 100) ||
-          (levelType == LevelType.boss && _level.levelNumber > 200);
+      final hasTimer =
+          (levelType == LevelType.god && _level.levelNumber > 100) ||
+              (levelType == LevelType.boss && _level.levelNumber > 200);
 
       if (hasTimer) {
         _totalTime = _calculateLevelTimerDuration(
@@ -754,7 +1049,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
   @override
   Widget build(BuildContext context) {
     final progressState = ref.watch(progressRepositoryProvider);
-    // final themeColors = AppThemes.getThemeColors(progressState.selectedTheme);
 
     if (_isLoadingLevel || !_isLevelReady) {
       return const LevelLoadingScreen();
@@ -772,7 +1066,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        // Android back gesture → open pause menu
         if (!_isPaused && !_showingComplete && !_showingGameOver) {
           _togglePause();
         }
@@ -788,7 +1081,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 child: Column(
                   children: [
                     GameTopBar(
-                      level: _level,
+                      level: _gameState?.level ?? _level,
                       isRandom: widget.isRandom,
                       onPause: _togglePause,
                       gameMode: widget.gameMode,
@@ -812,8 +1105,49 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          final boardSize = min(
-                              constraints.maxWidth, constraints.maxHeight - 16);
+                          final viewportSize = Size(
+                            constraints.maxWidth,
+                            constraints.maxHeight,
+                          );
+                          final contentSize = _contentSize;
+
+                          // Fit scale: how much we need to shrink the board
+                          // so it (plus padding) fits inside the viewport.
+                          final paddedW =
+                          (viewportSize.width - _kBoardPadding * 2)
+                              .clamp(1.0, double.infinity);
+                          final paddedH =
+                          (viewportSize.height - _kBoardPadding * 2)
+                              .clamp(1.0, double.infinity);
+                          final fitScale = min(
+                            paddedW / contentSize,
+                            paddedH / contentSize,
+                          );
+
+                          // Zoom range: allow zooming slightly further out
+                          // than the auto-fit, and in for detail.
+                          final minScale = (fitScale * 0.6).clamp(0.05, 1.0);
+                          final maxScale = max(3.0, fitScale * 4.0);
+
+                          final liveGridSize = _gameState?.level.gridSize ?? _level.gridSize;
+                          final fitKey = Object.hash(
+                            _gameState?.level.levelNumber ?? _level.levelNumber,
+                            liveGridSize,
+                            viewportSize.width,
+                            viewportSize.height,
+                          );
+                          if (_lastFitKey != fitKey) {
+                            _lastFitKey = fitKey;
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
+                              _applyFitTransform(
+                                viewportSize: viewportSize,
+                                contentSize: contentSize,
+                                fitScale: fitScale,
+                              );
+                            });
+                          }
+
                           return Transform.translate(
                             offset: Offset(_shakeOffset, 0),
                             child: Stack(
@@ -821,58 +1155,42 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               children: [
                                 RepaintBoundary(
                                   child: InteractiveViewer(
-                                    minScale: 0.8,
-                                    maxScale: 4.0,
-                                    boundaryMargin: const EdgeInsets.all(60),
+                                    transformationController:
+                                    _transformationController,
+                                    // Allow the board to be larger than the
+                                    // viewport; users can pan / zoom.
+                                    constrained: false,
+                                    minScale: minScale,
+                                    maxScale: maxScale,
+                                    boundaryMargin:
+                                    EdgeInsets.all(contentSize * 0.5),
                                     clipBehavior: Clip.hardEdge,
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: boardSize,
-                                        height: boardSize,
-                                        child: GameWidget(game: _game),
+                                    child: SizedBox(
+                                      width: contentSize,
+                                      height: contentSize,
+                                      child: Stack(
+                                        children: [
+                                          GameWidget(
+                                            key: ValueKey(
+                                              'game_widget_${_gameState?.level.levelNumber ?? _level.levelNumber}',
+                                            ),
+                                            game: _game,
+                                          ),
+                                          if (_gameState != null)
+                                            ListenableBuilder(
+                                              listenable: _gameState!,
+                                              builder: (context, _) {
+                                                return TelegraphOverlay(
+                                                  gameState: _gameState!,
+                                                  boardSize: contentSize,
+                                                );
+                                              },
+                                            ),
+                                        ],
                                       ),
                                     ),
                                   ),
                                 ),
-                                // if (_comboText != null)
-                                //   Positioned(
-                                //     top: 20,
-                                //     child: RepaintBoundary(
-                                //       child: Text(
-                                //         _comboText!,
-                                //         style: TextStyle(
-                                //           fontSize: 26,
-                                //           fontWeight: FontWeight.w900,
-                                //           color: AppColors.accent(context),
-                                //           letterSpacing: 1.5,
-                                //           shadows: [
-                                //             const Shadow(
-                                //               color: Colors.black87,
-                                //               blurRadius: 12,
-                                //               offset: Offset(0, 2),
-                                //             ),
-                                //             Shadow(
-                                //               color: AppColors.accent(context),
-                                //               blurRadius: 16,
-                                //             ),
-                                //           ],
-                                //         ),
-                                //       )
-                                //           .animate()
-                                //           .scale(
-                                //         begin: const Offset(0.5, 0.5),
-                                //         end: const Offset(1.15, 1.15),
-                                //         duration: 200.ms,
-                                //         curve: Curves.elasticOut,
-                                //       )
-                                //           .then()
-                                //           .scale(
-                                //         begin: const Offset(1.15, 1.15),
-                                //         end: const Offset(1.0, 1.0),
-                                //         duration: 100.ms,
-                                //       ),
-                                //     ),
-                                //   ),
                                 if (_showBonusAnimation)
                                   Positioned(
                                     top: 60,

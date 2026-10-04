@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants.dart';
 import '../../../core/game_mode.dart';
 import '../../../data/models/level.dart';
+import '../../../data/repositories/progress_repository.dart';
+import '../../../main.dart';
 import '../../../widgets/lives_bar.dart';
 
 class GameTopBar extends ConsumerWidget {
@@ -27,36 +29,58 @@ class GameTopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Formatted title — "Lv.007" for levels, or the mode name
     String titleText;
     if (gameMode == GameMode.timeAttack) {
       titleText = 'Score: $score';
     } else if (gameMode == GameMode.zen) {
       titleText = gameMode.label;
+    } else if (gameMode == GameMode.endlessRush) {
+      titleText = 'Arrow Rush';
     } else if (isRandom) {
       titleText = 'Random';
     } else {
-      titleText =
-      'Lv.${level.levelNumber.toString().padLeft(0, '0')}';
+      titleText = 'Lv.${level.levelNumber.toString().padLeft(3, '0')}';
     }
 
     final showHearts = !heartRemover && gameMode != GameMode.timeAttack;
 
     Widget? livesWidget;
     if (showHearts) {
-      if (gameMode == GameMode.zen) {
-        livesWidget = const Text(
-          '∞',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
+      final isInfiniteMode =
+          gameMode == GameMode.zen || gameMode == GameMode.endlessRush;
+
+      if (isInfiniteMode || lives > 5) {
+        livesWidget = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.redAccent.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.redAccent, width: 1.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 18),
+              const SizedBox(width: 4),
+              Text(
+                isInfiniteMode ? '∞' : '$lives',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+            ],
           ),
         );
       } else {
+        final maxLives = ref
+            .watch(progressRepositoryProvider)
+            .getMaxLivesForLevel(level.levelNumber);
+
         livesWidget = LivesBar(
           lives: lives,
-          maxLives: AppConstants.maxLives,
+          maxLives: maxLives,
         );
       }
     }
@@ -67,7 +91,6 @@ class GameTopBar extends ConsumerWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // CENTER — title
           Text(
             titleText,
             style: const TextStyle(
@@ -77,15 +100,11 @@ class GameTopBar extends ConsumerWidget {
               letterSpacing: 1.2,
             ),
           ),
-
-          // LEFT — hearts
           if (livesWidget != null)
             Align(
               alignment: Alignment.centerLeft,
               child: livesWidget,
             ),
-
-          // RIGHT — pause
           Align(
             alignment: Alignment.centerRight,
             child: GestureDetector(

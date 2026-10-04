@@ -1,11 +1,10 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_colors.dart';
+import '../../../core/audio_haptic_helper.dart';
 import '../../../core/game_mode.dart';
 import '../../../data/models/level.dart';
-import '../../../main.dart';
 import '../../../unity_rewarded_ad.dart';
 import 'game_dialog_button.dart';
 
@@ -42,21 +41,6 @@ class GameOverDialog extends ConsumerStatefulWidget {
 class _GameOverDialogState extends ConsumerState<GameOverDialog> {
   bool _isWatchingAd = false;
   bool _adRewardClaimed = false;
-  Timer? _ticker;
-
-  @override
-  void initState() {
-    super.initState();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _ticker?.cancel();
-    super.dispose();
-  }
 
   Future<void> _watchAd() async {
     if (_isWatchingAd || _adRewardClaimed) return;
@@ -97,10 +81,6 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
     const surface = Color(0xFF1E1E1E);
     const rewardGreen = Color(0xFF4CAF50);
 
-    final coinsRepo = ref.watch(coinsRepositoryProvider);
-    final canWatch = coinsRepo.canWatchRewardedAd;
-
-    // Title + subtitle based on state
     final String title;
     final IconData icon;
     final Color iconColor;
@@ -118,19 +98,17 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
       iconColor = accent;
     }
 
-    // Reward description
     final String rewardLabel = widget.isTimeout
         ? '+${widget.continueTime}s'
         : '+${widget.heartReward} ${widget.heartReward == 1 ? "heart" : "hearts"}';
 
-    // Show ad button only if available and not already claimed in this dialog
     final showAdOption =
         !isTimeAttack && !_adRewardClaimed && widget.adRewardAvailable;
 
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: surface,
           borderRadius: BorderRadius.circular(28),
@@ -175,58 +153,88 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
               ],
               const SizedBox(height: 20),
 
-              // Ad reward button
-              if (showAdOption)
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _isWatchingAd || !canWatch ? null : _watchAd,
-                    icon: _isWatchingAd
-                        ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: rewardGreen,
+              if (showAdOption) ...[
+                GestureDetector(
+                  onTap: () {
+                    AudioHapticHelper.playClick();
+                    if (!_isWatchingAd) _watchAd();
+                  },
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(12, 14, 28, 14),
+                        decoration: BoxDecoration(
+                          color: surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: rewardGreen, width: 1.5),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _isWatchingAd
+                                ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: rewardGreen,
+                              ),
+                            )
+                                : const Icon(
+                              Icons.play_circle_outline_rounded,
+                              color: rewardGreen,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  _isWatchingAd
+                                      ? 'Loading...'
+                                      : 'Watch ad → $rewardLabel',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: rewardGreen, // Matched to border & icon color
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    )
-                        : const Icon(
-                      Icons.play_circle_outline_rounded,
-                      size: 22,
-                    ),
-                    label: Text(
-                      _isWatchingAd
-                          ? 'Loading ad...'
-                          : canWatch
-                          ? 'Watch ad → $rewardLabel'
-                          : 'Daily ad limit reached',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
+                      Positioned(
+                        right: 8,
+                        bottom: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: rewardGreen.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: rewardGreen, width: 1),
+                          ),
+                          child: const Text(
+                            'AD',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              color: rewardGreen,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: rewardGreen,
-                      disabledForegroundColor:
-                      textSecondary.withValues(alpha: 0.5),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(
-                        color: canWatch
-                            ? rewardGreen.withValues(alpha: 0.5)
-                            : textSecondary.withValues(alpha: 0.2),
-                        width: 1.5,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 12),
+              ],
 
-              if (showAdOption) const SizedBox(height: 12),
-
-              // Restart
               GameDialogButton(
                 label: isTimeAttack ? 'Start New Run' : 'Restart Level',
                 icon: Icons.refresh_rounded,
@@ -236,7 +244,6 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
               ),
               const SizedBox(height: 10),
 
-              // Home
               GameDialogButton(
                 label: 'Home',
                 icon: Icons.home_rounded,

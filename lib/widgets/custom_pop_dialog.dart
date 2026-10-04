@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
-import 'pop_dialog.dart'; // Import the animation wrapper
+import 'pop_dialog.dart';
 
 class CustomPopDialog extends StatelessWidget {
   final String title;
@@ -29,7 +29,6 @@ class CustomPopDialog extends StatelessWidget {
     final textSecondary = AppColors.textSecondary(context);
     final accent = AppColors.accent(context);
 
-    // Use PopDialog to handle the shell and animation
     return PopDialog(
       child: Container(
         padding: const EdgeInsets.all(28),
@@ -95,7 +94,10 @@ class CustomPopDialog extends StatelessWidget {
                     ),
                     child: Text(
                       cancelText,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -103,8 +105,8 @@ class CustomPopDialog extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(context); // Close dialog first
-                      onConfirm(); // Then execute action
+                      Navigator.pop(context);
+                      onConfirm();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accent,
@@ -117,7 +119,10 @@ class CustomPopDialog extends StatelessWidget {
                     ),
                     child: Text(
                       confirmText,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),

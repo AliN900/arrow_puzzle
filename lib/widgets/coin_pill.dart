@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/app_colors.dart';
 import '../main.dart';
+import 'coin_icon.dart';
 
 class CoinPill extends ConsumerWidget {
   final VoidCallback? onTap;
@@ -28,24 +29,7 @@ class CoinPill extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 20,
-              height: 20,
-              decoration: const BoxDecoration(
-                color: coinYellow,
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text(
-                  '¢',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF5D4A1A),
-                  ),
-                ),
-              ),
-            ),
+            const CoinIcon(size: 20),
             const SizedBox(width: 8),
             Text(
               '$coins',

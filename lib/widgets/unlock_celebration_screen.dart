@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../core/board_themes.dart';
 import 'confetti_field.dart';
+import 'coin_icon.dart';
 
 class UnlockCelebrationScreen extends StatelessWidget {
   final BoardTheme board;
@@ -27,9 +28,6 @@ class UnlockCelebrationScreen extends StatelessWidget {
     final screenW = media.size.width;
     final screenH = media.size.height;
 
-    // Preview scales to fit BOTH width and height.
-    // On a tall phone: preview = 220 (max)
-    // On a small phone: preview shrinks to fit remaining vertical space.
     final previewByWidth = screenW - 100;
     final previewByHeight = screenH * 0.30;
     final previewSize =
@@ -254,24 +252,7 @@ class UnlockCelebrationScreen extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 26,
-            height: 26,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFD54F),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Text(
-                '¢',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF5D4A1A),
-                ),
-              ),
-            ),
-          ),
+          const CoinIcon(size: 26),
           const SizedBox(width: 10),
           Text(
             '+$coinsEarned COINS',
@@ -371,10 +352,6 @@ class UnlockCelebrationScreen extends StatelessWidget {
         .fadeIn(duration: 300.ms);
   }
 }
-
-// ============================================================
-// BOARD PREVIEW PAINTER
-// ============================================================
 
 class _BoardPreviewPainter extends CustomPainter {
   final BoardPattern pattern;

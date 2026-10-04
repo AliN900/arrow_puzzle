@@ -7,6 +7,7 @@ import '../models/level_result.dart';
 import '../../core/constants.dart';
 import '../../core/app_themes.dart';
 import '../../core/audio_haptic_helper.dart';
+import '../models/trophy.dart';
 
 class ProgressRepository extends ChangeNotifier {
   late Box _box;
@@ -108,6 +109,11 @@ class ProgressRepository extends ChangeNotifier {
     _heartRemover = _box.get('heartRemover', defaultValue: false);
     _assistMode = _box.get('assistMode', defaultValue: false);
     _complexPaths = _box.get('complexPaths', defaultValue: false);
+
+    // Load Unlocked Trophies from Hive
+    final trophiesList = _box.get('unlockedTrophies', defaultValue: <String>[]);
+    _unlockedTrophies.addAll((trophiesList as List).cast<String>());
+
     // Theme mode (stored as string)
     final themeModeStr = _box.get('themeMode', defaultValue: 'light');
     _themeMode = ThemeMode.values.firstWhere(
@@ -134,7 +140,6 @@ class ProgressRepository extends ChangeNotifier {
     );
     _itemsGrantedFromStars = _box.get('itemsGrantedFromStars', defaultValue: 0);
 
-    // Load new fields
     _soundEnabled = _box.get('soundEnabled', defaultValue: true);
     _musicEnabled = _box.get('musicEnabled', defaultValue: true);
     _arrowSpeed = _box.get('arrowSpeed', defaultValue: 0);
@@ -154,6 +159,9 @@ class ProgressRepository extends ChangeNotifier {
         }
       }
     }
+
+    // Retroactive check: Grant any trophies earned based on past level progress
+    _syncTrophiesWithProgress();
   }
 
   bool isBoardNew(BoardTheme board) => _newBoards.contains(board.name);
@@ -181,11 +189,67 @@ class ProgressRepository extends ChangeNotifier {
       'soundEnabled': _soundEnabled,
       'musicEnabled': _musicEnabled,
       'arrowSpeed': _arrowSpeed,
+      // ── ADDED: Save Unlocked Trophies to Hive ──
+      'unlockedTrophies': _unlockedTrophies.toList(),
     });
 
     for (final entry in _levelResults.entries) {
       await _resultsBox.put(entry.key.toString(), jsonEncode(entry.value.toJson()));
     }
+  }
+
+  void _syncTrophiesWithProgress() {
+    bool hasNewUnlock = false;
+    for (final trophy in TrophyConstants.allTrophies) {
+      final isEarned = _highestUnlockedLevel > trophy.unlockLevel ||
+          isLevelCompleted(trophy.unlockLevel) ||
+          _currentLevel > trophy.unlockLevel;
+      if (isEarned && !_unlockedTrophies.contains(trophy.id)) {
+        _unlockedTrophies.add(trophy.id);
+        hasNewUnlock = true;
+      }
+    }
+    if (hasNewUnlock) {
+      _save();
+    }
+  }
+
+  final Set<String> _unlockedTrophies = {};
+
+  Set<String> get unlockedTrophies => _unlockedTrophies;
+
+  bool isTrophyUnlocked(String trophyId) => _unlockedTrophies.contains(trophyId);
+
+  // Dynamic heart limit: Checks all possible trophy ID variations & perk types
+  int getMaxLivesForLevel(int levelNumber) {
+    if (levelNumber <= 25) {
+      return 2;
+    }
+
+    final isUnlocked = isTrophyUnlocked('survivalist') ||
+        isTrophyUnlocked('survivalist_badge') ||
+        isTrophyUnlocked('survivalist_trophy') ||
+        _unlockedTrophies.any((id) {
+          final match = TrophyConstants.allTrophies.where((t) => t.id == id);
+          return match.isNotEmpty && match.first.type == TrophyType.benefit;
+        });
+
+    if (isUnlocked) {
+      return 3;
+    }
+
+    return 2;
+  }
+
+  Future<void> checkAndUnlockTrophies(int completedLevel) async {
+    for (final trophy in TrophyConstants.allTrophies) {
+      if (completedLevel >= trophy.unlockLevel && !_unlockedTrophies.contains(trophy.id)) {
+        _unlockedTrophies.add(trophy.id);
+        debugPrint('🏆 Unlocked Trophy: ${trophy.title}');
+      }
+    }
+    await _save();
+    notifyListeners();
   }
 
   Future<void> setTheme(GameTheme theme) async {
@@ -252,6 +316,10 @@ class ProgressRepository extends ChangeNotifier {
     if (result.levelNumber >= _highestUnlockedLevel) {
       _highestUnlockedLevel = result.levelNumber + 1;
     }
+
+    // ── ADDED: Check and unlock trophies on every level completion ──
+    await checkAndUnlockTrophies(result.levelNumber);
+
     await _save();
     notifyListeners();
   }

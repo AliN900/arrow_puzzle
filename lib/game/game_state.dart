@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/board_themes.dart';
 import '../data/models/arrow.dart';
@@ -5,8 +6,10 @@ import '../data/models/level.dart';
 import '../core/constants.dart';
 import '../core/app_themes.dart';
 import '../core/game_mode.dart';
+import '../data/models/minesweeper_cell.dart';
 
 class GameState extends ChangeNotifier {
+  static const int kAbsoluteMaxGridSize = 15;
   late LevelModel _currentLevel;
   late List<ArrowModel> _arrows;
   late List<RockModel> _rocks;
@@ -21,9 +24,11 @@ class GameState extends ChangeNotifier {
   final bool assistMode;
   final int arrowSpeed;
   final BoardTheme boardTheme;
+  final int maxLives; // Dynamic max lives for this level session
   final List<ArrowModel> _escapedHistory = [];
   String? _hintArrowId;
   bool _isBombArmed = false;
+
 
   late Map<String, OrphanDotType> _orphanDots;
 
@@ -44,6 +49,7 @@ class GameState extends ChangeNotifier {
 
   GameState({
     required LevelModel level,
+    required int initialLives, // Accept dynamic initial lives from GameScreen
     required this.theme,
     required this.onLevelComplete,
     required this.onGameOver,
@@ -57,16 +63,16 @@ class GameState extends ChangeNotifier {
     this.onCameraShake,
     this.arrowSpeed = 1,
     this.boardTheme = BoardTheme.minimal,
-  }) {
+  })  : maxLives = initialLives,
+        _lives = (gameMode == GameMode.zen ||
+            gameMode == GameMode.timeAttack ||
+            heartRemover)
+            ? 999
+            : initialLives {
     _currentLevel = level;
     _arrows = level.arrows.map((a) => a.copyWith()).toList();
     _rocks = level.rocks.map((r) => r.copyWith()).toList();
     _orphanDots = {for (final od in level.orphanDots) od.key: od.type};
-    _lives = (gameMode == GameMode.zen ||
-        gameMode == GameMode.timeAttack ||
-        heartRemover)
-        ? 999
-        : AppConstants.maxLives;
   }
 
   List<ArrowModel> get arrows => _arrows;
@@ -83,6 +89,28 @@ class GameState extends ChangeNotifier {
 
   Map<String, OrphanDotType> get orphanDots => _orphanDots;
 
+  final List<ArrowModel> telegraphArrows = [];
+  /// IDs of telegraphs that were cancelled mid-blink. The blink timer in
+  /// `spawnEndlessArrowWithTelegraph` checks this before landing an arrow.
+  final Set<String> _cancelledTelegraphIds = {};
+
+  /// Cancel every in-flight telegraph. The pending blink timers will see the
+  /// cancellation flag and quietly abort instead of promoting to real arrows.
+  void cancelAllTelegraphs() {
+    if (telegraphArrows.isEmpty) return;
+    for (final t in telegraphArrows) {
+      _cancelledTelegraphIds.add(t.id);
+    }
+    telegraphArrows.clear();
+    notifyListeners();
+  }
+
+  bool isTelegraphCancelled(String id) =>
+      _cancelledTelegraphIds.contains(id);
+
+  void clearTelegraphCancellation(String id) =>
+      _cancelledTelegraphIds.remove(id);
+
   void handleArrowExitCompleted(String arrowId) {
     final idx = _arrows.indexWhere((a) => a.id == arrowId);
     if (idx != -1) {
@@ -91,8 +119,13 @@ class GameState extends ChangeNotifier {
     _arrows.removeWhere((a) => a.id == arrowId);
     _consumedDotsByArrow.remove(arrowId);
 
-    if (_arrows.isEmpty) {
+    if (gameMode == GameMode.endlessRush) {
+      notifyArrowCleared();
+    }
+
+    if (_arrows.isEmpty && telegraphArrows.isEmpty) {
       _isComplete = true;
+      telegraphArrows.clear();  // kill any in-flight blinks
       onLevelComplete();
     } else {
       if (checkDeadlock()) {
@@ -100,6 +133,15 @@ class GameState extends ChangeNotifier {
         onDeadlock?.call();
       }
     }
+    notifyListeners();
+  }
+
+  int _failedSpawnCount = 0;
+  int get failedSpawnCount => _failedSpawnCount;
+  set failedSpawnCount(int val) => _failedSpawnCount = val;
+
+  void setLevel(LevelModel updatedLevel) {
+    _currentLevel = updatedLevel;
     notifyListeners();
   }
 
@@ -112,6 +154,42 @@ class GameState extends ChangeNotifier {
         return false;
       }
     }
+    return true;
+  }
+
+  // Inside GameState class:
+  int _clearedRushArrows = 0;
+  int get clearedRushArrows => _clearedRushArrows;
+
+  void notifyArrowCleared() {
+    _clearedRushArrows++;
+    notifyListeners();
+  }
+
+  /// Grows the grid by one cell in both directions.
+  /// [maxGridSize] caps growth (caller supplies the level-specific limit).
+  bool growGrid({int? maxGridSize}) {
+    final limit = maxGridSize ?? kAbsoluteMaxGridSize;
+    if (_currentLevel.gridSize >= limit) return false;
+    final newSize = _currentLevel.gridSize + 1;
+
+    final newMask = <String>{..._currentLevel.mask};
+    for (int i = 0; i < newSize; i++) {
+      newMask.add('${newSize - 1},$i');
+      newMask.add('$i,${newSize - 1}');
+    }
+
+    _currentLevel = LevelModel(
+      levelNumber: _currentLevel.levelNumber,
+      gridSize: newSize,
+      arrows: _currentLevel.arrows,
+      rocks: _currentLevel.rocks,
+      maskShape: _currentLevel.maskShape,
+      mask: newMask,
+      orphanDots: _currentLevel.orphanDots,
+    );
+
+    notifyListeners();
     return true;
   }
 
@@ -177,10 +255,6 @@ class GameState extends ChangeNotifier {
 
     _arrows[index] = arrow.copyWith(state: ArrowState.sliding);
     _recordConsumedDots(arrowId, exitInfo.consumed);
-
-    // if (exitInfo.rockToDestroy != null) {
-    //   _rocks.removeWhere((r) => r.id == exitInfo.rockToDestroy);
-    // }
 
     for (final k in exitInfo.consumed) {
       _orphanDots.remove(k);
@@ -249,7 +323,6 @@ class GameState extends ChangeNotifier {
       if (visited.contains(key)) return const _ExitInfo(true);
       visited.add(key);
 
-      // Rocks
       RockModel? hitRock;
       for (final rock in _rocks) {
         if (rock.row == nr && rock.col == nc) {
@@ -264,7 +337,6 @@ class GameState extends ChangeNotifier {
         return const _ExitInfo(true);
       }
 
-      // Orphan dots (redirectors)
       if (_orphanDots.containsKey(key)) {
         consumed.add(key);
         final dotType = _orphanDots[key]!;
@@ -285,7 +357,6 @@ class GameState extends ChangeNotifier {
             break;
         }
       } else {
-        // Other arrows block
         bool hit = false;
         for (final other in _arrows) {
           if (other.id == arrow.id) continue;
@@ -308,6 +379,22 @@ class GameState extends ChangeNotifier {
     return _ExitInfo(false, consumed);
   }
 
+  Map<String, MinesweeperCell> minesweeperCells = {};
+
+  void triggerMineExplosion(int row, int col) {
+    if (gameMode != GameMode.zen && !heartRemover) {
+      _lives--;
+      _livesLost++;
+      onLifeLost();
+      onCameraShake?.call();
+      if (_lives <= 0) {
+        _isGameOver = true;
+        onGameOver();
+      }
+      notifyListeners();
+    }
+  }
+
   void setBombArmed(bool armed) {
     _isBombArmed = armed;
     notifyListeners();
@@ -318,7 +405,6 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Restores the last escaped arrow back to the board.
   bool undoLastExit() {
     if (_escapedHistory.isEmpty) return false;
     final arrow = _escapedHistory.removeLast();
@@ -327,7 +413,6 @@ class GameState extends ChangeNotifier {
     return true;
   }
 
-  /// Destroys a rock by ID. Returns true if it existed.
   bool destroyRock(String rockId) {
     final before = _rocks.length;
     _rocks.removeWhere((r) => r.id == rockId);
@@ -336,7 +421,6 @@ class GameState extends ChangeNotifier {
     return true;
   }
 
-  /// Returns the next arrow that can escape right now (for hint).
   String? findNextSolvableArrowId() {
     for (final arrow in _arrows) {
       if (arrow.state != ArrowState.idle) continue;
@@ -362,7 +446,7 @@ class GameState extends ChangeNotifier {
         gameMode == GameMode.timeAttack ||
         heartRemover)
         ? 999
-        : AppConstants.maxLives;
+        : maxLives;
     _livesLost = 0;
     _isComplete = false;
     _isGameOver = false;
@@ -371,7 +455,7 @@ class GameState extends ChangeNotifier {
   }
 
   void restoreLife() {
-    if (_lives < AppConstants.maxLives) {
+    if (_lives < maxLives) {
       _lives++;
       if (_isGameOver && _lives > 0) {
         _isGameOver = false;

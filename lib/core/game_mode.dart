@@ -1,27 +1,19 @@
+
+import 'package:flutter/material.dart';
+
 enum GameMode {
-  classic,
-  zen,
-  timeAttack;
+  classic('Classic', Icons.grid_on_rounded, Colors.deepPurple),
+  zen('Zen Mode', Icons.self_improvement_rounded, Colors.teal),
+  timeAttack('Time Attack', Icons.timer_rounded, Colors.orange),
+  minesweeper('Mine Arrows', Icons.bug_report_rounded, Colors.redAccent),
+  endlessRush('Arrow Rush', Icons.bolt_rounded, Colors.amber);
 
-  String get label {
-    switch (this) {
-      case GameMode.classic:
-        return 'Classic';
-      case GameMode.zen:
-        return 'Zen';
-      case GameMode.timeAttack:
-        return 'Time Attack';
-    }
-  }
+  final String label;
+  final IconData icon;
+  final Color color;
 
-  String get description {
-    switch (this) {
-      case GameMode.classic:
-        return '3 Lives. Procedural puzzles. Can you beat the timer?';
-      case GameMode.zen:
-        return 'No lives, no timers. Just pure relaxing puzzle solving.';
-      case GameMode.timeAttack:
-        return 'Race against the clock! Escape arrows to gain extra time.';
-    }
-  }
+  const GameMode(this.label, this.icon, this.color);
+
+  bool get isMinesweeper => this == GameMode.minesweeper;
+  bool get isEndlessRush => this == GameMode.endlessRush;
 }

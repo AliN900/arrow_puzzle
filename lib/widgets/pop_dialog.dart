@@ -13,12 +13,12 @@ class PopDialog extends StatelessWidget {
       child: child
           .animate()
           .scale(
-        begin: const Offset(0.3, 0.3),
+        begin: const Offset(0.5, 0.5),
         end: const Offset(1.0, 1.0),
-        duration: 450.ms,
-        curve: Curves.elasticOut,
+        duration: 200.ms,
+        curve: Curves.easeOutBack,
       )
-          .fadeIn(duration: 150.ms),
+          .fadeIn(duration: 100.ms),
     );
   }
 }
