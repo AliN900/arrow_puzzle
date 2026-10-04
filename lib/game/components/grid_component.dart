@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import '../../core/board_themes.dart';
+import '../../core/game_mode.dart';
 import '../../data/models/level.dart';
 import '../../data/models/arrow.dart';
 import '../../core/app_themes.dart';
@@ -467,7 +468,6 @@ class GridComponent extends PositionComponent with TapCallbacks {
     // ── Rebuild component map to match gameState.arrows ──
     final currentIds = gameState.arrows.map((a) => a.id).toSet();
 
-    // 1. Add new/restored arrows
     for (final arrow in gameState.arrows) {
       if (!_arrowComponents.containsKey(arrow.id)) {
         final comp = ArrowComponent(
@@ -476,7 +476,15 @@ class GridComponent extends PositionComponent with TapCallbacks {
           gameState: gameState,
           onExitCompleted: () => _arrowComponents.remove(arrow.id),
         )..position = Vector2(0, 0);
-        comp.startRestoreAnimation();
+
+        // Endless-rush spawns should slide in head-first. Undo / other
+        // re-adds keep the restore-from-exit animation.
+        if (gameState.gameMode == GameMode.endlessRush) {
+          comp.startEnterAnimation();
+        } else {
+          comp.startRestoreAnimation();
+        }
+
         _arrowComponents[arrow.id] = comp;
         add(comp);
       }

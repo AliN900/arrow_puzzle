@@ -334,15 +334,36 @@ class ProgressRepository extends ChangeNotifier {
     return delta;
   }
 
-  Future<void> setCurrentLevel(int level) async {
-    _currentLevel = level;
+  /// DEV ONLY — unlocks every level for testing.
+  Future<void> unlockAllLevels() async {
+    _highestUnlockedLevel = 999;
     await _save();
     notifyListeners();
   }
 
-  /// DEV ONLY — unlocks every level for testing.
-  Future<void> unlockAllLevels() async {
-    _highestUnlockedLevel = 999;
+  /// Directly overwrites the player's current level. Also bumps
+  /// `highestUnlockedLevel` when jumping forward, so a debug-set level
+  /// doesn't accidentally lock the level-select screen behind it.
+  Future<void> setCurrentLevel(int level) async {
+    if (level < 1) return;
+    _currentLevel = level;
+    if (level > _highestUnlockedLevel) {
+      _highestUnlockedLevel = level;
+    }
+    await _save();
+    notifyListeners();
+  }
+
+  /// Unlocks every level up to and including [targetLevel], and advances
+  /// `currentLevel` to [targetLevel] if it was behind.
+  Future<void> unlockUpToLevel(int targetLevel) async {
+    if (targetLevel < 1) return;
+    if (targetLevel > _highestUnlockedLevel) {
+      _highestUnlockedLevel = targetLevel;
+    }
+    if (targetLevel > _currentLevel) {
+      _currentLevel = targetLevel;
+    }
     await _save();
     notifyListeners();
   }

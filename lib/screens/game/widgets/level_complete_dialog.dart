@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/audio_haptic_helper.dart';
+import '../../../core/game_mode.dart';
 import '../../../data/models/level.dart';
 import '../../../data/models/trophy.dart';
 import '../../../main.dart';
@@ -20,6 +21,7 @@ class LevelCompleteDialog extends ConsumerStatefulWidget {
   final int baseItems;
   final VoidCallback onNextLevel;
   final VoidCallback onMenu;
+  final GameMode gameMode;
 
   const LevelCompleteDialog({
     super.key,
@@ -29,6 +31,7 @@ class LevelCompleteDialog extends ConsumerStatefulWidget {
     this.baseCoins = 0,
     this.baseItems = 0,
     required this.onNextLevel,
+    this.gameMode = GameMode.classic,
     required this.onMenu,
   });
 
@@ -277,7 +280,8 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                     ],
 
                     // Level 500 easter egg
-                    if (widget.level.levelNumber == 500) ...[
+                    if (widget.level.levelNumber == 500 &&
+                        widget.gameMode != GameMode.endlessRush) ...[
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
@@ -303,7 +307,8 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                    ] else if (!widget.isRandom) ...[
+                    ] else if (!widget.isRandom &&
+                        widget.gameMode != GameMode.endlessRush) ...[
                       GameDialogButton(
                         label: 'Next Level',
                         icon: Icons.play_arrow_rounded,

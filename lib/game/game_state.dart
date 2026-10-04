@@ -23,6 +23,7 @@ class GameState extends ChangeNotifier {
   final bool heartRemover;
   final bool assistMode;
   final int arrowSpeed;
+  final double rushSpeedMultiplier;
   final BoardTheme boardTheme;
   final int maxLives; // Dynamic max lives for this level session
   final List<ArrowModel> _escapedHistory = [];
@@ -62,6 +63,7 @@ class GameState extends ChangeNotifier {
     this.onParticleBurst,
     this.onCameraShake,
     this.arrowSpeed = 1,
+    this.rushSpeedMultiplier = 1.0,
     this.boardTheme = BoardTheme.minimal,
   })  : maxLives = initialLives,
         _lives = (gameMode == GameMode.zen ||

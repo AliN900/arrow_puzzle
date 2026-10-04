@@ -48,7 +48,7 @@ class GameScreen extends ConsumerStatefulWidget {
 }
 
 class _GameScreenState extends ConsumerState<GameScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   late LevelModel _level;
   late ArrowPuzzleGame _game;
   GameState? _gameState;
@@ -80,9 +80,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// proportionally with `gridSize`, so large levels don't cram tiny cells.
   static const double _kCellPx = 64.0;
   static const double _kBoardPadding = 24.0;
-  static const int _kEndlessSpawnMinMs = 700;
-  static const int _kEndlessSpawnMaxMs = 3500;
   Object? _lastFitKey;
+
+  Matrix4? _fromFitMatrix;
+  Matrix4? _toFitMatrix;
+  late final AnimationController _fitAnimController;
 
   final TransformationController _transformationController =
   TransformationController();
@@ -92,7 +94,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// canvas from ballooning past the viewport.
   double get _cellPx {
     if (widget.gameMode == GameMode.endlessRush) {
-      final g = _gameState?.level.gridSize ?? 16;
+      final g = _gameState?.level.gridSize ?? _level.gridSize;
       return (64 - (g - 16) * 2).clamp(48, 64).toDouble();
     }
     return _kCellPx;
@@ -100,37 +102,36 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   double get _contentSize =>
       (_gameState?.level.gridSize ?? _level.gridSize) * _cellPx;
-  /// Endless Rush tuning.
-  static const int _kEndlessMinArrows = 50;
-  static int _startingGridForLevel(int level) {
-    // TEST: small board
-    return 5;
-  }
+  // -------------------------------------------------------------------------
+// Endless Rush level scaling
+// -------------------------------------------------------------------------
+
+  static int _startingGridForLevel(int level) =>
+      (5 + level ~/ 45).clamp(5, 13);
+
+  static int _maxGridForLevel(int level) =>
+      (_startingGridForLevel(level) + 4).clamp(5, 17);
 
   static int _initialArrowCountForLevel(int level, int startGrid) {
-    // TEST: exactly 5 arrows
-    return 5;
+    final fill = (0.35 + level / 450).clamp(0.35, 0.65);
+    final count = (startGrid * startGrid * fill / 2.5).round();
+    return count.clamp(3, 80);
   }
 
-  static int _maxGridForLevel(int level) {
-    // TEST: allow growing from 5 → 9
-    return 9;
-  }
+  static int _minSpawnDelayForLevel(int level) =>
+      (700 - (level * 0.8).round()).clamp(300, 700);
 
-  // static int _startingGridForLevel(int level) {
-  //   return (16 + (level ~/ 150)).clamp(16, 19);
-  // }
-  //
-  // static int _initialArrowCountForLevel(int level, int startGrid) {
-  //   final target = _kEndlessMinArrows + (level ~/ 100) * 5;
-  //   // ~50 % cell fill, averaged at 2.5 cells/arrow.
-  //   final cap = (startGrid * startGrid / 5).floor();
-  //   return target.clamp(_kEndlessMinArrows, cap);
-  // }
-  //
-  // static int _maxGridForLevel(int level) {
-  //   return (_startingGridForLevel(level) + 3).clamp(16, 22);
-  // }
+  static int _maxSpawnDelayForLevel(int level) =>
+      (3500 - (level * 5.0).round()).clamp(1500, 3500);
+
+  static double _lossFillForLevel(int level) =>
+      (0.95 - level / 6000).clamp(0.85, 0.95);
+
+  static int _lastStandCountForLevel(int level) =>
+      1 + (level ~/ 200).clamp(0, 1);
+
+  static double _rushSpeedMultiplierForLevel(int level) =>
+      1.0 + (level / 1200).clamp(0.0, 0.25);
 
   /// Applies a scale + translation matrix that centres [contentSize] inside a
   /// viewport of [viewportSize] at the given [fitScale].
@@ -141,9 +142,34 @@ class _GameScreenState extends ConsumerState<GameScreen>
   }) {
     final tx = (viewportSize.width - contentSize * fitScale) / 2;
     final ty = (viewportSize.height - contentSize * fitScale) / 2;
-    _transformationController.value = Matrix4.identity()
+
+    final target = Matrix4.identity()
       ..translate(tx, ty)
       ..scale(fitScale);
+
+    // First application (boot): snap directly, don't animate from identity.
+    if (_toFitMatrix == null) {
+      _toFitMatrix = target;
+      _transformationController.value = target;
+      return;
+    }
+
+    // Subsequent applications (grid growth, rotation): animate from
+    // whatever the current rendered transform is.
+    _fitAnimController.stop();
+    _fromFitMatrix = _transformationController.value;
+    _toFitMatrix = target;
+    _fitAnimController.forward(from: 0);
+  }
+
+  void _onFitAnimTick() {
+    final from = _fromFitMatrix;
+    final to = _toFitMatrix;
+    if (from == null || to == null) return;
+
+    final t = Curves.easeOutCubic.transform(_fitAnimController.value);
+    _transformationController.value =
+        Matrix4Tween(begin: from, end: to).lerp(t);
   }
 
   // ---------------------------------------------------------------------------
@@ -154,6 +180,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _fitAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    )..addListener(_onFitAnimTick);
   }
 
   @override
@@ -170,19 +200,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Future<void> _loadLevelAsync(int levelNum) async {
     if (widget.gameMode == GameMode.endlessRush) {
-      final startGrid = _startingGridForLevel(widget.level);
-      final maxGrid = _maxGridForLevel(widget.level);
+      // Use the player's actual campaign level, not widget.level (which is
+      // usually just 1 when the mode is launched from the menu).
+      final progress = ref.read(progressRepositoryProvider);
+      final effectiveLevel = _kDebugRushLevel > 0
+          ? _kDebugRushLevel
+          : progress.currentLevel;
+
+      final startGrid = _startingGridForLevel(effectiveLevel);
+      final maxGrid = _maxGridForLevel(effectiveLevel);
       final targetArrows =
-      _initialArrowCountForLevel(widget.level, startGrid);
+      _initialArrowCountForLevel(effectiveLevel, startGrid);
 
       final initialMask = <String>{
         for (int r = 0; r < startGrid; r++)
           for (int c = 0; c < startGrid; c++) '$r,$c'
       };
 
-      // Populate via the solver-verified spawner so every arrow is guaranteed
-      // clearable in sequence. We loop until we hit the target or the spawner
-      // can no longer find a valid slot.
       final generated = <ArrowModel>[];
       for (int i = 0; i < targetArrows; i++) {
         final arrow = EndlessSpawner.trySpawnArrow(
@@ -194,8 +228,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
         generated.add(arrow);
       }
 
-      _endlessStartGrid = startGrid;
+      // Cache every per-level parameter that _tickEndlessRush / _endlessAttemptSpawn
+      // will read. Recomputing these every tick is wasteful and would let a
+      // mid-run `widget.level` change desync the pacing.
       _endlessMaxGrid = maxGrid;
+      _endlessMinDelayMs = _minSpawnDelayForLevel(effectiveLevel);
+      _endlessMaxDelayMs = _maxSpawnDelayForLevel(effectiveLevel);
+      _endlessLossFill = _lossFillForLevel(effectiveLevel);
+      _endlessLastStandCount = _lastStandCountForLevel(effectiveLevel);
+      _lastSeenArrowCount = -1;
 
       _level = LevelModel(
         levelNumber: 999,
@@ -278,17 +319,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Timer? _endlessSpawnTimer;
   int _endlessInitialArrowCount = 0;
-  int _endlessStartGrid = 16;
-  int _endlessMaxGrid = 19;
+  int _endlessMaxGrid = 8;
+  int _endlessMinDelayMs = 700;
+  int _endlessMaxDelayMs = 3500;
+  double _endlessLossFill = 0.95;
+  int _endlessLastStandCount = 1;
   int _lastSeenArrowCount = -1;
 
   /// Boots the endless-rush pressure loop. Call from _initGame.
+  ///
+  /// Gives the player a fixed 5-second survey window before pressure begins,
+  /// then hands off to the recursive `_tickEndlessRush` scheduler.
   void _startEndlessRush() {
     _endlessSpawnTimer?.cancel();
     final gs = _gameState;
     if (gs == null) return;
     _endlessInitialArrowCount = gs.arrows.length;
-    _tickEndlessRush();
+    _endlessSpawnTimer = Timer(const Duration(seconds: 5), _tickEndlessRush);
   }
 
   /// Recursive scheduler. Every tick:
@@ -311,21 +358,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final realArrows = gs.arrows.length;
     final telegraphs = gs.telegraphArrows.length;
 
-    // Win: nothing left on the board at all.
     if (realArrows == 0 && telegraphs == 0) {
       unawaited(_onLevelComplete());
       return;
     }
 
-    // ----------------------------------------------------------------
-    // LAST STAND: telegraphs don't count. Once only one *real* arrow
-    // remains, cancel any in-flight telegraph and stop spawning.
-    // ----------------------------------------------------------------
-    if (realArrows <= 1) {
+    // Last stand (count scales with player level).
+    if (realArrows <= _endlessLastStandCount) {
       if (telegraphs > 0) {
         gs.cancelAllTelegraphs();
-        // notifyListeners already fired inside cancelAllTelegraphs.
-        // Re-check: it's possible the only thing left was the telegraph.
         if (gs.arrows.isEmpty) {
           unawaited(_onLevelComplete());
           return;
@@ -343,33 +384,30 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
 
-    // Gate: no spawns until 50 % of the initial board is cleared.
+    // NEW: cumulative arrows cleared this run — drives the pressure ramp.
     final clearedTotal = gs.clearedRushArrows;
-    final clearProgress = (clearedTotal / initial).clamp(0.0, 1.0);
-    if (clearProgress < 0.5) {
-      _endlessSpawnTimer =
-          Timer(const Duration(milliseconds: 300), _tickEndlessRush);
-      return;
-    }
 
-    // Pacing: delay scales with total board pressure (arrows + telegraphs).
-    // Telegraphs *do* count for pacing — we just don't let them gate last-stand.
+    // Pacing: base delay scales with current board fill, then a pressure
+    // term accelerates everything as the player clears more cumulative arrows.
     final remaining = realArrows + telegraphs;
     final remainingRatio = (remaining / initial).clamp(0.0, 1.0);
-    final delayMs = (_kEndlessSpawnMinMs +
-        ((_kEndlessSpawnMaxMs - _kEndlessSpawnMinMs) * remainingRatio))
-        .round();
+
+    // Pressure: 0 clears → 1.0 scale. Every `initial` arrows cleared adds
+    // 0.20 to the denominator, capped so the floor is exactly 50 %.
+    final pressure = (clearedTotal / initial).clamp(0.0, 5.0);
+    final paceScale = 1.0 / (1.0 + 0.20 * pressure);
+
+    final adjMin = (_endlessMinDelayMs * paceScale).round();
+    final adjMax = (_endlessMaxDelayMs * paceScale).round();
+    final delayMs = (adjMin + ((adjMax - adjMin) * remainingRatio)).round();
 
     _endlessSpawnTimer = Timer(Duration(milliseconds: delayMs), () {
       if (!mounted || _gameState == null) return;
-
-      // Race guard: board may have thinned while the timer was pending.
       final nowReal = _gameState!.arrows.length;
       final nowTel = _gameState!.telegraphArrows.length;
-      if (nowReal > 1) {
+      if (nowReal > _endlessLastStandCount) {
         _endlessAttemptSpawn();
       } else if (nowTel > 0) {
-        // Entered last-stand while we waited — drop the pending telegraph.
         _gameState!.cancelAllTelegraphs();
       }
       _tickEndlessRush();
@@ -394,19 +432,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     final fillRatio = occupied.length / (gridSize * gridSize);
 
-    // Overwhelmed.
-    if (gridSize >= maxGrid && fillRatio > 0.95) {
+    if (gridSize >= maxGrid && fillRatio > _endlessLossFill) {
       _onGameOver();
       return;
     }
 
-    // Cramped → grow, but only past 70 % now.
-    if (fillRatio > 0.70 && gridSize < maxGrid) {
+    if (fillRatio > 0.75 && gridSize < maxGrid) {
       gs.growGrid(maxGridSize: maxGrid);
       return;
     }
 
-    // Normal spawn.
     final spawned = gs.spawnEndlessArrowWithTelegraph();
     if (!spawned) {
       if (gridSize < maxGrid) {
@@ -429,15 +464,22 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _loadLevelAsync(nextLevel);
   }
 
+  static const int _kDebugRushLevel = 0;
+
   void _initGame() {
     final progress = ref.read(progressRepositoryProvider);
     final selectedTheme = progress.selectedTheme;
     final isLifeFree = widget.gameMode == GameMode.zen ||
         widget.gameMode == GameMode.timeAttack ||
-        widget.gameMode == GameMode.endlessRush ||
         progress.heartRemover;
 
-    final levelMaxLives = progress.getMaxLivesForLevel(widget.level);
+// Endless Rush should scale hearts with the player's real campaign level,
+// not the widget's default (usually 1).
+    final effectiveLevel = widget.gameMode == GameMode.endlessRush
+        ? progress.currentLevel
+        : widget.level;
+
+    final levelMaxLives = progress.getMaxLivesForLevel(effectiveLevel);
     _lives = isLifeFree ? 999 : levelMaxLives;
 
     _showingGameOver = false;
@@ -455,6 +497,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
       boardTheme: progress.selectedBoard,
       assistMode: progress.assistMode,
       arrowSpeed: progress.arrowSpeed,
+      rushSpeedMultiplier: widget.gameMode == GameMode.endlessRush
+          ? _rushSpeedMultiplierForLevel(
+          _kDebugRushLevel > 0
+              ? _kDebugRushLevel
+              : progress.currentLevel)
+          : 1.0,
       onLevelComplete: _onLevelComplete,
       onGameOver: _onGameOver,
       onLifeLost: isLifeFree ? () {} : _onLifeLost,
@@ -475,11 +523,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     // New game ⇒ new board ⇒ reset zoom fit next frame.
     _lastFitKey = null;
-    _transformationController.value = Matrix4.identity();
-    if (widget.gameMode == GameMode.endlessRush) {
-      _startEndlessRush();
-    }
     _lastSeenArrowCount = -1;
+    _toFitMatrix = null;
+    _transformationController.value = Matrix4.identity();
     if (widget.gameMode == GameMode.endlessRush) {
       _startEndlessRush();
     }
@@ -518,15 +564,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final gs = _gameState;
     if (gs == null) return;
 
-    if (realArrows <= 1 && gs.telegraphArrows.isNotEmpty) {
+    if (realArrows <= _endlessLastStandCount &&
+        gs.telegraphArrows.isNotEmpty) {
       gs.cancelAllTelegraphs();
     }
 
-    if (realArrows <= 1) {
+    if (realArrows <= _endlessLastStandCount) {
       _endlessSpawnTimer?.cancel();
       _tickEndlessRush();
     }
   }
+
 
   void _onLifeLost() {
     if (!mounted) return;
@@ -678,6 +726,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _usedAdRewardThisLevel = false;
         _itemUsesThisLevel.clear();
         _lastFitKey = null;
+        _toFitMatrix = null;
         _transformationController.value = Matrix4.identity();
       });
       await _loadLevelAsync(widget.level);
@@ -866,6 +915,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         level: _gameState?.level ?? _level,
         stars: stars,
         isRandom: widget.isRandom,
+        gameMode: widget.gameMode,          // ← new
         baseCoins: coinsEarned,
         baseItems: _pendingMilestoneItems,
         onNextLevel: _handleNextLevel,
@@ -890,19 +940,30 @@ class _GameScreenState extends ConsumerState<GameScreen>
     int continueTime = 0;
     int heartReward = 0;
 
+    final progress = ref.read(progressRepositoryProvider);
+    final effectiveLevel = widget.gameMode == GameMode.endlessRush
+        ? progress.currentLevel
+        : _level.levelNumber;
+    final maxLives = progress.getMaxLivesForLevel(effectiveLevel);
+
     if (_isTimeoutState) {
       final remainingArrows =
           _gameState!.arrows.where((a) => a.state != ArrowState.sliding).length;
       continueTime = AdRewards.secondsForRemainingArrows(remainingArrows);
     } else {
-      heartReward = AdRewards.heartsForLevel(_level.levelNumber);
+      // Reward can never exceed the player's heart ceiling for this level.
+      // Levels ≤ 25 → 2 hearts, higher levels → 3 (or 3 with survivalist).
+      heartReward = min(
+        AdRewards.heartsForLevel(effectiveLevel),
+        maxLives,
+      );
     }
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => GameOverDialog(
-        level: _level,
+        level: _gameState?.level ?? _level,
         isTimeout: _isTimeoutState,
         continueTime: continueTime,
         heartReward: heartReward,
@@ -951,6 +1012,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _endlessSpawnTimer?.cancel();
     _shakeTimer?.cancel();
     _gameState?.removeListener(_onGameStateChanged);
+    _fitAnimController.dispose();
     super.dispose();
   }
 
@@ -1165,6 +1227,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                     boundaryMargin:
                                     EdgeInsets.all(contentSize * 0.5),
                                     clipBehavior: Clip.hardEdge,
+                                    onInteractionStart: (_) => _fitAnimController.stop(),
                                     child: SizedBox(
                                       width: contentSize,
                                       height: contentSize,

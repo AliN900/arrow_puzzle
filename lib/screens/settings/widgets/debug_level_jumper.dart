@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/board_themes.dart';
+import '../../../core/game_mode.dart';
 import '../../../core/items.dart';
 import '../../../main.dart';
 import '../../../unity_rewarded_ad.dart';
@@ -38,6 +39,89 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
       context,
       MaterialPageRoute(builder: (_) => GameScreen(level: level)),
     );
+  }
+
+  int? _parsedInput() {
+    final level = int.tryParse(_controller.text.trim());
+    if (level == null || level < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid level number')),
+      );
+      return null;
+    }
+    return level;
+  }
+
+  Future<void> _unlockUpTo() async {
+    final level = _parsedInput();
+    if (level == null) return;
+    await ref.read(progressRepositoryProvider).unlockUpToLevel(level);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Unlocked through level $level')),
+    );
+    setState(() {}); // refresh the "current/highest" banner
+  }
+
+  Future<void> _setCurrentLevel() async {
+    final level = _parsedInput();
+    if (level == null) return;
+    await ref.read(progressRepositoryProvider).setCurrentLevel(level);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Current level set to $level')),
+    );
+    setState(() {});
+  }
+
+  Future<void> _launchEndlessRush() async {
+    final level = int.tryParse(_controller.text.trim());
+    if (level != null && level >= 1) {
+      await ref.read(progressRepositoryProvider).setCurrentLevel(level);
+    }
+    if (!mounted) return;
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const GameScreen(
+          level: 1,                     // ignored by endless rush
+          gameMode: GameMode.endlessRush,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmReset() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text(
+          'Reset everything?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'This wipes level progress, stars, and settings.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reset',
+                style: TextStyle(color: Color(0xFFFF5252))),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await ref.read(progressRepositoryProvider).resetProgress();
+      if (mounted) Navigator.pop(context);
+    }
   }
 
   Future<void> _showCelebrationTest(BoardTheme board) async {
@@ -141,6 +225,8 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
               style: const TextStyle(color: textSecondary, fontSize: 12),
             ),
             const SizedBox(height: 16),
+
+            // ── Input ───────────────────────────────────────────────
             TextField(
               controller: _controller,
               keyboardType: TextInputType.number,
@@ -150,7 +236,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
                 fontWeight: FontWeight.bold,
               ),
               decoration: InputDecoration(
-                labelText: 'Jump to level',
+                labelText: 'Level number',
                 labelStyle: const TextStyle(color: textSecondary),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.05),
@@ -161,13 +247,67 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
               ),
             ),
             const SizedBox(height: 12),
+
+            // ── Level-targeting actions ─────────────────────────────
             _btn(
-              label: 'Jump to Level',
+              label: '🔓 Unlock Up To Level',
+              icon: Icons.lock_open_rounded,
+              color: accent,
+              onTap: _unlockUpTo,
+            ),
+            const SizedBox(height: 8),
+            _btn(
+              label: '🎯 Set Current Level',
+              icon: Icons.flag_rounded,
+              color: const Color(0xFF00C853),
+              onTap: _setCurrentLevel,
+            ),
+            const SizedBox(height: 8),
+            _btn(
+              label: '▶️ Play Classic at Level',
               icon: Icons.play_arrow_rounded,
               color: accent,
               onTap: _jumpToLevel,
             ),
             const SizedBox(height: 8),
+            _btn(
+              label: '🌀 Play Endless Rush at Current',
+              icon: Icons.all_inclusive_rounded,
+              color: const Color(0xFF00BCD4),
+              onTap: _launchEndlessRush,
+            ),
+            const SizedBox(height: 12),
+
+            // ── Quick-test chips ────────────────────────────────────
+            const Text(
+              'Quick test levels',
+              style: TextStyle(
+                color: textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [1, 60, 120, 240, 300, 500, 800].map((lv) {
+                return ActionChip(
+                  label: Text('$lv',
+                      style: const TextStyle(color: Colors.white, fontSize: 12)),
+                  backgroundColor: accent.withValues(alpha: 0.25),
+                  side: BorderSide(color: accent.withValues(alpha: 0.6)),
+                  onPressed: () {
+                    _controller.text = '$lv';
+                    _setCurrentLevel();
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Existing utility buttons ────────────────────────────
             _btn(
               label: 'Unlock All Levels',
               icon: Icons.lock_open_rounded,
@@ -188,9 +328,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
             ElevatedButton(
               onPressed: () async {
                 await UnityRewardedAd.show(
-                  onRewarded: () {
-                    debugPrint('🎉 USER EARNED REWARD');
-                  },
+                  onRewarded: () => debugPrint('🎉 USER EARNED REWARD'),
                   onFailed: () => debugPrint('❌ Ad failed to show'),
                 );
               },
@@ -240,39 +378,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
               label: 'Reset Progress',
               icon: Icons.warning_amber_rounded,
               color: const Color(0xFFFF5252),
-              onTap: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    backgroundColor: surface,
-                    title: const Text(
-                      'Reset everything?',
-                      style: TextStyle(color: textPrimary),
-                    ),
-                    content: const Text(
-                      'This wipes level progress, stars, and settings.',
-                      style: TextStyle(color: textSecondary),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text(
-                          'Reset',
-                          style: TextStyle(color: Color(0xFFFF5252)),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirm == true) {
-                  await ref.read(progressRepositoryProvider).resetProgress();
-                  if (mounted) Navigator.pop(context);
-                }
-              },
+              onTap: _confirmReset,
             ),
           ],
         ),

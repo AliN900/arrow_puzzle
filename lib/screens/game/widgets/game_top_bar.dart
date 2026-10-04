@@ -42,12 +42,14 @@ class GameTopBar extends ConsumerWidget {
       titleText = 'Lv.${level.levelNumber.toString().padLeft(3, '0')}';
     }
 
+    final progress = ref.watch(progressRepositoryProvider);
     final showHearts = !heartRemover && gameMode != GameMode.timeAttack;
 
     Widget? livesWidget;
     if (showHearts) {
-      final isInfiniteMode =
-          gameMode == GameMode.zen || gameMode == GameMode.endlessRush;
+      // Only Zen has truly infinite hearts. Endless Rush now uses the
+      // player's real campaign hearts.
+      final isInfiniteMode = gameMode == GameMode.zen;
 
       if (isInfiniteMode || lives > 5) {
         livesWidget = Container(
@@ -60,7 +62,8 @@ class GameTopBar extends ConsumerWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 18),
+              const Icon(Icons.favorite_rounded,
+                  color: Colors.redAccent, size: 18),
               const SizedBox(width: 4),
               Text(
                 isInfiniteMode ? '∞' : '$lives',
@@ -74,13 +77,15 @@ class GameTopBar extends ConsumerWidget {
           ),
         );
       } else {
-        final maxLives = ref
-            .watch(progressRepositoryProvider)
-            .getMaxLivesForLevel(level.levelNumber);
+        // Endless Rush reports level 999, which would always give the wrong
+        // heart cap. Use the player's real campaign level for the ratio.
+        final effectiveLevel = gameMode == GameMode.endlessRush
+            ? progress.currentLevel
+            : level.levelNumber;
 
         livesWidget = LivesBar(
           lives: lives,
-          maxLives: maxLives,
+          maxLives: progress.getMaxLivesForLevel(effectiveLevel),
         );
       }
     }

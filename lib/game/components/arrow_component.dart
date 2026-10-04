@@ -43,6 +43,9 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   bool _isRestoring = false;
   double _restoreProgress = 0.0;
   double _restoreDuration = 0.5;
+  bool _isEntering = false;
+  double _enterProgress = 0.0;
+  double _enterDuration = 0.25;
 
   List<Offset>? _deflectedExtension;
 
@@ -134,7 +137,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
   @override
   bool containsLocalPoint(Vector2 point) {
-    if (_isExiting || _isRestoring) return false;
+    if (_isExiting || _isRestoring || _isEntering) return false;
     if (gameState.isBombArmed) return false;
     final col = (point.x / cellSize).floor();
     final row = (point.y / cellSize).floor();
@@ -211,16 +214,20 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
         break;
     }
 
+    final rushDiv = gameState.rushSpeedMultiplier;
+
     if (arrowModel.type == ArrowType.bomb) {
       gameState.removeRockOnImpact(arrowModel.id);
       _isBombExiting = false;
       _bombRockCenterPx = null;
-      _exitDuration = (0.4 + arrowModel.path.length * 0.08) * speedMultiplier;
+      _exitDuration =
+          (0.4 + arrowModel.path.length * 0.08) * speedMultiplier / rushDiv;
       _deflectedExtension = _buildDeflectedExtension();
     } else {
       _isBombExiting = false;
       _bombRockCenterPx = null;
-      _exitDuration = (0.4 + arrowModel.path.length * 0.08) * speedMultiplier;
+      _exitDuration =
+          (0.4 + arrowModel.path.length * 0.08) * speedMultiplier / rushDiv;
       _deflectedExtension = _buildDeflectedExtension();
     }
 
@@ -244,9 +251,20 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
         break;
     }
     _restoreDuration =
-        (0.4 + arrowModel.path.length * 0.08) * speedMultiplier;
+        (0.4 + arrowModel.path.length * 0.08) * speedMultiplier /
+            gameState.rushSpeedMultiplier;
     _isRestoring = true;
     _restoreProgress = 0.0;
+    _isAnimating = true;
+    _deflectedExtension = null;
+    _invalidateCache();
+  }
+
+  /// Slides a freshly-spawned arrow forward into its position, entering
+  /// from behind its travel direction. Used by Endless Rush spawns.
+  void startEnterAnimation() {
+    _isEntering = true;
+    _enterProgress = 0.0;
     _isAnimating = true;
     _deflectedExtension = null;
     _invalidateCache();
@@ -396,8 +414,22 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   void update(double dt) {
     super.update(dt);
 
-    if (arrowModel.type == ArrowType.bomb && !_isAnimating && !_isExiting && !_isRestoring) {
+    if (arrowModel.type == ArrowType.bomb &&
+        !_isAnimating &&
+        !_isExiting &&
+        !_isRestoring) {
       _bombPulseTime += dt * 6.0;
+    }
+
+    if (_isEntering) {
+      _enterProgress += dt / _enterDuration;
+      if (_enterProgress >= 1.0) {
+        _isEntering = false;
+        _enterProgress = 0.0;
+        _isAnimating = false;
+        _invalidateCache();
+      }
+      return;
     }
 
     if (_isRestoring) {
@@ -457,11 +489,15 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     if (arrowModel.path.isEmpty) return;
 
     final bool hasPressScale = _pressScale != 1.0;
-    final bool isBombIdle = arrowModel.type == ArrowType.bomb && !_isAnimating && !_isExiting && !_isRestoring;
+    final bool isBombIdle = arrowModel.type == ArrowType.bomb &&
+        !_isAnimating &&
+        !_isExiting &&
+        !_isRestoring;
 
     if (hasPressScale || isBombIdle) {
       final head = arrowModel.path[0];
-      final center = Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
+      final center = Offset(
+          (head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
       canvas.save();
       canvas.translate(center.dx, center.dy);
 
@@ -479,7 +515,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     final List<Offset> pts;
     final bool isAnimatingNow =
-        _isExiting || _isBlockedAnimating || _isRestoring;
+        _isExiting || _isBlockedAnimating || _isRestoring || _isEntering;
 
     if (_isRestoring && _cachedTrack == null) {
       final delta = arrowModel.direction.delta;
@@ -521,7 +557,18 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       final animTail = (tailDist - traveled).clamp(0.0, tailDist);
 
       pts = _slice(track, dist, animHead, animTail);
-    } else if (isAnimatingNow) {
+    } else if (_isEntering) {
+      // ─── snake-in ─────────────────────────────────────────────
+      final track = pathPx;
+      final dist = <double>[0.0];
+      for (int i = 1; i < track.length; i++) {
+        dist.add(dist[i - 1] + (track[i] - track[i - 1]).distance);
+      }
+      final totalLen = dist.last;
+      final p = Curves.easeOutCubic.transform(_enterProgress.clamp(0.0, 1.0));
+      pts = _slice(track, dist, 0.0, p * totalLen);
+      // ──────────────────────────────────────────────────────────
+      } else if (isAnimatingNow) {
       if (_cachedTrack == null) {
         final delta = arrowModel.direction.delta;
         final headPx = pathPx.first;
@@ -626,7 +673,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       canvas.drawPath(bodyPath, _glowPaintInner);
     }
 
-    if (isAnimatingNow) {
+    if (_isExiting || _isBlockedAnimating || _isRestoring) {
       _trailPaint
         ..color = mainColor.withValues(alpha: 0.15)
         ..strokeWidth = sw * 2.0;

@@ -168,23 +168,23 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
                         decoration: BoxDecoration(
                           color: surface,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: rewardGreen, width: 1.5),
+                          border: Border.all(color: accent, width: 1.5),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             _isWatchingAd
-                                ? const SizedBox(
+                                ? SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: rewardGreen,
+                                color: accent,
                               ),
                             )
-                                : const Icon(
+                                : Icon(
                               Icons.play_circle_outline_rounded,
-                              color: rewardGreen,
+                              color: accent,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
@@ -195,10 +195,10 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
                                   _isWatchingAd
                                       ? 'Loading...'
                                       : 'Watch ad → $rewardLabel',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w900,
-                                    color: rewardGreen, // Matched to border & icon color
+                                    color: accent,
                                     letterSpacing: 1.0,
                                   ),
                                 ),
@@ -214,16 +214,16 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 5, vertical: 1.5),
                           decoration: BoxDecoration(
-                            color: rewardGreen.withValues(alpha: 0.25),
+                            color: accent.withValues(alpha: 0.25),
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: rewardGreen, width: 1),
+                            border: Border.all(color: accent, width: 1),
                           ),
-                          child: const Text(
+                          child: Text(
                             'AD',
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
-                              color: rewardGreen,
+                              color: accent,
                               letterSpacing: 0.5,
                             ),
                           ),
