@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 enum ItemType {
   bomb,
   hint,
@@ -99,5 +101,31 @@ class ItemPricing {
 
   static int minPrice(ItemType item) =>
       bundlesFor(item).first.price;
+}
+
+
+
+extension ItemTypeLocalization on ItemType {
+  String localizedName(BuildContext context) {
+    final s = AppStrings.of(context);
+    switch (this) {
+      case ItemType.bomb:        return s.itemBombName;
+      case ItemType.hint:        return s.itemHintName;
+      case ItemType.undo:        return s.itemUndoName;
+      case ItemType.heartFlask:  return s.itemHeartFlaskName;
+      case ItemType.timeFreeze:  return s.itemTimeFreezeName;
+    }
+  }
+
+  String localizedDescription(BuildContext context) {
+    final s = AppStrings.of(context);
+    switch (this) {
+      case ItemType.bomb:        return s.itemBombDesc;
+      case ItemType.hint:        return s.itemHintDesc;
+      case ItemType.undo:        return s.itemUndoDesc;
+      case ItemType.heartFlask:  return s.itemHeartFlaskDesc;
+      case ItemType.timeFreeze:  return s.itemTimeFreezeDesc;
+    }
+  }
 }
 

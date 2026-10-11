@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../../../core/app_colors.dart';
 import '../../../core/audio_haptic_helper.dart';
 import '../../../core/game_mode.dart';
@@ -42,7 +44,7 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
   bool _isWatchingAd = false;
   bool _adRewardClaimed = false;
 
-  Future<void> _watchAd() async {
+  Future<void> _watchAd(AppStrings strings) async {
     if (_isWatchingAd || _adRewardClaimed) return;
     setState(() => _isWatchingAd = true);
 
@@ -59,9 +61,9 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
         if (!mounted) return;
         setState(() => _isWatchingAd = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ad not available, try again later'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(strings.adNotAvailable),
+            duration: const Duration(seconds: 2),
           ),
         );
       },
@@ -74,33 +76,33 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final isTimeAttack = widget.gameMode == GameMode.timeAttack;
     final accent = AppColors.accent(context);
     const textPrimary = Colors.white;
     const textSecondary = Colors.white70;
     const surface = Color(0xFF1E1E1E);
-    const rewardGreen = Color(0xFF4CAF50);
 
     final String title;
     final IconData icon;
     final Color iconColor;
     if (isTimeAttack) {
-      title = "Time's Up!";
+      title = strings.gameOverTimeUp;
       icon = Icons.timer_off_rounded;
       iconColor = Colors.orangeAccent;
     } else if (widget.isTimeout) {
-      title = 'Out of Time!';
+      title = strings.gameOverOutOfTime;
       icon = Icons.hourglass_top;
       iconColor = accent;
     } else {
-      title = 'Out of Lives!';
+      title = strings.gameOverOutOfLives;
       icon = Icons.heart_broken;
       iconColor = accent;
     }
 
     final String rewardLabel = widget.isTimeout
-        ? '+${widget.continueTime}s'
-        : '+${widget.heartReward} ${widget.heartReward == 1 ? "heart" : "hearts"}';
+        ? strings.gameOverRewardTime(widget.continueTime)
+        : strings.gameOverRewardHearts(widget.heartReward);
 
     final showAdOption =
         !isTimeAttack && !_adRewardClaimed && widget.adRewardAvailable;
@@ -142,7 +144,10 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
               if (isTimeAttack) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Puzzles Cleared: ${widget.score}\nFinal Level: ${widget.level.levelNumber}',
+                  strings.gameOverTimeAttackStats(
+                    widget.score,
+                    widget.level.levelNumber,
+                  ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 16,
@@ -157,7 +162,7 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
                 GestureDetector(
                   onTap: () {
                     AudioHapticHelper.playClick();
-                    if (!_isWatchingAd) _watchAd();
+                    if (!_isWatchingAd) _watchAd(strings);
                   },
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -193,8 +198,8 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
                                 fit: BoxFit.scaleDown,
                                 child: Text(
                                   _isWatchingAd
-                                      ? 'Loading...'
-                                      : 'Watch ad → $rewardLabel',
+                                      ? strings.loadingLabel
+                                      : strings.gameOverWatchAdReward(rewardLabel),
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w900,
@@ -219,7 +224,7 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
                             border: Border.all(color: accent, width: 1),
                           ),
                           child: Text(
-                            'AD',
+                            strings.adBadge,
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
@@ -236,7 +241,9 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
               ],
 
               GameDialogButton(
-                label: isTimeAttack ? 'Start New Run' : 'Restart Level',
+                label: isTimeAttack
+                    ? strings.gameOverStartNewRun
+                    : strings.gameOverRestartLevel,
                 icon: Icons.refresh_rounded,
                 textColor: textPrimary,
                 iconColor: accent,
@@ -245,7 +252,7 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
               const SizedBox(height: 10),
 
               GameDialogButton(
-                label: 'Home',
+                label: strings.homeButton,
                 icon: Icons.home_rounded,
                 textColor: textSecondary,
                 iconColor: accent,

@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../core/app_colors.dart';
+import '../core/audio_haptic_helper.dart';
 import 'pop_dialog.dart';
 
 class CustomPopDialog extends StatelessWidget {
   final String title;
   final String message;
   final Widget icon;
-  final String cancelText;
+
+  /// Optional override. When null, falls back to the localized
+  /// `strings.buttonCancel`.
+  final String? cancelText;
+
   final String confirmText;
   final VoidCallback onConfirm;
   final VoidCallback? onCancel;
@@ -16,7 +23,7 @@ class CustomPopDialog extends StatelessWidget {
     required this.title,
     required this.message,
     required this.icon,
-    this.cancelText = 'Cancel',
+    this.cancelText,
     required this.confirmText,
     required this.onConfirm,
     this.onCancel,
@@ -24,10 +31,13 @@ class CustomPopDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final bgColor = AppColors.surface(context);
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
     final accent = AppColors.accent(context);
+
+    final resolvedCancelText = cancelText ?? strings.buttonCancel;
 
     return PopDialog(
       child: Container(
@@ -80,7 +90,14 @@ class CustomPopDialog extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: onCancel ?? () => Navigator.pop(context),
+                    onPressed: () {
+                      AudioHapticHelper.playClick();
+                      // Pop the dialog with `false` FIRST, so the awaiting
+                      // showDialog<bool> resolves correctly.
+                      Navigator.pop(context, false);
+                      // Then fire the callback for any side effects.
+                      onCancel?.call();
+                    },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: textPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -93,7 +110,7 @@ class CustomPopDialog extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      cancelText,
+                      resolvedCancelText,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -105,7 +122,10 @@ class CustomPopDialog extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(context);
+                      AudioHapticHelper.playClick();
+                      // Pop with `true` FIRST.
+                      Navigator.pop(context, true);
+                      // Then fire the callback.
                       onConfirm();
                     },
                     style: ElevatedButton.styleFrom(

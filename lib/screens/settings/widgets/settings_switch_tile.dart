@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/audio_haptic_helper.dart';
 
 class SettingsSwitchTile extends StatelessWidget {
   final IconData icon;
@@ -30,7 +31,10 @@ class SettingsSwitchTile extends StatelessWidget {
       ),
       trailing: Switch(
         value: value,
-        onChanged: onChanged,
+        onChanged: (v) {
+          AudioHapticHelper.playClick();
+          onChanged(v);
+        },
         activeThumbColor: accentColor,
         activeTrackColor: accentColor.withValues(alpha: 0.3),
       ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 class AccentColorPicker extends StatelessWidget {
   final List<Color> accentColors;
   final Color selectedColor;
@@ -18,6 +20,7 @@ class AccentColorPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -25,7 +28,7 @@ class AccentColorPicker extends StatelessWidget {
           Icon(Icons.color_lens_outlined, color: textSecondary, size: 24),
           const SizedBox(width: 16),
           Text(
-            'Accent Color',
+            strings.accentColorLabel,
             style: TextStyle(fontWeight: FontWeight.w600, color: textPrimary),
           ),
           const SizedBox(width: 12),

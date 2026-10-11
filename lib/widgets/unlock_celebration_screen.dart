@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../core/audio_haptic_helper.dart';
 import '../core/board_themes.dart';
+import '../l10n/app_localizations.dart';
 import 'confetti_field.dart';
 import 'coin_icon.dart';
 
@@ -27,6 +29,7 @@ class UnlockCelebrationScreen extends StatelessWidget {
     final media = MediaQuery.of(context);
     final screenW = media.size.width;
     final screenH = media.size.height;
+    final strings = AppStrings.of(context);
 
     final previewByWidth = screenW - 100;
     final previewByHeight = screenH * 0.30;
@@ -64,10 +67,10 @@ class UnlockCelebrationScreen extends StatelessWidget {
                             const SizedBox(height: 20),
 
                             // Title
-                            const Text(
-                              'Congratulations!',
+                            Text(
+                              strings.unlockTitle,
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
@@ -91,7 +94,7 @@ class UnlockCelebrationScreen extends StatelessWidget {
                             const SizedBox(height: 6),
 
                             Text(
-                              'New board unlocked',
+                              strings.unlockSubtitle,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 15,
@@ -104,21 +107,21 @@ class UnlockCelebrationScreen extends StatelessWidget {
                             const SizedBox(height: 24),
 
                             // Board card
-                            _buildBoardCard(colors, previewSize),
+                            _buildBoardCard(context, strings, colors, previewSize),
 
                             const SizedBox(height: 20),
 
                             // Coin pill
-                            if (coinsEarned > 0) _buildCoinPill(),
+                            if (coinsEarned > 0) _buildCoinPill(strings),
 
                             if (coinsEarned > 0) const SizedBox(height: 20),
 
                             // Buttons
-                            _buildResumeButton(),
+                            _buildResumeButton(strings),
                             const SizedBox(height: 12),
-                            _buildInventoryButton(),
+                            _buildInventoryButton(strings),
                             const SizedBox(height: 8),
-                            _buildMainMenuButton(),
+                            _buildMainMenuButton(strings),
 
                             const SizedBox(height: 20),
                           ],
@@ -135,7 +138,12 @@ class UnlockCelebrationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBoardCard(BoardColors colors, double previewSize) {
+  Widget _buildBoardCard(
+      BuildContext context,
+      AppStrings strings,
+      BoardColors colors,
+      double previewSize,
+      ) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -196,7 +204,7 @@ class UnlockCelebrationScreen extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                board.name[0].toUpperCase() + board.name.substring(1),
+                board.localizedName(context),
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -216,7 +224,7 @@ class UnlockCelebrationScreen extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                'Added to your inventory',
+                strings.unlockAddedToInventory,
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.grey.shade600,
@@ -238,7 +246,7 @@ class UnlockCelebrationScreen extends StatelessWidget {
         .fadeIn(duration: 200.ms);
   }
 
-  Widget _buildCoinPill() {
+  Widget _buildCoinPill(AppStrings strings) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
@@ -255,7 +263,7 @@ class UnlockCelebrationScreen extends StatelessWidget {
           const CoinIcon(size: 26),
           const SizedBox(width: 10),
           Text(
-            '+$coinsEarned COINS',
+            strings.unlockCoinsEarned(coinsEarned),
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w900,
@@ -271,11 +279,14 @@ class UnlockCelebrationScreen extends StatelessWidget {
         .slideY(begin: 0.3, end: 0);
   }
 
-  Widget _buildResumeButton() {
+  Widget _buildResumeButton(AppStrings strings) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: onResume,
+        onPressed: () {
+          AudioHapticHelper.playClick();
+          onResume();
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFFFD54F),
           foregroundColor: const Color(0xFF5D4A1A),
@@ -285,9 +296,9 @@ class UnlockCelebrationScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(30),
           ),
         ),
-        child: const Text(
-          'Resume',
-          style: TextStyle(
+        child: Text(
+          strings.buttonResume,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w900,
             letterSpacing: 0.5,
@@ -300,15 +311,18 @@ class UnlockCelebrationScreen extends StatelessWidget {
         .slideY(begin: 0.3, end: 0);
   }
 
-  Widget _buildInventoryButton() {
+  Widget _buildInventoryButton(AppStrings strings) {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: onCheckInventory,
+        onPressed: () {
+          AudioHapticHelper.playClick();
+          onCheckInventory();
+        },
         icon: const Icon(Icons.inventory_2_rounded, size: 20),
-        label: const Text(
-          'Check Inventory',
-          style: TextStyle(
+        label: Text(
+          strings.buttonCheckInventory,
+          style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.5,
@@ -332,16 +346,19 @@ class UnlockCelebrationScreen extends StatelessWidget {
         .slideY(begin: 0.3, end: 0);
   }
 
-  Widget _buildMainMenuButton() {
+  Widget _buildMainMenuButton(AppStrings strings) {
     return TextButton(
-      onPressed: onMainMenu,
+      onPressed: () {
+        AudioHapticHelper.playClick();
+        onMainMenu();
+      },
       style: TextButton.styleFrom(
         foregroundColor: Colors.white.withValues(alpha: 0.85),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
-      child: const Text(
-        'Main Menu',
-        style: TextStyle(
+      child: Text(
+        strings.buttonMainMenu,
+        style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,

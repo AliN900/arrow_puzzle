@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../../../core/app_colors.dart';
 import '../../../core/audio_haptic_helper.dart';
 import '../../../core/game_mode.dart';
@@ -44,7 +46,7 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
   bool _doubled = false;
   bool _isWatchingAd = false;
 
-  Future<void> _watchAd() async {
+  Future<void> _watchAd(AppStrings strings) async {
     if (_isWatchingAd || _doubled) return;
 
     setState(() => _isWatchingAd = true);
@@ -65,9 +67,9 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
         if (!mounted) return;
         setState(() => _isWatchingAd = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ad not available, try again later'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(strings.adNotAvailable),
+            duration: const Duration(seconds: 2),
           ),
         );
       },
@@ -82,11 +84,12 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final accent = AppColors.accent(context);
     const textPrimary = Colors.white;
     const textSecondary = Colors.white70;
     const surface = Color(0xFF1E1E1E);
-    const shinyGold = Color(0xFFFFD700);
+
 
     final hasAdReward = widget.baseCoins > 0 && !widget.isRandom;
 
@@ -100,58 +103,9 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── STARS IN A RAINBOW ARC WITH TRUE STAR-SHAPED OUTLINE BADGES ──
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: List.generate(3, (i) {
-                  final isCenter = i == 1;
-                  final badgeSize = isCenter ? 82.0 : 68.0;
-                  final verticalOffset = isCenter ? -14.0 : 14.0;
-                  final isEarned = i < widget.stars;
-
-                  return Transform.translate(
-                    offset: Offset(0, verticalOffset),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: SizedBox(
-                        width: badgeSize,
-                        height: badgeSize,
-                        child: CustomPaint(
-                          painter: StarBadgePainter(
-                            isEarned: isEarned,
-                            shinyGold: shinyGold,
-                            surfaceColor: Colors.yellow.shade500,
-                          ),
-                          child: Center(
-                            child: Icon(
-                              isEarned
-                                  ? Icons.star_rounded
-                                  : Icons.star_border_rounded,
-                              color: isEarned ? shinyGold : Colors.white24,
-                              size: badgeSize * 0.52,
-                            ),
-                          ),
-                        ),
-                      )
-                          .animate(
-                          delay: Duration(milliseconds: 150 + i * 120))
-                          .scale(
-                        begin: const Offset(0.0, 0.0),
-                        end: const Offset(1.0, 1.0),
-                        duration: 500.ms,
-                        curve: Curves.elasticOut,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
+            _buildStars(),
             const SizedBox(height: 14),
 
-            // ── MAIN POPUP CARD ──
             Container(
               padding:
               const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
@@ -173,16 +127,15 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Level Complete!',
-                      style: TextStyle(
+                    Text(
+                      strings.levelCompleteTitle,
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                         color: textPrimary,
                       ),
                     ),
 
-                    // ── COINS GAINED UNDER LEVEL COMPLETE TEXT ──
                     if (hasAdReward) ...[
                       const SizedBox(height: 10),
                       Row(
@@ -213,7 +166,6 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                       ).animate().fadeIn(duration: 300.ms),
                     ],
 
-                    // ── NEW TROPHY NOTIFICATION ──
                     if (hasNewTrophy) ...[
                       const SizedBox(height: 12),
                       Row(
@@ -224,7 +176,7 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              'NEW TROPHY',
+                              strings.levelCompleteNewTrophy,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -239,7 +191,6 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                       ).animate().fadeIn(duration: 400.ms),
                     ],
 
-                    // ── RANDOM ITEMS INFO ──
                     if (widget.baseItems > 0) ...[
                       const SizedBox(height: 10),
                       Row(
@@ -249,9 +200,11 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              _doubled
-                                  ? '+${widget.baseItems * 2} RANDOM ITEMS'
-                                  : '+${widget.baseItems} RANDOM ITEM',
+                              strings.levelCompleteRandomItems(
+                                _doubled
+                                    ? widget.baseItems * 2
+                                    : widget.baseItems,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -268,10 +221,10 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
 
                     const SizedBox(height: 24),
 
-                    // Double Coins Ad Button
                     if (hasAdReward) ...[
                       _buildAdButton(
                         context: context,
+                        strings: strings,
                         accent: accent,
                         textSecondary: textSecondary,
                         textPrimary: textPrimary,
@@ -279,7 +232,6 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                       const SizedBox(height: 12),
                     ],
 
-                    // Level 500 easter egg
                     if (widget.level.levelNumber == 500 &&
                         widget.gameMode != GameMode.endlessRush) ...[
                       Container(
@@ -295,9 +247,9 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                           children: [
                             Icon(Icons.emoji_events, color: accent, size: 32),
                             const SizedBox(height: 10),
-                            const Text(
-                              'You Finished the Game!',
-                              style: TextStyle(
+                            Text(
+                              strings.levelCompleteFinishedGame,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
                                 color: textPrimary,
@@ -310,14 +262,14 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                     ] else if (!widget.isRandom &&
                         widget.gameMode != GameMode.endlessRush) ...[
                       GameDialogButton(
-                        label: 'Next Level',
+                        label: strings.levelCompleteNextLevel,
                         icon: Icons.play_arrow_rounded,
                         onTap: widget.onNextLevel,
                       ),
                       const SizedBox(height: 12),
                     ],
                     GameDialogButton(
-                      label: 'Home',
+                      label: strings.homeButton,
                       icon: Icons.home_rounded,
                       textColor: textPrimary,
                       onTap: widget.onMenu,
@@ -332,8 +284,94 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
     );
   }
 
+  Widget _buildStars() {
+    const shinyGold = Color(0xFFFFD700);
+    final count = widget.stars.clamp(1, 3);
+
+    // 1 star: single large centred
+    if (count == 1) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _starBadge(index: 0, size: 82, offsetY: 0, shinyGold: shinyGold),
+          ],
+        ),
+      );
+    }
+
+    // 2 stars: side by side, equal size
+    if (count == 2) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _starBadge(index: 0, size: 78, offsetY: 0, shinyGold: shinyGold),
+            const SizedBox(width: 14),
+            _starBadge(index: 1, size: 78, offsetY: 0, shinyGold: shinyGold),
+          ],
+        ),
+      );
+    }
+
+    // 3 stars: middle raised and larger — matches the reference image
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _starBadge(index: 0, size: 68, offsetY: 14, shinyGold: shinyGold),
+          const SizedBox(width: 14),
+          _starBadge(index: 1, size: 82, offsetY: -14, shinyGold: shinyGold),
+          const SizedBox(width: 14),
+          _starBadge(index: 2, size: 68, offsetY: 14, shinyGold: shinyGold),
+        ],
+      ),
+    );
+  }
+
+  Widget _starBadge({
+    required int index,
+    required double size,
+    required double offsetY,
+    required Color shinyGold,
+  }) {
+    return Transform.translate(
+      offset: Offset(0, offsetY),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(
+          painter: StarBadgePainter(
+            isEarned: true,
+            shinyGold: shinyGold,
+            surfaceColor: Colors.yellow.shade500,
+          ),
+          child: Center(
+            child: Icon(
+              Icons.star_rounded,
+              color: shinyGold,
+              size: size * 0.52,
+            ),
+          ),
+        ),
+      )
+          .animate(delay: Duration(milliseconds: 150 + index * 120))
+          .scale(
+        begin: const Offset(0.0, 0.0),
+        end: const Offset(1.0, 1.0),
+        duration: 500.ms,
+        curve: Curves.elasticOut,
+      ),
+    );
+  }
+
   Widget _buildAdButton({
     required BuildContext context,
+    required AppStrings strings,
     required Color accent,
     required Color textPrimary,
     required Color textSecondary,
@@ -350,7 +388,7 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
         ),
         child: Center(
           child: Text(
-            'Coins Doubled!',
+            strings.levelCompleteCoinsDoubled,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -364,7 +402,7 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
     return GestureDetector(
       onTap: () {
         AudioHapticHelper.playClick();
-        if (!_isWatchingAd) _watchAd();
+        if (!_isWatchingAd) _watchAd(strings);
       },
       child: Stack(
         clipBehavior: Clip.none,
@@ -396,7 +434,9 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _isWatchingAd ? 'Loading...' : 'Double Coins',
+                  _isWatchingAd
+                      ? strings.loadingLabel
+                      : strings.levelCompleteDoubleCoins,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -419,7 +459,7 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                 border: Border.all(color: accent, width: 1),
               ),
               child: Text(
-                'AD',
+                strings.adBadge,
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w900,
@@ -518,3 +558,4 @@ class StarBadgePainter extends CustomPainter {
         oldDelegate.surfaceColor != surfaceColor;
   }
 }
+

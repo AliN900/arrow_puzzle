@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../core/app_colors.dart';
+import '../core/audio_haptic_helper.dart';
 import '../core/daily_rewards.dart';
 import '../main.dart';
 import 'coin_icon.dart';
 
 class DailyRewardCard extends ConsumerStatefulWidget {
-  /// Called when the user finishes claiming (or skips) — used by the popup
-  /// to close the dialog. Ignored in Profile screen usage.
   final VoidCallback? onDone;
-
-  /// If true, adds a subtle "Dismiss" text button (popup mode).
   final bool showDismissButton;
 
   const DailyRewardCard({
@@ -27,19 +26,20 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
   bool _isWatchingAd = false;
 
   Future<void> _claim({required bool withAd}) async {
+    AudioHapticHelper.playClick();
+    final strings = AppStrings.of(context);
     if (withAd) {
       if (_isWatchingAd) return;
       setState(() => _isWatchingAd = true);
-      // NOTE: Ad logic will be added later. For now just claim.
       await ref.read(coinsRepositoryProvider).claimDailyReward(withAd: true);
       if (!mounted) return;
       setState(() => _isWatchingAd = false);
       widget.onDone?.call();
-      _showSnack('Claimed!');
+      _showSnack(strings.claimedSnack);
     } else {
       await ref.read(coinsRepositoryProvider).claimDailyReward();
       widget.onDone?.call();
-      _showSnack('Claimed!');
+      _showSnack(strings.claimedSnack);
     }
   }
 
@@ -52,6 +52,7 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final coinsRepo = ref.watch(coinsRepositoryProvider);
     final card = AppColors.surface(context);
     final textPrimary = AppColors.textPrimary(context);
@@ -75,7 +76,7 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'DAILY REWARDS',
+            strings.dailyRewardsLabel,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w900,
@@ -86,8 +87,8 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
           const SizedBox(height: 6),
           Text(
             canClaim
-                ? 'Day $streakDay of ${DailyRewards.maxStreak}'
-                : 'Come back tomorrow',
+                ? strings.dayOfMax(streakDay, DailyRewards.maxStreak)
+                : strings.comeBackTomorrow,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -137,8 +138,7 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          color:
-                          isToday ? Colors.white : textPrimary,
+                          color: isToday ? Colors.white : textPrimary,
                         ),
                       ),
                     ),
@@ -157,7 +157,7 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
                 const CoinIcon(size: 26),
                 const SizedBox(width: 8),
                 Text(
-                  '+$baseCoins coins',
+                  strings.plusCoins(baseCoins),
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -167,7 +167,7 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
                 if (baseItems > 0) ...[
                   const SizedBox(width: 10),
                   Text(
-                    '+ $baseItems 🎁',
+                    strings.plusItems(baseItems),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -193,9 +193,12 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  'Claim for free',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                child: Text(
+                  strings.claimForFree,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
@@ -213,9 +216,11 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
                     : const Icon(Icons.play_circle_outline_rounded, size: 20),
                 label: Text(
                   _isWatchingAd
-                      ? 'Loading...'
-                      : 'Watch ad → +$adCoins coins'
-                      '${adItems > baseItems ? " +${adItems}🎁" : ""}',
+                      ? strings.loadingLabel
+                      : strings.watchAdCoins(adCoins) +
+                      (adItems > baseItems
+                          ? ' ${strings.plusItems(adItems - baseItems)}'
+                          : ''),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -237,9 +242,12 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
             if (widget.showDismissButton) ...[
               const SizedBox(height: 8),
               TextButton(
-                onPressed: widget.onDone,
+                onPressed: () {
+                  AudioHapticHelper.playClick();
+                  widget.onDone?.call();
+                },
                 child: Text(
-                  'Not now',
+                  strings.notNow,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -253,7 +261,7 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
             Icon(Icons.check_circle_rounded, color: accent, size: 40),
             const SizedBox(height: 8),
             Text(
-              'Claimed today!',
+              strings.claimedToday,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -262,15 +270,18 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Next reward in ${_formatTime(coinsRepo.timeUntilTomorrow)}',
+              strings.nextRewardIn(_formatTime(coinsRepo.timeUntilTomorrow)),
               style: TextStyle(fontSize: 13, color: textSecondary),
             ),
             if (widget.showDismissButton) ...[
               const SizedBox(height: 12),
               TextButton(
-                onPressed: widget.onDone,
+                onPressed: () {
+                  AudioHapticHelper.playClick();
+                  widget.onDone?.call();
+                },
                 child: Text(
-                  'Close',
+                  strings.closeLabel,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,

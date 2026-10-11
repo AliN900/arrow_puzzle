@@ -1,3 +1,7 @@
+import 'package:flutter/cupertino.dart';
+
+import '../../l10n/app_localizations.dart';
+
 enum TrophyType { benefit, monumental }
 enum TrophyBenefit { extraHeart, none }
 
@@ -28,7 +32,7 @@ class TrophyConstants {
       index: 1,
       id: 'first_escape',
       title: '🌟 THE FIRST AWAKENING',
-      description: 'Your very first maze escaped! You have unlocked the gateway to the Trophy System. Welcome to AHB.Dev\'s ultimate puzzle journey!',
+      description: 'Your very first maze escaped! You have unlocked the gateway to the Trophy System. Welcome to ahb.Dev\'s ultimate puzzle journey!',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 1,
@@ -504,4 +508,120 @@ class TrophyConstants {
       unlockLevel: 500,
     ),
   ];
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Localization extension
+// ─────────────────────────────────────────────────────────────────────────
+
+extension TrophyLocalization on TrophyModel {
+  String localizedTitle(BuildContext context) {
+    final s = AppStrings.of(context);
+    switch (id) {
+      case 'first_escape':        return s.trophyFirstEscapeTitle;
+      case 'point_blank':         return s.trophyPointBlankTitle;
+      case 'trial_of_two':        return s.trophyTrialOfTwoTitle;
+      case 'quick_thinker':       return s.trophyQuickThinkerTitle;
+      case 'arrow_smith':         return s.trophyArrowSmithTitle;
+      case 'clean_slate':         return s.trophyCleanSlateTitle;
+      case 'spark_of_genius':     return s.trophySparkOfGeniusTitle;
+      case 'unwind':              return s.trophyUnwindTitle;
+      case 'rock_breaker':        return s.trophyRockBreakerTitle;
+      case 'survivalist_badge':   return s.trophySurvivalistBadgeTitle;
+      case 'wayfinder':           return s.trophyWayfinderTitle;
+      case 'tangle_tamer':        return s.trophyTangleTamerTitle;
+      case 'time_lord':           return s.trophyTimeLordTitle;
+      case 'century_mark':        return s.trophyCenturyMarkTitle;
+      case 'bomb_technician':     return s.trophyBombTechnicianTitle;
+      case 'untouchable':         return s.trophyUntouchableTitle;
+      case 'stargazer':           return s.trophyStargazerTitle;
+      case 'master_of_angles':    return s.trophyMasterOfAnglesTitle;
+      case 'halfway_to_glory':    return s.trophyHalfwayToGloryTitle;
+      case 'the_strategist':      return s.trophyTheStrategistTitle;
+      case 'quick_silver':        return s.trophyQuickSilverTitle;
+      case 'iron_will':           return s.trophyIronWillTitle;
+      case 'golden_touch':        return s.trophyGoldenTouchTitle;
+      case 'deep_diver':          return s.trophyDeepDiverTitle;
+      case 'the_puzzler':         return s.trophyThePuzzlerTitle;
+      case 'sharp_shooter':       return s.trophySharpShooterTitle;
+      case 'vault_keeper':        return s.trophyVaultKeeperTitle;
+      case 'milestone_master':    return s.trophyMilestoneMasterTitle;
+      case 'boss_slayer':         return s.trophyBossSlayerTitle;
+      case 'time_bender':         return s.trophyTimeBenderTitle;
+      case 'resilient_spirit':    return s.trophyResilientSpiritTitle;
+      case 'board_collector':     return s.trophyBoardCollectorTitle;
+      case 'apex_predator':       return s.trophyApexPredatorTitle;
+      case 'flawless_execution':  return s.trophyFlawlessExecutionTitle;
+      case 'tactical_mindset':    return s.trophyTacticalMindsetTitle;
+      case 'daily_devotee':       return s.trophyDailyDevoteeTitle;
+      case 'monumental_pioneer':  return s.trophyMonumentalPioneerTitle;
+      case 'high_climber':        return s.trophyHighClimberTitle;
+      case 'grandmaster':         return s.trophyGrandmasterTitle;
+      case 'eternal_flame':       return s.trophyEternalFlameTitle;
+      case 'ironclad':            return s.trophyIroncladTitle;
+      case 'perfectionist':       return s.trophyPerfectionistTitle;
+      case 'titan_of_the_maze':   return s.trophyTitanOfTheMazeTitle;
+      case 'the_500_club':        return s.trophyThe500ClubTitle;
+      case 'living_legend':       return s.trophyLivingLegendTitle;
+      case 'monument_of_time':    return s.trophyMonumentOfTimeTitle;
+      case 'absolute_void':       return s.trophyAbsoluteVoidTitle;
+      case 'infinite_horizon':    return s.trophyInfiniteHorizonTitle;
+      default:                    return title; // English fallback
+    }
+  }
+
+  String localizedDescription(BuildContext context) {
+    final s = AppStrings.of(context);
+    switch (id) {
+      case 'first_escape':        return s.trophyFirstEscapeDesc;
+      case 'point_blank':         return s.trophyPointBlankDesc;
+      case 'trial_of_two':        return s.trophyTrialOfTwoDesc;
+      case 'quick_thinker':       return s.trophyQuickThinkerDesc;
+      case 'arrow_smith':         return s.trophyArrowSmithDesc;
+      case 'clean_slate':         return s.trophyCleanSlateDesc;
+      case 'spark_of_genius':     return s.trophySparkOfGeniusDesc;
+      case 'unwind':              return s.trophyUnwindDesc;
+      case 'rock_breaker':        return s.trophyRockBreakerDesc;
+      case 'survivalist_badge':   return s.trophySurvivalistBadgeDesc;
+      case 'wayfinder':           return s.trophyWayfinderDesc;
+      case 'tangle_tamer':        return s.trophyTangleTamerDesc;
+      case 'time_lord':           return s.trophyTimeLordDesc;
+      case 'century_mark':        return s.trophyCenturyMarkDesc;
+      case 'bomb_technician':     return s.trophyBombTechnicianDesc;
+      case 'untouchable':         return s.trophyUntouchableDesc;
+      case 'stargazer':           return s.trophyStargazerDesc;
+      case 'master_of_angles':    return s.trophyMasterOfAnglesDesc;
+      case 'halfway_to_glory':    return s.trophyHalfwayToGloryDesc;
+      case 'the_strategist':      return s.trophyTheStrategistDesc;
+      case 'quick_silver':        return s.trophyQuickSilverDesc;
+      case 'iron_will':           return s.trophyIronWillDesc;
+      case 'golden_touch':        return s.trophyGoldenTouchDesc;
+      case 'deep_diver':          return s.trophyDeepDiverDesc;
+      case 'the_puzzler':         return s.trophyThePuzzlerDesc;
+      case 'sharp_shooter':       return s.trophySharpShooterDesc;
+      case 'vault_keeper':        return s.trophyVaultKeeperDesc;
+      case 'milestone_master':    return s.trophyMilestoneMasterDesc;
+      case 'boss_slayer':         return s.trophyBossSlayerDesc;
+      case 'time_bender':         return s.trophyTimeBenderDesc;
+      case 'resilient_spirit':    return s.trophyResilientSpiritDesc;
+      case 'board_collector':     return s.trophyBoardCollectorDesc;
+      case 'apex_predator':       return s.trophyApexPredatorDesc;
+      case 'flawless_execution':  return s.trophyFlawlessExecutionDesc;
+      case 'tactical_mindset':    return s.trophyTacticalMindsetDesc;
+      case 'daily_devotee':       return s.trophyDailyDevoteeDesc;
+      case 'monumental_pioneer':  return s.trophyMonumentalPioneerDesc;
+      case 'high_climber':        return s.trophyHighClimberDesc;
+      case 'grandmaster':         return s.trophyGrandmasterDesc;
+      case 'eternal_flame':       return s.trophyEternalFlameDesc;
+      case 'ironclad':            return s.trophyIroncladDesc;
+      case 'perfectionist':       return s.trophyPerfectionistDesc;
+      case 'titan_of_the_maze':   return s.trophyTitanOfTheMazeDesc;
+      case 'the_500_club':        return s.trophyThe500ClubDesc;
+      case 'living_legend':       return s.trophyLivingLegendDesc;
+      case 'monument_of_time':    return s.trophyMonumentOfTimeDesc;
+      case 'absolute_void':       return s.trophyAbsoluteVoidDesc;
+      case 'infinite_horizon':    return s.trophyInfiniteHorizonDesc;
+      default:                    return description;
+    }
+  }
 }

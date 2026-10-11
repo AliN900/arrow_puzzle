@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// Which category tab the board appears under.
 enum BoardCategory { dark, light }
 
@@ -851,6 +853,33 @@ class BoardThemes {
             canvas.drawPath(path, linePaint);
           }
         }
+    }
+  }
+}
+extension BoardThemeLocalization on BoardTheme {
+  String localizedName(BuildContext context) {
+    final s = AppStrings.of(context);
+    switch (this) {
+      case BoardTheme.minimal:    return s.boardMinimal;
+      case BoardTheme.nebula:     return s.boardNebula;
+      case BoardTheme.blueprint:  return s.boardBlueprint;
+      case BoardTheme.forest:     return s.boardForest;
+      case BoardTheme.ocean:      return s.boardOcean;
+      case BoardTheme.ember:      return s.boardEmber;
+      case BoardTheme.cosmic:     return s.boardCosmic;
+      case BoardTheme.geometric:  return s.boardGeometric;
+      case BoardTheme.gold:       return s.boardGold;
+      case BoardTheme.hacker:     return s.boardHacker;
+      case BoardTheme.paper:      return s.boardPaper;
+      case BoardTheme.ice:        return s.boardIce;
+      case BoardTheme.sand:       return s.boardSand;
+      case BoardTheme.cloud:      return s.boardCloud;
+      case BoardTheme.mint:       return s.boardMint;
+      case BoardTheme.rose:       return s.boardRose;
+      case BoardTheme.lavender:   return s.boardLavender;
+      case BoardTheme.sky:        return s.boardSky;
+      case BoardTheme.pearl:      return s.boardPearl;
+      case BoardTheme.honey:      return s.boardHoney;
     }
   }
 }

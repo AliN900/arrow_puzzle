@@ -1,11 +1,18 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/app_themes.dart';
+import '../../core/audio_haptic_helper.dart';
+import '../../core/board_themes.dart';
 import '../../core/game_mode.dart';
+import '../../core/items.dart';
+import '../../data/models/trophy.dart';
 import '../../main.dart';
 import '../../widgets/coin_pill.dart';
 import '../../widgets/daily_reward_popup.dart';
+import '../../widgets/zen_mode.dart';
 import '../game/game_screen.dart';
 import '../leaderboard/leaderboard_screen.dart';
 import '../profile/profile_screen.dart';
@@ -27,21 +34,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       _preWarmLevels();
-      // Show the daily popup after a short delay so the app finishes
-      // first frame rendering before the dialog appears.
+
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
       await _maybeShowDailyPopup();
     });
   }
 
-
   Future<void> _maybeShowDailyPopup() async {
     final coinsRepo = ref.read(coinsRepositoryProvider);
     if (!coinsRepo.shouldShowDailyPopup) return;
     if (!mounted) return;
 
-    // Mark shown BEFORE displaying so a crash doesn't re-show it
     await coinsRepo.markDailyPopupShown();
     if (!mounted) return;
 
@@ -63,27 +67,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final progress = ref.watch(progressRepositoryProvider);
+    final coinsRepo = ref.watch(coinsRepositoryProvider);
+    final auth = ref.watch(authServiceProvider);
 
-    // Theme-aware colors
     final bgColor = AppColors.background(context);
     final cardColor = AppColors.surface(context);
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
     final accent = AppColors.accent(context);
 
-    // Real data from repository
     final int currentLevel = progress.currentLevel;
     final int highestLevel = progress.highestUnlockedLevel;
     final bool skinsUnlocked = progress.skinsUnlocked;
-    final int starsEarned = List.generate(currentLevel, (i) => i + 1)
+    final int starsEarned = List.generate(highestLevel, (i) => i + 1)
         .fold(0, (sum, l) => sum + progress.getStarsForLevel(l));
 
-    // Icon accent colors (fixed palette, theme-independent)
+    final bool dailyReady = coinsRepo.shouldShowDailyPopup;
+
+    const int freeArrowSkins = 4;
+    final int ownedSkins = skinsUnlocked
+        ? freeArrowSkins + progress.purchasedArrows.length
+        : freeArrowSkins + progress.purchasedArrows.length;
+
+    final int totalTrophies = TrophyConstants.allTrophies.length;
+    final int unlockedTrophies = progress.unlockedTrophies.length;
+
     const coinYellow = Color(0xFFFFD54F);
     const trophyRed = Color(0xFFFF5A5F);
     const inventoryGreen = Color(0xFF00C853);
     const dailyBlue = Color(0xFF448AFF);
+
+    final int totalSkins = GameTheme.values.length;
+
+    final int ownedBoards =
+        BoardThemes.all.where((b) => progress.isBoardUnlocked(b)).length;
+    final int totalBoards = BoardThemes.all.length;
+
+    final int ownedCollections = ownedSkins + ownedBoards;
+    final int totalCollections = totalSkins + totalBoards;
+
+    int totalItems = 0;
+    for (final item in ItemType.values) {
+      totalItems += coinsRepo.getItemCount(item);
+    }
+
+    final String inventorySubtitle;
+    if (skinsUnlocked) {
+      inventorySubtitle = strings.homeInventoryAllUnlocked(totalItems);
+    } else if (totalCollections == 0 && totalItems == 0) {
+      inventorySubtitle = strings.homeInventoryBrowse;
+    } else {
+      inventorySubtitle = strings.homeInventoryCounts(
+        ownedCollections,
+        totalCollections,
+        totalItems,
+      );
+    }
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -98,6 +139,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 children: [
                   GestureDetector(
                     onTap: () {
+                      AudioHapticHelper.playClick();
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -109,17 +151,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       decoration: BoxDecoration(
                         color: accent,
                         shape: BoxShape.circle,
+                        image: auth.avatarUrl != null && auth.avatarUrl!.isNotEmpty
+                            ? DecorationImage(
+                          image: NetworkImage(auth.avatarUrl!),
+                          fit: BoxFit.cover,
+                        )
+                            : null,
                       ),
-                      child: const Center(
+                      child: auth.avatarUrl == null || auth.avatarUrl!.isEmpty
+                          ? Center(
                         child: Text(
-                          'P',
-                          style: TextStyle(
+                          auth.isGuest ? 'P' : auth.avatarInitial,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
+                      )
+                          : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -128,15 +178,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Player',
+                          auth.isGuest ? strings.homePlayer : auth.displayName,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: textPrimary,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'Level $currentLevel · $starsEarned stars',
+                          strings.homeLevelStars(currentLevel, starsEarned),
                           style: TextStyle(
                             fontSize: 13,
                             color: textSecondary,
@@ -145,7 +196,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ],
                     ),
                   ),
-                  // Coin pill
                   const CoinPill(),
                 ],
               ),
@@ -171,7 +221,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'CONTINUE',
+                      strings.homeContinueLabel,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -181,7 +231,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Level $currentLevel',
+                      strings.homeLevelNumber(currentLevel),
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w900,
@@ -196,6 +246,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         onPressed: _isNavigating
                             ? null
                             : () async {
+                          AudioHapticHelper.playClick();
                           if (!mounted) return;
                           setState(() => _isNavigating = true);
                           await Navigator.push(
@@ -219,14 +270,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           elevation: 0,
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.play_arrow_rounded, size: 28),
-                            SizedBox(width: 8),
+                            const Icon(Icons.play_arrow_rounded, size: 28),
+                            const SizedBox(width: 8),
                             Text(
-                              'Continue',
-                              style: TextStyle(
+                              strings.homeContinue,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -241,6 +292,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
               const SizedBox(height: 16),
 
+              const ZenModeCard(),
+
+              const SizedBox(height: 16),
 
               // --- 2x2 Grid Section ---
               Row(
@@ -248,11 +302,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Expanded(
                     child: _buildGridCard(
                       context: context,
-                      title: 'Daily',
-                      subtitle: 'Ready to play',
+                      title: strings.homeDaily,
+                      subtitle: dailyReady
+                          ? strings.homeDailyReady
+                          : strings.homeDailyClaimed,
                       icon: Icons.calendar_today_rounded,
                       iconColor: dailyBlue,
-                      hasBadge: true,
+                      hasBadge: dailyReady,
                       badgeColor: trophyRed,
                       onTap: () {
                         ref.read(currentTabProvider.notifier).state = 1;
@@ -263,8 +319,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Expanded(
                     child: _buildGridCard(
                       context: context,
-                      title: 'Leaderboard',
-                      subtitle: 'Coming soon',
+                      title: strings.homeLeaderboard,
+                      subtitle: strings.homeComingSoon,
                       icon: Icons.leaderboard_rounded,
                       iconColor: coinYellow,
                       badgeColor: trophyRed,
@@ -286,10 +342,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Expanded(
                     child: _buildGridCard(
                       context: context,
-                      title: 'Inventory',
-                      subtitle: skinsUnlocked
-                          ? 'All skins unlocked'
-                          : '4 skins owned',
+                      title: strings.homeInventory,
+                      subtitle: inventorySubtitle,
                       icon: Icons.grid_view_rounded,
                       iconColor: inventoryGreen,
                       badgeColor: trophyRed,
@@ -302,15 +356,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Expanded(
                     child: _buildGridCard(
                       context: context,
-                      title: 'Trophies',
-                      subtitle: '$starsEarned of ${highestLevel * 3}',
+                      title: strings.homeTrophies,
+                      subtitle:
+                      strings.homeTrophiesCount(unlockedTrophies, totalTrophies),
                       icon: Icons.emoji_events_rounded,
                       iconColor: trophyRed,
                       badgeColor: trophyRed,
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const TrophiesScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const TrophiesScreen(),
+                          ),
                         );
                       },
                     ),
@@ -340,7 +397,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final textSecondary = AppColors.textSecondary(context);
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        AudioHapticHelper.playClick();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

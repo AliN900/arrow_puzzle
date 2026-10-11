@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 enum GameTheme {
   neon,
   classic,
@@ -202,6 +204,25 @@ class AppThemes {
             Color(0xFFFF4081), // Pink
           ],
         );
+    }
+  }
+}
+
+extension GameThemeLocalization on GameTheme {
+  String localizedName(BuildContext context) {
+    final s = AppStrings.of(context);
+    switch (this) {
+      case GameTheme.neon:       return s.themeNeon;
+      case GameTheme.classic:    return s.themeClassic;
+      case GameTheme.retro:      return s.themeRetro;
+      case GameTheme.cyber:      return s.themeCyber;
+      case GameTheme.hacker:     return s.themeHacker;
+      case GameTheme.aurora:     return s.themeAurora;
+      case GameTheme.blueprint:  return s.themeBlueprint;
+      case GameTheme.forest:     return s.themeForest;
+      case GameTheme.pastel:     return s.themePastel;
+      case GameTheme.sunset:     return s.themeSunset;
+      case GameTheme.rainbow:    return s.themeRainbow;
     }
   }
 }

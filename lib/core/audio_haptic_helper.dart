@@ -1,3 +1,4 @@
+import 'package:arrow_puzzle/core/sfx_player.dart';
 import 'package:flutter/services.dart';
 
 class AudioHapticHelper {
@@ -5,10 +6,9 @@ class AudioHapticHelper {
 
   static void init() {}
 
-  static Future<void> playClick() async {
-    if (hapticsEnabled) {
-      await HapticFeedback.selectionClick();
-    }
+  static void playClick() {
+    SfxPlayer.instance.playUiTap();
+    if (hapticsEnabled) HapticFeedback.selectionClick();
   }
 
   static Future<void> playSuccess({int combo = 1, bool isLast = false}) async {

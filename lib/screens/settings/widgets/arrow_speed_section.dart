@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
 
 class ArrowSpeedSection extends StatelessWidget {
   final int speed;
@@ -16,21 +17,24 @@ class ArrowSpeedSection extends StatelessWidget {
     required this.textSecondary,
   });
 
-  String _speedLabel(int value) {
+  String _speedLabel(AppStrings strings, int value) {
     switch (value) {
       case 0:
-        return 'Slow';
+        return strings.arrowSpeedSlow;
       case 1:
-        return 'Normal';
+        return strings.arrowSpeedNormal;
       case 2:
-        return 'Fast';
+        return strings.arrowSpeedFast;
       default:
-        return 'Slow';
+        return strings.arrowSpeedSlow;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final label = _speedLabel(strings, speed);
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -40,7 +44,7 @@ class ArrowSpeedSection extends StatelessWidget {
               Icon(Icons.speed_outlined, color: textSecondary, size: 24),
               const SizedBox(width: 16),
               Text(
-                'Escape speed',
+                strings.arrowSpeedEscapeSpeed,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: textPrimary,
@@ -48,7 +52,7 @@ class ArrowSpeedSection extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                _speedLabel(speed),
+                label,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: accentColor,
@@ -64,7 +68,7 @@ class ArrowSpeedSection extends StatelessWidget {
             divisions: 2,
             activeColor: accentColor,
             inactiveColor: accentColor.withValues(alpha: 0.2),
-            label: _speedLabel(speed),
+            label: label,
             onChanged: (value) => onSpeedChanged(value.round()),
           ),
         ],

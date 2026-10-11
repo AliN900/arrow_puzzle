@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/audio_haptic_helper.dart';
 import '../../core/game_mode.dart';
+import '../../main.dart';
 import '../game/game_screen.dart';
 import '../profile/profile_screen.dart';
+import 'arrow_rushcard.dart';
 
 class DailyScreen extends ConsumerWidget {
   const DailyScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
+    final progress = ref.watch(progressRepositoryProvider);
     final bg = AppColors.background(context);
     final card = AppColors.surface(context);
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
     final accent = AppColors.accent(context);
+
+    final selected = progress.rushDifficulty;
 
     return Scaffold(
       backgroundColor: bg,
@@ -26,7 +35,7 @@ class DailyScreen extends ConsumerWidget {
             children: [
               const SizedBox(height: 4),
               Text(
-                'Daily Challenges',
+                strings.dailyChallengesTitle,
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
@@ -35,7 +44,7 @@ class DailyScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Complete special modes to earn bonus rewards.',
+                strings.dailyChallengesSubtitle,
                 style: TextStyle(fontSize: 14, color: textSecondary),
               ),
               const SizedBox(height: 20),
@@ -43,6 +52,7 @@ class DailyScreen extends ConsumerWidget {
               // Daily Rewards shortcut
               GestureDetector(
                 onTap: () {
+                  AudioHapticHelper.playClick();
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -75,7 +85,7 @@ class DailyScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Daily Rewards',
+                              strings.dailyRewardsTitle,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
@@ -84,7 +94,7 @@ class DailyScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Claim your streak reward',
+                              strings.dailyRewardsSubtitle,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: textSecondary,
@@ -93,16 +103,16 @@ class DailyScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_right_rounded, color: textSecondary),
+                      Icon(Icons.chevron_right_rounded,
+                          color: textSecondary),
                     ],
                   ),
                 ),
               ),
 
               const SizedBox(height: 24),
-
               Text(
-                'Active Challenges',
+                strings.activeChallengesTitle,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -111,23 +121,34 @@ class DailyScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // Arrow Rush Challenge (Isolated Endless Level)
+              // ── Arrow Rush with difficulty selector ───────────────
+              ArrowRushCard(
+                progress: progress,
+                selected: selected,
+                accent: accent,
+                card: card,
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+              ),
+
+              const SizedBox(height: 12),
+
               _buildChallengeCard(
                 context: context,
-                title: 'Arrow Rush',
-                subtitle: 'Race the clock as new arrows continuously populate!',
-                badgeText: '+75 Coins',
-                badgeColor: Colors.amber,
-                icon: Icons.bolt_rounded,
-                color: Colors.amber,
+                title: strings.blitzTitle,
+                subtitle: strings.blitzSubtitle,
+                badgeText: strings.badgeNew,
+                badgeColor: const Color(0xFF00BCD4),
+                icon: Icons.local_fire_department_rounded,
+                color: const Color(0xFF00BCD4),
                 isComingSoon: false,
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const GameScreen(
-                        level: 1, // Isolated run, does not affect main story levels
-                        gameMode: GameMode.endlessRush,
+                        level: 1,
+                        gameMode: GameMode.blitz,
                       ),
                     ),
                   );
@@ -136,21 +157,44 @@ class DailyScreen extends ConsumerWidget {
 
               const SizedBox(height: 12),
 
-              // Mine Arrows Challenge (Coming Soon)
               _buildChallengeCard(
                 context: context,
-                title: 'Mine Arrows',
-                subtitle: 'Clear arrows while dodging hidden grid mines!',
-                badgeText: 'COMING SOON',
+                title: strings.gameModeTimeBlitz,
+                subtitle: strings.timeBlitzDesc,
+                badgeText: strings.badgeNew,
+                badgeColor: const Color(0xFFFF5722),
+                icon: Icons.hourglass_bottom_rounded,
+                color: const Color(0xFFFF5722),
+                isComingSoon: false,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const GameScreen(
+                        level: 1,
+                        gameMode: GameMode.timeBlitz,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Mine Arrows (unchanged)
+              _buildChallengeCard(
+                context: context,
+                title: strings.mineArrowsTitle,
+                subtitle: strings.mineArrowsSubtitle,
+                badgeText: strings.badgeComingSoon,
                 badgeColor: Colors.grey,
                 icon: Icons.bug_report_rounded,
                 color: Colors.redAccent,
                 isComingSoon: true,
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Mine Arrows challenge is coming soon!'),
-                      duration: Duration(seconds: 2),
+                    SnackBar(
+                      content: Text(strings.mineArrowsComingSoonSnack),
+                      duration: const Duration(seconds: 2),
                     ),
                   );
                 },
@@ -179,7 +223,10 @@ class DailyScreen extends ConsumerWidget {
     final effectiveColor = isComingSoon ? Colors.grey : color;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        AudioHapticHelper.playClick();
+        onTap();
+      },
       child: Opacity(
         opacity: isComingSoon ? 0.6 : 1.0,
         child: Container(
@@ -208,7 +255,6 @@ class DailyScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Wrap prevents horizontal overflow on narrow screens
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
                       spacing: 8,

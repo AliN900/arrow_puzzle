@@ -16,6 +16,11 @@ LevelModel generateComplexLevelIsolate(int levelNumber) {
   return LevelGenerator.generateLevel(levelNumber, complexPaths: true);
 }
 
+@pragma('vm:entry-point')
+LevelModel generateSeededLevelIsolate(List<int> args) {
+  return LevelGenerator.generateLevel(args[0], seed: args[1]);
+}
+
 class LevelRepository {
   static const int cacheVersion = LevelModel.currentVersion;
 
@@ -146,6 +151,22 @@ class LevelRepository {
     } catch (e) {
       debugPrint('Complex level generation error: $e');
       return LevelGenerator.generateLevel(levelNumber, complexPaths: true);
+    }
+  }
+
+  /// Generates a **non-deterministic** level for Blitz. The same level number
+  /// with a different seed produces a completely different layout. Uses an
+  /// isolate so the UI thread doesn't freeze on big grids.
+  Future<LevelModel> getBlitzLevelAsync(
+      int levelNumber, {
+        required int seed,
+      }) async {
+    try {
+      return await compute(generateSeededLevelIsolate, [levelNumber, seed])
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      debugPrint('Seeded generation failed, using sync: $e');
+      return LevelGenerator.generateLevel(levelNumber, seed: seed);
     }
   }
 

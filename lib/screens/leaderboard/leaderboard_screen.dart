@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../../core/app_colors.dart';
 
 class LeaderboardScreen extends ConsumerWidget {
@@ -7,6 +9,7 @@ class LeaderboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final bgColor = AppColors.background(context);
     final cardColor = AppColors.surface(context);
     final textPrimary = AppColors.textPrimary(context);
@@ -38,7 +41,7 @@ class LeaderboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Leaderboard',
+                  strings.leaderboardTitle,
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
@@ -47,7 +50,7 @@ class LeaderboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Coming soon',
+                  strings.leaderboardComingSoon,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -63,7 +66,7 @@ class LeaderboardScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    'Compete with players around the world. Your scores and rankings will appear here once the online leaderboard goes live.',
+                    strings.leaderboardDescription,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,

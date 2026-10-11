@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/audio_haptic_helper.dart';
+
 class SettingsNavTile extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -25,7 +27,10 @@ class SettingsNavTile extends StatelessWidget {
         style: TextStyle(fontWeight: FontWeight.w600, color: textPrimary),
       ),
       trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
-      onTap: onTap,
+      onTap: () {
+        AudioHapticHelper.playClick();
+        onTap();
+      },
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/app_colors.dart';
+import '../core/audio_haptic_helper.dart';
 import '../main.dart';
 import 'coin_icon.dart';
 
@@ -15,7 +16,12 @@ class CoinPill extends ConsumerWidget {
     const coinYellow = Color(0xFFFFD54F);
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTap == null
+          ? null
+          : () {
+        AudioHapticHelper.playClick();
+        onTap!();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(

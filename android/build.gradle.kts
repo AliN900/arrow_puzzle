@@ -1,7 +1,25 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        maven(url = "https://developer.huawei.com/repo/")
+    }
+    configurations.classpath {
+        resolutionStrategy {
+            force("com.android.tools.build:gradle:8.11.1")
+        }
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.11.1")
+        classpath("com.huawei.agconnect:agcp:1.9.1.303")
+    }
+}
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+        maven(url = "https://developer.huawei.com/repo/")
     }
 }
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/audio_haptic_helper.dart';
 import '../../data/models/trophy.dart';
 import '../../main.dart';
 
@@ -9,6 +12,7 @@ class TrophiesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final progress = ref.watch(progressRepositoryProvider);
     final bgColor = AppColors.background(context);
     final cardColor = AppColors.surface(context);
@@ -17,15 +21,23 @@ class TrophiesScreen extends ConsumerWidget {
     final accent = AppColors.accent(context);
 
     final trophies = TrophyConstants.allTrophies;
-    final unlockedCount = trophies.where((t) => progress.isTrophyUnlocked(t.id)).length;
+    final unlockedCount =
+        trophies.where((t) => progress.isTrophyUnlocked(t.id)).length;
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: textPrimary),
+          onPressed: () {
+            AudioHapticHelper.playClick();
+            Navigator.pop(context);
+          },
+        ),
         title: Text(
-          'Trophies ($unlockedCount / ${trophies.length})',
+          strings.trophiesTitle(unlockedCount, trophies.length),
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w900,
@@ -65,7 +77,6 @@ class TrophiesScreen extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                // Trophy Icon Badge
                 Container(
                   width: 56,
                   height: 56,
@@ -83,7 +94,6 @@ class TrophiesScreen extends ConsumerWidget {
                 ),
                 const SizedBox(width: 16),
 
-                // Trophy Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,7 +103,7 @@ class TrophiesScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              trophy.title,
+                              trophy.localizedTitle(context),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
@@ -102,13 +112,14 @@ class TrophiesScreen extends ConsumerWidget {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.grey.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              'Lvl ${trophy.unlockLevel}',
+                              strings.trophiesLevelBadge(trophy.unlockLevel),
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -120,7 +131,7 @@ class TrophiesScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        trophy.description,
+                        trophy.localizedDescription(context),
                         style: TextStyle(
                           fontSize: 13,
                           color: textSecondary,
@@ -128,18 +139,18 @@ class TrophiesScreen extends ConsumerWidget {
                         ),
                       ),
 
-                      // Highlight Functional Benefit Trophies
                       if (trophy.type == TrophyType.benefit) ...[
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: Colors.amber.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text(
-                            '✨ Perk: +1 Permanent Max Heart',
-                            style: TextStyle(
+                          child: Text(
+                            strings.trophiesPerkHeart,
+                            style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: Colors.amber,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../core/app_colors.dart';
+import '../core/audio_haptic_helper.dart';
 
 class CustomBottomNavBar extends HookWidget {
   final int currentIndex;
@@ -14,6 +17,7 @@ class CustomBottomNavBar extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final cardColor = AppColors.surface(context);
     final accent = AppColors.accent(context);
     final textSecondary = AppColors.textSecondary(context);
@@ -45,23 +49,28 @@ class CustomBottomNavBar extends HookWidget {
       currentIndex: currentIndex,
       type: BottomNavigationBarType.fixed,
       elevation: 10,
-      onTap: onTap,
+      onTap: (index) {
+        if (index != currentIndex) {
+          AudioHapticHelper.playClick();
+        }
+        onTap(index);
+      },
       items: [
         BottomNavigationBarItem(
           icon: buildIcon(Icons.home_rounded, 0),
-          label: 'Home',
+          label: strings.bottomNavHome,
         ),
         BottomNavigationBarItem(
           icon: buildIcon(Icons.calendar_today_rounded, 1),
-          label: 'Daily',
+          label: strings.bottomNavDaily,
         ),
         BottomNavigationBarItem(
           icon: buildIcon(Icons.inventory_2_rounded, 2),
-          label: 'Inventory',
+          label: strings.bottomNavInventory,
         ),
         BottomNavigationBarItem(
           icon: buildIcon(Icons.settings_rounded, 3),
-          label: 'Settings',
+          label: strings.bottomNavSettings,
         ),
       ],
     );

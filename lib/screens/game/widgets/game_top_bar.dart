@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants.dart';
 import '../../../core/game_mode.dart';
 import '../../../data/models/level.dart';
-import '../../../data/repositories/progress_repository.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../main.dart';
 import '../../../widgets/lives_bar.dart';
 
@@ -29,21 +28,26 @@ class GameTopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
+
     String titleText;
-    if (gameMode == GameMode.timeAttack) {
-      titleText = 'Score: $score';
+    if (gameMode == GameMode.timeAttack ||
+        gameMode == GameMode.timeBlitz) {
+      titleText = strings.gameTopBarScore(score);
     } else if (gameMode == GameMode.zen) {
-      titleText = gameMode.label;
+      titleText = gameMode.localizedLabel(context);
     } else if (gameMode == GameMode.endlessRush) {
-      titleText = 'Arrow Rush';
+      titleText = strings.arrowRushTitle;
     } else if (isRandom) {
-      titleText = 'Random';
+      titleText = strings.gameTopBarRandom;
     } else {
-      titleText = 'Lv.${level.levelNumber.toString().padLeft(3, '0')}';
+      titleText = strings.gameTopBarLevelNumber(level.levelNumber.toString());
     }
 
     final progress = ref.watch(progressRepositoryProvider);
-    final showHearts = !heartRemover && gameMode != GameMode.timeAttack;
+    final showHearts = !heartRemover &&
+        gameMode != GameMode.timeAttack &&
+        gameMode != GameMode.timeBlitz;
 
     Widget? livesWidget;
     if (showHearts) {

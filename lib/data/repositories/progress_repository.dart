@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 import '../../core/board_themes.dart';
+import '../../core/rush_difficulty.dart';
+import '../../core/sfx_player.dart';
 import '../models/level_result.dart';
 import '../../core/constants.dart';
 import '../../core/app_themes.dart';
@@ -22,8 +24,11 @@ class ProgressRepository extends ChangeNotifier {
   bool _assistMode = false;
   bool _complexPaths = false;
   bool _soundEnabled = true;
+  String _languageCode = 'system';
   bool _musicEnabled = true;
+  double _soundVolume = 0.5;
   int _arrowSpeed = 0;
+  int _rushDifficultyIndex = 0;
   ThemeMode _themeMode = ThemeMode.light;
   Color _accentColor = const Color(0xFF6C4CF1);
   BoardTheme _selectedBoard = BoardTheme.minimal;
@@ -33,6 +38,7 @@ class ProgressRepository extends ChangeNotifier {
   final Set<String> _purchasedBoards = {};
   final Set<String> _purchasedArrows = {};
   int _itemsGrantedFromStars = 0;
+  bool _privacyAccepted = false;
 
   int get lives => _lives;
   int get maxLives => AppConstants.maxLives;
@@ -51,8 +57,16 @@ class ProgressRepository extends ChangeNotifier {
   BoardTheme get selectedBoard => _selectedBoard;
   // NEW GETTERS (used by SettingsScreen)
   bool get soundEnabled => _soundEnabled;
+  String get languageCode => _languageCode;
   bool get musicEnabled => _musicEnabled;
+  double get soundVolume => _soundVolume;
   int get arrowSpeed => _arrowSpeed;
+  bool get privacyAccepted => _privacyAccepted;
+  RushDifficulty get rushDifficulty => RushDifficulty.values[
+  _rushDifficultyIndex.clamp(0, RushDifficulty.values.length - 1)];
+
+  bool isRushDifficultyUnlocked(RushDifficulty d) =>
+      _highestUnlockedLevel >= d.unlockLevel;
   int getStarsForLevel(int level) => _levelResults[level]?.stars ?? 0;
   bool isLevelUnlocked(int level) {
     return level <= _highestUnlockedLevel;
@@ -79,9 +93,28 @@ class ProgressRepository extends ChangeNotifier {
     _load();
   }
 
-  // NEW METHODS (used by SettingsScreen)
   Future<void> toggleSound() async {
     _soundEnabled = !_soundEnabled;
+    SfxPlayer.instance.setEnabled(_soundEnabled);
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> setSoundVolume(double volume) async {
+    _soundVolume = volume.clamp(0.0, 1.0);
+    SfxPlayer.instance.setVolume(_soundVolume);
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> setLanguageCode(String code) async {
+    _languageCode = code;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> acceptPrivacyPolicy() async {
+    _privacyAccepted = true;
     await _save();
     notifyListeners();
   }
@@ -139,10 +172,17 @@ class ProgressRepository extends ChangeNotifier {
       (_box.get('purchasedArrows', defaultValue: <String>[]) as List).cast<String>(),
     );
     _itemsGrantedFromStars = _box.get('itemsGrantedFromStars', defaultValue: 0);
+    _privacyAccepted = _box.get('privacyAccepted', defaultValue: false);
 
     _soundEnabled = _box.get('soundEnabled', defaultValue: true);
+    _languageCode = _box.get('languageCode', defaultValue: 'system');
+    _soundVolume = _box.get('soundVolume', defaultValue: 0.7);
+    SfxPlayer.instance.setEnabled(_soundEnabled);
+    SfxPlayer.instance.setVolume(_soundVolume);
     _musicEnabled = _box.get('musicEnabled', defaultValue: true);
+    _soundVolume = _box.get('soundVolume', defaultValue: 0.7);
     _arrowSpeed = _box.get('arrowSpeed', defaultValue: 0);
+    _rushDifficultyIndex = _box.get('rushDifficultyIndex', defaultValue: 0);
 
     AudioHapticHelper.hapticsEnabled = _hapticsEnabled;
 
@@ -188,7 +228,11 @@ class ProgressRepository extends ChangeNotifier {
       // Save new fields
       'soundEnabled': _soundEnabled,
       'musicEnabled': _musicEnabled,
+      'soundVolume': _soundVolume,
+      'languageCode': _languageCode,
       'arrowSpeed': _arrowSpeed,
+      'privacyAccepted': _privacyAccepted,
+      'rushDifficultyIndex': _rushDifficultyIndex,
       // ── ADDED: Save Unlocked Trophies to Hive ──
       'unlockedTrophies': _unlockedTrophies.toList(),
     });
@@ -196,6 +240,12 @@ class ProgressRepository extends ChangeNotifier {
     for (final entry in _levelResults.entries) {
       await _resultsBox.put(entry.key.toString(), jsonEncode(entry.value.toJson()));
     }
+  }
+
+  Future<void> setRushDifficulty(RushDifficulty d) async {
+    _rushDifficultyIndex = d.index;
+    await _save();
+    notifyListeners();
   }
 
   void _syncTrophiesWithProgress() {

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,8 @@ import '../../../core/app_colors.dart';
 import '../../../core/board_themes.dart';
 import '../../../core/game_mode.dart';
 import '../../../core/items.dart';
+import '../../../data/models/level_result.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../main.dart';
 import '../../../unity_rewarded_ad.dart';
 import '../../../widgets/unlock_celebration_screen.dart';
@@ -74,6 +78,67 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
     setState(() {});
   }
 
+  /// Debug: fills levels 1..currentLevel with random stars (1-3), weighted
+  /// toward 3 so the total looks like a real player's progress.
+  ///
+  /// As a side effect, this also triggers trophy unlocks (many trophies
+  /// check `highestUnlockedLevel`), which is exactly what we want for
+  /// clean store screenshots.
+  Future<void> _fillRandomStars() async {
+    final progress = ref.read(progressRepositoryProvider);
+    final targetLevel = progress.currentLevel;
+
+    if (targetLevel <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Set a current level above 1 first'),
+        ),
+      );
+      return;
+    }
+
+    final rng = Random();
+    int totalStars = 0;
+    int levelsFilled = 0;
+
+    for (int lv = 1; lv <= targetLevel; lv++) {
+      // Weighted random star roll:
+      //   55% chance → 3 stars
+      //   35% chance → 2 stars
+      //   10% chance → 1 star
+      // Mirrors how a decent player would actually clear levels.
+      final roll = rng.nextDouble();
+      final stars = roll < 0.55 ? 3 : (roll < 0.90 ? 2 : 1);
+
+      // Corresponding livesLost value (matches how the real game computes it):
+      final livesLost = stars == 3 ? 0 : (stars == 2 ? 1 : 2);
+
+      await progress.recordLevelComplete(LevelResult(
+        levelNumber: lv,
+        stars: stars,
+        livesLost: livesLost,
+        completed: true,
+        completedAt: DateTime.now(),
+      ));
+
+      totalStars += stars;
+      levelsFilled++;
+    }
+
+    // Restore the current level in case recordLevelComplete altered it.
+    await progress.setCurrentLevel(targetLevel);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Filled $totalStars stars across $levelsFilled levels',
+        ),
+      ),
+    );
+    setState(() {});
+  }
+
   Future<void> _launchEndlessRush() async {
     final level = int.tryParse(_controller.text.trim());
     if (level != null && level >= 1) {
@@ -93,6 +158,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
   }
 
   Future<void> _confirmReset() async {
+    final strings = AppStrings.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -108,7 +174,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(strings.buttonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -131,13 +197,13 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
       PageRouteBuilder(
         opaque: true,
         transitionDuration: const Duration(milliseconds: 400),
-        pageBuilder: (_, __, ___) => UnlockCelebrationScreen(
+        pageBuilder: (_, _, _) => UnlockCelebrationScreen(
           board: board,
           onResume: () => Navigator.pop(context),
           onMainMenu: () => Navigator.pop(context),
           onCheckInventory: () => Navigator.pop(context),
         ),
-        transitionsBuilder: (_, animation, __, child) {
+        transitionsBuilder: (_, animation, _, child) {
           return FadeTransition(opacity: animation, child: child);
         },
       ),
@@ -145,6 +211,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
   }
 
   Future<void> _showCelebrationPicker() async {
+    final strings = AppStrings.of(context);
     final boards = BoardTheme.values;
     final selected = await showDialog<BoardTheme>(
       context: context,
@@ -180,7 +247,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(strings.buttonCancel),
           ),
         ],
       ),
@@ -226,7 +293,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
             ),
             const SizedBox(height: 16),
 
-            // ── Input ───────────────────────────────────────────────
+            // ── Input ──
             TextField(
               controller: _controller,
               keyboardType: TextInputType.number,
@@ -246,9 +313,11 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // ── Level-targeting actions ─────────────────────────────
+            // ── LEVEL NAVIGATION ──
+            _sectionLabel('LEVEL NAVIGATION'),
+            const SizedBox(height: 6),
             _btn(
               label: '🔓 Unlock Up To Level',
               icon: Icons.lock_open_rounded,
@@ -259,7 +328,7 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
             _btn(
               label: '🎯 Set Current Level',
               icon: Icons.flag_rounded,
-              color: const Color(0xFF00C853),
+              color: accent,
               onTap: _setCurrentLevel,
             ),
             const SizedBox(height: 8),
@@ -273,12 +342,12 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
             _btn(
               label: '🌀 Play Endless Rush at Current',
               icon: Icons.all_inclusive_rounded,
-              color: const Color(0xFF00BCD4),
+              color: accent,
               onTap: _launchEndlessRush,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // ── Quick-test chips ────────────────────────────────────
+            // ── Quick test chips ──
             const Text(
               'Quick test levels',
               style: TextStyle(
@@ -294,8 +363,10 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
               runSpacing: 6,
               children: [1, 60, 120, 240, 300, 500, 800].map((lv) {
                 return ActionChip(
-                  label: Text('$lv',
-                      style: const TextStyle(color: Colors.white, fontSize: 12)),
+                  label: Text(
+                    '$lv',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
                   backgroundColor: accent.withValues(alpha: 0.25),
                   side: BorderSide(color: accent.withValues(alpha: 0.6)),
                   onPressed: () {
@@ -305,9 +376,11 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // ── Existing utility buttons ────────────────────────────
+            // ── PROGRESS ──
+            _sectionLabel('PROGRESS'),
+            const SizedBox(height: 6),
             _btn(
               label: 'Unlock All Levels',
               icon: Icons.lock_open_rounded,
@@ -319,37 +392,57 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
             ),
             const SizedBox(height: 8),
             _btn(
+              label: '⭐ Fill Random Stars',
+              icon: Icons.star_rounded,
+              color: accent,
+              onTap: _fillRandomStars,
+            ),
+            const SizedBox(height: 20),
+
+            // ── TESTING ──
+            _sectionLabel('TESTING'),
+            const SizedBox(height: 6),
+            _btn(
               label: '🎉 Test Celebration',
               icon: Icons.celebration_rounded,
-              color: const Color(0xFFFFD54F),
+              color: accent,
               onTap: _showCelebrationPicker,
             ),
             const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () async {
+            _btn(
+              label: '📺 Test Reward Ad',
+              icon: Icons.play_circle_outline_rounded,
+              color: accent,
+              onTap: () async {
                 await UnityRewardedAd.show(
                   onRewarded: () => debugPrint('🎉 USER EARNED REWARD'),
                   onFailed: () => debugPrint('❌ Ad failed to show'),
                 );
               },
-              child: const Text('Test Reward Ad'),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () async {
-                final c = ref.read(coinsRepositoryProvider);
-                await c.debugAdvanceDailyStreak();
-              },
-              child: const Text('Advance Daily (DEV)'),
             ),
             const SizedBox(height: 8),
             _btn(
+              label: '📅 Advance Daily (DEV)',
+              icon: Icons.calendar_today_rounded,
+              color: accent,
+              onTap: () async {
+                final c = ref.read(coinsRepositoryProvider);
+                await c.debugAdvanceDailyStreak();
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // ── ECONOMY ──
+            _sectionLabel('ECONOMY'),
+            const SizedBox(height: 6),
+            _btn(
               label: '💰 Add 1000 Coins',
               icon: Icons.monetization_on_rounded,
-              color: const Color(0xFFFFD54F),
+              color: accent,
               onTap: () async {
                 await ref.read(coinsRepositoryProvider).addCoins(1000);
                 if (mounted) {
+                  // ignore: use_build_context_synchronously
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('+1000 coins added')),
                   );
@@ -360,20 +453,25 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
             _btn(
               label: '🎁 Grant All Items ×5',
               icon: Icons.inventory_2_rounded,
-              color: const Color(0xFF7C4DFF),
+              color: accent,
               onTap: () async {
                 final coinsRepo = ref.read(coinsRepositoryProvider);
                 for (final item in ItemType.values) {
                   await coinsRepo.addItem(item, count: 5);
                 }
                 if (mounted) {
+                  // ignore: use_build_context_synchronously
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Granted 5 of each item')),
                   );
                 }
               },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 20),
+
+            // ── DANGER ZONE ──
+            _sectionLabel('DANGER ZONE'),
+            const SizedBox(height: 6),
             _btn(
               label: 'Reset Progress',
               icon: Icons.warning_amber_rounded,
@@ -412,4 +510,16 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
       ),
     );
   }
+}
+
+Widget _sectionLabel(String text) {
+  return Text(
+    text,
+    style: const TextStyle(
+      color: Colors.white38,
+      fontSize: 10,
+      fontWeight: FontWeight.w900,
+      letterSpacing: 1.5,
+    ),
+  );
 }

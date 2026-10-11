@@ -33,7 +33,7 @@ class _ConfettiFieldState extends State<ConfettiField>
     return IgnorePointer(
       child: AnimatedBuilder(
         animation: _controller,
-        builder: (_, __) => CustomPaint(
+        builder: (_, _) => CustomPaint(
           painter: _ConfettiPainter(
             progress: _controller.value,
             count: widget.count,

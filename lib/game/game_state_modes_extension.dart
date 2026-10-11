@@ -20,7 +20,7 @@ extension GameStateModes on GameState {
 
     failedSpawnCount = 0;
     telegraphArrows.add(newArrow);
-    notifyListeners();
+    refresh();
 
     int blinkTicks = 0;
     Timer.periodic(const Duration(milliseconds: 100), (timer) {
@@ -31,18 +31,18 @@ extension GameStateModes on GameState {
         timer.cancel();
         telegraphArrows.remove(newArrow);
         clearTelegraphCancellation(newArrow.id);
-        notifyListeners();
+        refresh();
         return;
       }
 
       blinkTicks++;
-      notifyListeners();
+      refresh();
 
       if (blinkTicks >= 10) {
         timer.cancel();
         telegraphArrows.remove(newArrow);
         arrows.add(newArrow.copyWith(state: ArrowState.idle));
-        notifyListeners();
+        refresh();
       }
     });
 

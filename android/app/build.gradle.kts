@@ -3,8 +3,22 @@ import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+configurations {
+    all {
+        exclude(group = "com.huawei.hms", module = "hmscoreinstaller")
+    }
+}
+
+val isHuaweiBuild = gradle.startParameter.taskRequests
+    .toString()
+    .lowercase()
+    .contains("huawei")
+
+if (isHuaweiBuild) {
+    pluginManager.apply("com.huawei.agconnect")
 }
 
 val keystoreProperties = Properties()
@@ -14,7 +28,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "AHB.dev.arrow_puzzle"
+    namespace = "ahb.dev.arrow_puzzle"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -23,25 +37,29 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "AHB.dev.arrow_puzzle"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "ahb.dev.arrow_puzzle"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
-    // COMMENT THIS OUT ENTIRELY FOR NOW
-    /*
+    flavorDimensions("store")
+    productFlavors {
+        create("google") {
+            dimension = "store"
+        }
+        create("huawei") {
+            dimension = "store"
+        }
+    }
+
     signingConfigs {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String
@@ -50,12 +68,12 @@ android {
             storePassword = keystoreProperties["storePassword"] as String
         }
     }
-    */
 
     buildTypes {
         release {
-            // Change this to use the debug config so it builds without the secret key
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 
@@ -70,6 +88,12 @@ android {
                 output.versionCodeOverride = (variant.versionCode) * 10 + abiCode
             }
         }
+    }
+}
+
+dependencies {
+    if (isHuaweiBuild) {
+        implementation("com.huawei.agconnect:agconnect-core:1.9.1.303")
     }
 }
 

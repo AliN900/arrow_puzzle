@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/audio_haptic_helper.dart';
 import '../../core/app_themes.dart';
+import '../../core/sfx_player.dart';
 import '../../data/models/arrow.dart';
 import '../../data/models/level.dart';
 import '../game_state.dart';
@@ -22,12 +23,11 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   double _blockTime = 0.0;
   double _maxBlockSlide = 0.0;
   double _slideOffset = 0.0;
+  // ignore: unused_field
   bool _isBombExiting = false;
+// ignore: unused_field
   Offset? _bombRockCenterPx;
-  double _bombSlideDuration = 0.0;
-  double _bombPopDuration = 0.0;
-  double _bombSlideThreshold = 0.0;
-  double _hintPulseTime = 0.0;
+  final double _hintPulseTime = 0.0;
   double _bombPulseTime = 0.0;
 
   static const double _kLongPressThreshold = 0.30;
@@ -36,6 +36,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   bool _isPreviewMode = false;
   List<Offset>? _previewPath;
   double _previewPulseTime = 0.0;
+  double _leavingPulseTime = 0.0;
+
 
   bool _isExiting = false;
   double _exitProgress = 0.0;
@@ -45,7 +47,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   double _restoreDuration = 0.5;
   bool _isEntering = false;
   double _enterProgress = 0.0;
-  double _enterDuration = 0.25;
+  final double _enterDuration = 0.25;
 
   List<Offset>? _deflectedExtension;
 
@@ -154,7 +156,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _isTouchDown = true;
     _longPressAccum = 0.0;
     _pressScale = 0.93;
-    AudioHapticHelper.playClick();
+
   }
 
   @override
@@ -179,17 +181,19 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _previewPath = null;
   }
 
-  void triggerMove() {
+  void triggerMove({bool isForced = false}) {
     if (_isAnimating) return;
     _isAnimating = true;
 
-    final result = gameState.tapArrow(arrowModel.id);
+    final result = gameState.tapArrow(arrowModel.id, isForced: isForced);
     switch (result) {
       case TapResult.exited:
+        SfxPlayer.instance.playArrowClear();
         AudioHapticHelper.playSuccess(combo: gameState.comboCount);
         _startExitAnimation();
         break;
       case TapResult.blocked:
+        SfxPlayer.instance.playArrowBlocked();
         AudioHapticHelper.playFailure();
         _playBlockAnimation();
         break;
@@ -413,6 +417,21 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   @override
   void update(double dt) {
     super.update(dt);
+    // Leaving-arrow forced launch — fires automatically when the tap
+    // counter hits 0.
+    if (gameState.pendingForceLaunch.contains(arrowModel.id) &&
+        !_isAnimating &&
+        !_isExiting &&
+        !_isRestoring &&
+        !_isEntering) {
+      gameState.acknowledgeForceLaunch(arrowModel.id);
+      triggerMove(isForced: true);
+    }
+
+    // Pulse timer for leaving arrows
+    if (arrowModel.isLeavingArrow && !_isAnimating) {
+      _leavingPulseTime += dt * 4.0;
+    }
 
     if (arrowModel.type == ArrowType.bomb &&
         !_isAnimating &&
@@ -686,6 +705,23 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     canvas.drawPath(bodyPath, _bodyPaint);
 
     _drawHead(canvas, pts, mainColor, sw);
+
+
+    // Pulsing glow for leaving arrows
+    if (arrowModel.isLeavingArrow && arrowModel.state == ArrowState.idle) {
+      final pulse = 0.5 + 0.5 * math.sin(_leavingPulseTime);
+      canvas.drawPath(
+        bodyPath,
+        Paint()
+          ..color = const Color(0xFFFF9800)
+              .withValues(alpha: 0.35 + pulse * 0.45)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = sw * 4.5
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+      );
+    }
 
     if (_isPreviewMode) {
       final preview = _previewPath;

@@ -54,3 +54,7 @@ app.*.map.json
 *.p12
 *.pem
 key.properties
+
+android/key.properties
+*.jks
+*.keystore

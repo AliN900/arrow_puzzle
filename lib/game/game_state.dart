@@ -89,7 +89,11 @@ class GameState extends ChangeNotifier {
   String? get hintArrowId => _hintArrowId;
   bool get isBombArmed => _isBombArmed;
 
+  void refresh() => notifyListeners();
+
   Map<String, OrphanDotType> get orphanDots => _orphanDots;
+
+
 
   final List<ArrowModel> telegraphArrows = [];
   /// IDs of telegraphs that were cancelled mid-blink. The blink timer in
@@ -114,6 +118,8 @@ class GameState extends ChangeNotifier {
       _cancelledTelegraphIds.remove(id);
 
   void handleArrowExitCompleted(String arrowId) {
+    final wasActiveLeaving = arrowId == _activeLeavingArrowId;
+
     final idx = _arrows.indexWhere((a) => a.id == arrowId);
     if (idx != -1) {
       _escapedHistory.add(_arrows[idx]);
@@ -127,7 +133,7 @@ class GameState extends ChangeNotifier {
 
     if (_arrows.isEmpty && telegraphArrows.isEmpty) {
       _isComplete = true;
-      telegraphArrows.clear();  // kill any in-flight blinks
+      telegraphArrows.clear();
       onLevelComplete();
     } else {
       if (checkDeadlock()) {
@@ -135,12 +141,15 @@ class GameState extends ChangeNotifier {
         onDeadlock?.call();
       }
     }
+
+    if (wasActiveLeaving) {
+      onLeavingArrowResolved(arrowId);
+    }
+
     notifyListeners();
   }
 
-  int _failedSpawnCount = 0;
-  int get failedSpawnCount => _failedSpawnCount;
-  set failedSpawnCount(int val) => _failedSpawnCount = val;
+  int failedSpawnCount = 0;
 
   void setLevel(LevelModel updatedLevel) {
     _currentLevel = updatedLevel;
@@ -225,7 +234,7 @@ class GameState extends ChangeNotifier {
     _consumedDotsByArrow[arrowId] = dots;
   }
 
-  TapResult tapArrow(String arrowId) {
+  TapResult tapArrow(String arrowId, {bool isForced = false}) {
     if (_isComplete || _isGameOver) return TapResult.ignored;
 
     final index = _arrows.indexWhere((a) => a.id == arrowId);
@@ -234,6 +243,12 @@ class GameState extends ChangeNotifier {
     final arrow = _arrows[index];
     if (arrow.state != ArrowState.idle) {
       return TapResult.ignored;
+    }
+
+    // Decrement the leaving-arrow counter on every user tap.
+    // Forced launches skip this to avoid a feedback loop.
+    if (!isForced) {
+      decrementLeavingArrowCounter();
     }
 
     final exitInfo = _computeExitInfo(arrow);
@@ -277,11 +292,23 @@ class GameState extends ChangeNotifier {
 
   TapResult _handleBlocked(int index, ArrowModel arrow, String arrowId) {
     _arrows[index] = arrow.copyWith(state: ArrowState.blocked);
-    if (gameMode != GameMode.zen &&
-        gameMode != GameMode.timeAttack &&
-        !heartRemover) {
+
+    final isHeartFree = gameMode == GameMode.zen ||
+        gameMode == GameMode.timeAttack ||
+        heartRemover;
+
+    final isTimeBlitz = gameMode == GameMode.timeBlitz;
+
+    // Classic / Endless Rush: deduct a life
+    if (!isHeartFree && !isTimeBlitz) {
       _lives--;
       _livesLost++;
+      onLifeLost();
+    }
+
+    // Time Blitz: fire onLifeLost for the time penalty (screen handles the
+    // actual -Ns). Hearts aren't tracked.
+    if (isTimeBlitz) {
       onLifeLost();
     }
 
@@ -293,10 +320,8 @@ class GameState extends ChangeNotifier {
       }
     });
 
-    if (gameMode != GameMode.zen &&
-        gameMode != GameMode.timeAttack &&
-        !heartRemover &&
-        _lives <= 0) {
+    // Classic game-over on life depletion
+    if (!isHeartFree && !isTimeBlitz && _lives <= 0) {
       _isGameOver = true;
       onGameOver();
       notifyListeners();
@@ -464,6 +489,94 @@ class GameState extends ChangeNotifier {
       }
       notifyListeners();
     }
+  }
+
+  // ── Leaving Arrows (Classic + Time Blitz only) ──
+  static const int kLeavingArrowTapLimit = 10;
+
+  int _leavingArrowTapCount = kLeavingArrowTapLimit;
+  String? _activeLeavingArrowId;
+  int _leavingArrowsRemaining = 0;
+  final Set<String> _pendingForceLaunch = {};
+
+  int get leavingArrowTapCount => _leavingArrowTapCount;
+  String? get activeLeavingArrowId => _activeLeavingArrowId;
+  Set<String> get pendingForceLaunch => _pendingForceLaunch;
+  bool get hasActiveLeavingArrow => _activeLeavingArrowId != null;
+
+  /// Call at level start. Seeds the leaving-arrow cycle.
+  /// If [count] is 0, no leaving arrows will appear this level.
+  void seedLeavingArrows({required int count}) {
+    _leavingArrowsRemaining = count;
+    _leavingArrowTapCount = kLeavingArrowTapLimit;
+    _activeLeavingArrowId = null;
+    _pendingForceLaunch.clear();
+    _promoteNextLeavingArrow();
+  }
+
+  void _promoteNextLeavingArrow() {
+    if (_leavingArrowsRemaining <= 0) {
+      _activeLeavingArrowId = null;
+      return;
+    }
+
+    final candidates = _arrows
+        .where((a) =>
+    a.state == ArrowState.idle &&
+        a.type == ArrowType.normal &&
+        !a.isLeavingArrow)
+        .toList();
+
+    if (candidates.isEmpty) {
+      _activeLeavingArrowId = null;
+      return;
+    }
+
+    candidates.shuffle();
+    final chosen = candidates.first;
+    final idx = _arrows.indexWhere((a) => a.id == chosen.id);
+    if (idx == -1) {
+      _activeLeavingArrowId = null;
+      return;
+    }
+
+    _arrows[idx] = _arrows[idx].copyWith(isLeavingArrow: true);
+    _activeLeavingArrowId = chosen.id;
+    _leavingArrowTapCount = kLeavingArrowTapLimit;
+    _leavingArrowsRemaining--;
+    notifyListeners();
+  }
+
+  /// Decrement the leaving-arrow counter on every user tap.
+  /// When it hits 0, queues the arrow for a forced launch.
+  void decrementLeavingArrowCounter() {
+    final activeId = _activeLeavingArrowId;
+    if (activeId == null) return;
+
+    final stillAlive = _arrows
+        .any((a) => a.id == activeId && a.state == ArrowState.idle);
+    if (!stillAlive) return;
+
+    _leavingArrowTapCount--;
+    if (_leavingArrowTapCount <= 0) {
+      _pendingForceLaunch.add(activeId);
+      _leavingArrowTapCount = kLeavingArrowTapLimit;
+    }
+    notifyListeners();
+  }
+
+  /// Called by ArrowComponent after a forced launch has been initiated.
+  void acknowledgeForceLaunch(String arrowId) {
+    _pendingForceLaunch.remove(arrowId);
+  }
+
+  /// Called when the currently active leaving arrow has left the board
+  /// (either successfully, or been removed). Promotes the next one.
+  void onLeavingArrowResolved(String arrowId) {
+    if (_activeLeavingArrowId != arrowId) return;
+    _pendingForceLaunch.remove(arrowId);
+    _activeLeavingArrowId = null;
+    _promoteNextLeavingArrow();
   }
 
   void forceGameOver() {

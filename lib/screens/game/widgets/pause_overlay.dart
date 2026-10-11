@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:arrow_puzzle/l10n/app_localizations.dart';
+
 import '../../../core/app_colors.dart';
 import 'game_dialog_button.dart';
 
 class PauseOverlay extends StatelessWidget {
   final VoidCallback onResume;
-  final VoidCallback onRestart;
+  final VoidCallback? onRestart;
   final VoidCallback onMainMenu;
 
   const PauseOverlay({
     super.key,
     required this.onResume,
-    required this.onRestart,
+    this.onRestart,
     required this.onMainMenu,
   });
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final accent = AppColors.accent(context);
 
     return Positioned.fill(
@@ -48,9 +51,9 @@ class PauseOverlay extends StatelessWidget {
                   size: 52,
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Paused',
-                  style: TextStyle(
+                Text(
+                  strings.pauseTitle,
+                  style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
@@ -58,21 +61,23 @@ class PauseOverlay extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 GameDialogButton(
-                  label: 'Resume',
+                  label: strings.pauseResume,
                   icon: Icons.play_arrow_rounded,
                   textColor: Colors.white,
                   onTap: onResume,
                 ),
+                if (onRestart != null) ...[
+                  const SizedBox(height: 10),
+                  GameDialogButton(
+                    label: strings.pauseRestart,
+                    icon: Icons.refresh_rounded,
+                    textColor: Colors.white,
+                    onTap: onRestart!,
+                  ),
+                ],
                 const SizedBox(height: 10),
                 GameDialogButton(
-                  label: 'Restart',
-                  icon: Icons.refresh_rounded,
-                  textColor: Colors.white,
-                  onTap: onRestart,
-                ),
-                const SizedBox(height: 10),
-                GameDialogButton(
-                  label: 'Main Menu',
+                  label: strings.pauseMainMenu,
                   icon: Icons.home_rounded,
                   textColor: Colors.white70,
                   onTap: onMainMenu,

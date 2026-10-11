@@ -71,12 +71,15 @@ class ArrowModel {
   ArrowDirection direction;
   ArrowState state;
 
-  /// NEW — 'normal' by default; 'bomb' when paired with a rock.
+  /// 'normal' by default; 'bomb' when paired with a rock.
   final ArrowType type;
 
-  /// NEW — for bomb arrows, the id of the RockModel this arrow destroys.
-  /// Null for normal arrows.
+  /// For bomb arrows, the id of the RockModel this arrow destroys.
   final String? targetRockId;
+
+  /// When true, this arrow is a "leaving arrow" — it force-launches after
+  /// N user taps on the board. Only used in Classic and Time Blitz.
+  final bool isLeavingArrow;
 
   final List<List<int>> path;
 
@@ -88,6 +91,7 @@ class ArrowModel {
     this.state = ArrowState.idle,
     this.type = ArrowType.normal,
     this.targetRockId,
+    this.isLeavingArrow = false,
     List<List<int>>? path,
   }) : path = path ?? [[row, col]];
 
@@ -99,6 +103,7 @@ class ArrowModel {
     ArrowState? state,
     ArrowType? type,
     String? targetRockId,
+    bool? isLeavingArrow,
     List<List<int>>? path,
   }) {
     return ArrowModel(
@@ -109,6 +114,7 @@ class ArrowModel {
       state: state ?? this.state,
       type: type ?? this.type,
       targetRockId: targetRockId ?? this.targetRockId,
+      isLeavingArrow: isLeavingArrow ?? this.isLeavingArrow,
       path: path ?? this.path,
     );
   }
@@ -121,6 +127,7 @@ class ArrowModel {
     'state': state.index,
     'type': type.index,
     'targetRockId': targetRockId,
+    'isLeavingArrow': isLeavingArrow,
     'path': path,
   };
 
@@ -134,6 +141,7 @@ class ArrowModel {
         ? ArrowType.values[json['type'] as int]
         : ArrowType.normal,
     targetRockId: json['targetRockId'] as String?,
+    isLeavingArrow: json['isLeavingArrow'] as bool? ?? false,
     path: (json['path'] as List<dynamic>?)
         ?.map((e) => (e as List<dynamic>).map((x) => x as int).toList())
         .toList(),
@@ -141,5 +149,6 @@ class ArrowModel {
 
   @override
   String toString() =>
-      'Arrow($id @ [$row,$col] ${direction.name}, type: ${type.name}, path: $path)';
+      'Arrow($id @ [$row,$col] ${direction.name}, type: ${type.name}, '
+          'leaving: $isLeavingArrow, path: $path)';
 }

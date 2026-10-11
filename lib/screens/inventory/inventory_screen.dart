@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_themes.dart';
+import '../../core/audio_haptic_helper.dart';
 import '../../core/board_themes.dart';
 import '../../core/items.dart';
 import '../../core/store_prices.dart';
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../widgets/coin_icon.dart';
 import '../../widgets/pop_dialog.dart';
@@ -21,6 +23,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final bgColor = AppColors.background(context);
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
@@ -32,14 +35,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── HEADER WITH INVENTORY TITLE & COIN COUNTER ──
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Inventory',
+                    strings.inventoryTitle,
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
@@ -88,9 +90,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 padding: const EdgeInsets.all(4),
                 child: Row(
                   children: [
-                    _tabButton('Arrows', 0, accent, textPrimary, textSecondary),
-                    _tabButton('Boards', 1, accent, textPrimary, textSecondary),
-                    _tabButton('Items', 2, accent, textPrimary, textSecondary),
+                    _tabButton(strings.inventoryTabArrows, 0, accent, textPrimary, textSecondary),
+                    _tabButton(strings.inventoryTabBoards, 1, accent, textPrimary, textSecondary),
+                    _tabButton(strings.inventoryTabItems, 2, accent, textPrimary, textSecondary),
                   ],
                 ),
               ),
@@ -121,7 +123,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     final selected = _tab == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _tab = index),
+        onTap: () {
+          AudioHapticHelper.playClick();
+          setState(() => _tab = index);
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
@@ -180,6 +185,7 @@ class _ArrowsGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final progress = ref.watch(progressRepositoryProvider);
     final selectedTheme = progress.selectedTheme;
     final cardColor = AppColors.surface(context);
@@ -208,6 +214,7 @@ class _ArrowsGrid extends ConsumerWidget {
 
               return GestureDetector(
                 onTap: () {
+                  AudioHapticHelper.playClick();
                   if (isUnlocked) {
                     ref.read(progressRepositoryProvider).setTheme(theme);
                   } else {
@@ -291,7 +298,7 @@ class _ArrowsGrid extends ConsumerWidget {
                               const SizedBox(height: 4),
                               if (isUnlocked)
                                 Text(
-                                  isSelected ? 'Equipped' : 'Tap to equip',
+                                  isSelected ? strings.inventoryEquipped : strings.inventoryTapToEquip,
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: isSelected ? accent : textSecondary,
@@ -365,6 +372,7 @@ class _BoardsGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final progress = ref.watch(progressRepositoryProvider);
     final selectedBoard = progress.selectedBoard;
     final cardColor = AppColors.surface(context);
@@ -395,6 +403,7 @@ class _BoardsGrid extends ConsumerWidget {
 
               return GestureDetector(
                 onTap: () {
+                  AudioHapticHelper.playClick();
                   if (isUnlocked) {
                     ref.read(progressRepositoryProvider).setBoard(board);
                     ref.read(progressRepositoryProvider).markBoardViewed(board);
@@ -403,9 +412,7 @@ class _BoardsGrid extends ConsumerWidget {
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                          'Reach level ${colors.unlockLevel} to unlock',
-                        ),
+                        content: Text(strings.inventoryReachLevel(colors.unlockLevel)),
                       ),
                     );
                   }
@@ -517,7 +524,7 @@ class _BoardsGrid extends ConsumerWidget {
                               const SizedBox(height: 4),
                               if (isUnlocked)
                                 Text(
-                                  isSelected ? 'Equipped' : 'Tap to equip',
+                                  isSelected ? strings.inventoryEquipped : strings.inventoryTapToEquip,
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: isSelected ? accent : textSecondary,
@@ -540,7 +547,7 @@ class _BoardsGrid extends ConsumerWidget {
                                 )
                               else
                                 Text(
-                                  'Lv ${colors.unlockLevel}',
+                                  strings.inventoryLevelBadge(colors.unlockLevel),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: textSecondary,
@@ -575,6 +582,7 @@ class _ItemsGrid extends ConsumerWidget {
       ItemType item,
       ItemBundle bundle,
       ) async {
+    final strings = AppStrings.of(context);
     final coinsRepo = ref.read(coinsRepositoryProvider);
     final price = bundle.price;
 
@@ -582,7 +590,7 @@ class _ItemsGrid extends ConsumerWidget {
       final missing = price - coinsRepo.coins;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Need $missing more coins'),
+          content: Text(strings.inventoryNeedMoreCoins(missing)),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -610,7 +618,7 @@ class _ItemsGrid extends ConsumerWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
       itemCount: ItemType.values.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final item = ItemType.values[index];
         final owned = coinsRepo.getItemCount(item);
@@ -695,7 +703,10 @@ class _ItemsGrid extends ConsumerWidget {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: ElevatedButton(
-                        onPressed: () => _buyItem(context, ref, item, bundle),
+                        onPressed: () {
+                          AudioHapticHelper.playClick();
+                          _buyItem(context, ref, item, bundle);
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: coinYellow,
                           foregroundColor: const Color(0xFF5D4A1A),
@@ -747,6 +758,7 @@ class _ItemsGrid extends ConsumerWidget {
       ItemType item,
       ItemBundle bundle,
       ) {
+    final strings = AppStrings.of(context);
     final accent = AppColors.accent(context);
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
@@ -809,13 +821,16 @@ class _ItemsGrid extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Cancel'),
+                      child: Text(strings.buttonCancel),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pop(ctx, true),
+                      onPressed: () {
+                        AudioHapticHelper.playClick();
+                        Navigator.pop(ctx, true);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: accent,
                         foregroundColor: Colors.white,
@@ -850,6 +865,7 @@ Future<bool?> _showConfirmDialog(
       required String title,
       required int price,
     }) {
+  final strings = AppStrings.of(context);
   final accent = AppColors.accent(context);
   final textPrimary = AppColors.textPrimary(context);
   final textSecondary = AppColors.textSecondary(context);
@@ -904,7 +920,7 @@ Future<bool?> _showConfirmDialog(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Cancel'),
+                    child: Text(strings.buttonCancel),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -936,10 +952,11 @@ Future<bool?> _showConfirmDialog(
 }
 
 void _showNotEnough(BuildContext context, int price, int balance) {
+  final strings = AppStrings.of(context);
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
-        'Need ${price - balance} more coins',
+        strings.inventoryNeedMoreCoins(price - balance),
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
       duration: const Duration(seconds: 2),

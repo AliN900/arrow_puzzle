@@ -9,16 +9,24 @@ import 'solver.dart';
 import 'mask_generator.dart';
 
 class LevelGenerator {
-  static LevelModel generateLevel(int levelNumber, {bool complexPaths = false}) {
-    debugPrint('🔥 GENERATING LEVEL $levelNumber');
+  static LevelModel generateLevel(
+      int levelNumber, {
+        bool complexPaths = false,
+        int? seed,
+      }) {
+    debugPrint('🔥 GENERATING LEVEL $levelNumber (seed=${seed ?? "auto"})');
     final type = AppConstants.levelTypeFor(levelNumber);
     int gridSize = AppConstants.gridSizeForLevel(levelNumber);
     if (levelNumber == 213) gridSize = 32;
     if (levelNumber == 395) gridSize = 35;
     if (levelNumber == 437) gridSize = 36;
 
-    final seed = levelNumber * 103 + 51 + (complexPaths ? 99991 : 0);
-    final rng = Random(seed);
+    // When `seed` is provided, use it directly. Otherwise derive the
+    // deterministic seed from the level number, so campaign levels stay
+    // identical across runs while Blitz can pass a fresh seed per play.
+    final actualSeed =
+        seed ?? (levelNumber * 103 + 51 + (complexPaths ? 99991 : 0));
+    final rng = Random(actualSeed);
 
     final maskShape = _shapeFor(type, rng);
     final mask = MaskGenerator.shapeByName(maskShape.name, gridSize, rng);

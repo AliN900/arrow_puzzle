@@ -178,7 +178,7 @@ class CoinsRepository extends ChangeNotifier {
 
     await _save();
     notifyListeners();
-    debugPrint('🎁 DEV: Day $nextDay, +$coins coins, +$itemCount items, total ${_coins}');
+    debugPrint('🎁 DEV: Day $nextDay, +$coins coins, +$itemCount items, total $_coins');
     return coins;
   }
 
