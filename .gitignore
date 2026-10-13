@@ -58,3 +58,16 @@ key.properties
 android/key.properties
 *.jks
 *.keystore
+
+
+# Huawei AGC — contains API key and client_secret
+agconnect-services.json
+android/app/agconnect-services.json
+
+# Extra hardening
+google-services.json
+android/app/google-services.json
+*.env
+.env.*
+lib/core/secrets.dart
+lib/core/api_keys.dart
