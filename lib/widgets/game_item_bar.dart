@@ -185,7 +185,7 @@ class _GameItemBarState extends ConsumerState<GameItemBar>
       case ItemType.hint:
         return 999;
       case ItemType.undo:
-        return widget.isTimedLevel ? 2 : 1;
+        return widget.isTimedLevel ? 2 : 999;
       case ItemType.bomb:
         return 1;
       case ItemType.heartFlask:

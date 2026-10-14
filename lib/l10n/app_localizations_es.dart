@@ -1044,12 +1044,6 @@ class AppStringsEs extends AppStrings {
   String get accentColorLabel => 'Color de acento';
 
   @override
-  String get settingsShareFriends => 'Compartir con amigos';
-
-  @override
-  String get settingsSharingSoon => 'Compartir próximamente';
-
-  @override
   String get settingsPrivacyPolicy => 'Política de privacidad';
 
   @override
@@ -1104,11 +1098,49 @@ class AppStringsEs extends AppStrings {
   String get leaderboardTitle => 'Clasificación';
 
   @override
-  String get leaderboardComingSoon => 'Próximamente';
+  String get leaderboardTabWeekly => 'Semanal';
 
   @override
-  String get leaderboardDescription =>
-      'Compite con jugadores de todo el mundo. Tus puntuaciones y clasificaciones aparecerán aquí cuando la clasificación en línea esté disponible.';
+  String get leaderboardTabMonthly => 'Mensual';
+
+  @override
+  String get leaderboardTabAllTime => 'Histórico';
+
+  @override
+  String get leaderboardYourRank => 'Tu posición';
+
+  @override
+  String get leaderboardNotRanked => 'Sin clasificar';
+
+  @override
+  String get leaderboardSignInToRank => 'Inicia sesión para aparecer';
+
+  @override
+  String get leaderboardEmptyState => 'Aún no hay puntuaciones';
+
+  @override
+  String get leaderboardScore => 'Puntos';
+
+  @override
+  String get leaderboardLevel => 'Nivel';
+
+  @override
+  String get leaderboardStars => 'Estrellas';
+
+  @override
+  String get leaderboardTrophies => 'Trofeos';
+
+  @override
+  String get leaderboardYou => 'Tú';
+
+  @override
+  String get leaderboardRankPrefix => '#';
+
+  @override
+  String get leaderboardOptInTitle => 'Mostrarme en la clasificación';
+
+  @override
+  String get leaderboardOptInSubtitle => 'Permite que otros vean tu posición';
 
   @override
   String get inventoryTitle => 'Inventario';
@@ -1665,4 +1697,20 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get profileUpdated => 'Perfil actualizado';
+
+  @override
+  String get shareMessage =>
+      '¡Descubre Arrow Puzzle, un divertido juego de escape de laberintos!';
+
+  @override
+  String get copyLink => 'Copiar enlace';
+
+  @override
+  String get linkCopied => 'Enlace copiado';
+
+  @override
+  String get settingsShareFriends => 'Compartir con amigos';
+
+  @override
+  String get settingsSharingSoon => 'Próximamente';
 }

@@ -19,14 +19,15 @@
  * Modifications: Flutter fork with UI redesign, theme system, and additional features by ahb.Dev.
  */
 
-
 import 'dart:async';
+import 'dart:ui';
 import 'package:arrow_puzzle/screens/onboarding/privacy_consent_screen.dart';
 import 'package:arrow_puzzle/services/auth_service.dart';
 import 'package:arrow_puzzle/services/cloud_sync_service.dart';
 import 'package:arrow_puzzle/services/huawei_iap_service.dart';
 import 'package:arrow_puzzle/services/store_detector.dart';
 import 'package:arrow_puzzle/unity_rewarded_ad.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -43,10 +44,12 @@ import 'data/repositories/level_repository.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/main_screen.dart';
 
-
 const bool _kScreenshotMode = bool.fromEnvironment('SCREENSHOT_MODE');
 
-// --- PROVIDERS ---
+// ─────────────────────────────────────────────────────────────────────
+// Providers
+// ─────────────────────────────────────────────────────────────────────
+
 final progressRepositoryProvider =
 ChangeNotifierProvider<ProgressRepository>((ref) {
   throw UnimplementedError('Must be overridden');
@@ -64,22 +67,46 @@ ChangeNotifierProvider<CoinsRepository>((ref) {
 final currentTabProvider = StateProvider<int>((ref) => 0);
 
 final authServiceProvider = ChangeNotifierProvider<AuthService>((ref) {
-  // 🚨 CRITICAL FIX: Keeps the singleton alive forever
   ref.keepAlive();
   return AuthService.instance;
 });
 
-// ─────────────────────────────────────────────────────────────────────────
-// Cloud push — debounced. Top-level so the timer survives past main().
-// ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────
+// Cloud push — debounced
+// ─────────────────────────────────────────────────────────────────────
 
 Timer? _cloudPushDebounce;
 ProgressRepository? _linkedProgress;
 CoinsRepository? _linkedCoins;
+String? _lastMergedUserId;
+bool _authListenerAttached = false;
 
 void _scheduleCloudPush() {
   _cloudPushDebounce?.cancel();
   _cloudPushDebounce = Timer(const Duration(seconds: 3), _flushCloudPush);
+}
+
+void _attachAuthListener() {
+  if (_authListenerAttached) return;
+  _authListenerAttached = true;
+
+  AuthService.instance.addListener(() {
+    final userId = AuthService.instance.userId;
+    if (userId == null) return;
+    if (userId == _lastMergedUserId) return;
+    _lastMergedUserId = userId;
+
+    final progress = _linkedProgress;
+    final coins = _linkedCoins;
+    if (progress == null || coins == null) return;
+
+    debugPrint('☁️ [Auth] userId changed → merging cloud ($userId)');
+    mergeCloudAndLocal(progress, coins).then((_) {
+      debugPrint('☁️ [Auth] merge complete');
+    }).catchError((e) {
+      debugPrint('🔴 [Auth] merge failed: $e');
+    });
+  });
 }
 
 Future<void> _flushCloudPush() async {
@@ -89,56 +116,75 @@ Future<void> _flushCloudPush() async {
   final userId = AuthService.instance.userId;
   final progress = _linkedProgress;
   final coins = _linkedCoins;
-  if (userId == null || progress == null || coins == null) return;
+  if (userId == null || progress == null || coins == null) {
+    debugPrint('☁️ push skipped: userId=$userId');
+    return;
+  }
 
-  await CloudSyncService.instance.pushSave(
+  final blob = <String, dynamic>{
+    'v': 1,
+    'syncedAt': DateTime.now().toUtc().toIso8601String(),
+    ...progress.exportState(),
+    ...coins.exportState(),
+  };
+
+  await CloudSyncService.instance.pushFullSave(
     userId: userId,
+    blob: blob,
     currentLevel: progress.currentLevel,
     coins: coins.coins,
   );
 }
 
-/// Merge cloud save with local state (keep whichever side is further along)
-/// and seed the cloud row if it doesn't exist yet.
 Future<void> mergeCloudAndLocal(
     ProgressRepository progress,
     CoinsRepository coins,
     ) async {
   final userId = AuthService.instance.userId;
-  if (userId == null) return;
+  if (userId == null) {
+    debugPrint('☁️ merge skipped: no userId');
+    return;
+  }
+  debugPrint('☁️ merge start for $userId');
 
   try {
-    final cloud = await CloudSyncService.instance.fetchSave(userId);
+    final cloud = await CloudSyncService.instance.fetchFullSave(userId);
 
     if (cloud == null) {
-      await CloudSyncService.instance.pushSave(
-        userId: userId,
-        currentLevel: progress.currentLevel,
-        coins: coins.coins,
-      );
+      debugPrint('☁️ no cloud row — seeding from local');
+      await _flushCloudPush();
       return;
     }
 
-    final remoteLevel = (cloud['currentLevel'] as num?)?.toInt() ?? 1;
-    final remoteCoins = (cloud['coins'] as num?)?.toInt() ?? 0;
+    debugPrint('☁️ cloud row found, importing…');
+    await progress.importState(cloud);
+    await coins.importState(cloud);
+    debugPrint('☁️ import complete');
 
-    if (remoteLevel > progress.currentLevel) {
-      await progress.setCurrentLevel(remoteLevel);
-    } else if (progress.currentLevel > remoteLevel) {
+    final localExport = progress.exportState();
+    final localSettings = localExport['settings'] as Map<String, dynamic>;
+    final remoteSettings =
+        cloud['settings'] as Map<String, dynamic>? ?? const {};
+
+    final localTime = DateTime.tryParse(
+      (localSettings['lastModified'] as String?) ?? '',
+    );
+    final remoteTime = DateTime.tryParse(
+      (remoteSettings['lastModified'] as String?) ?? '',
+    );
+
+    if (localTime != null &&
+        (remoteTime == null || localTime.isAfter(remoteTime))) {
+      debugPrint('☁️ local settings newer — scheduling push');
       _scheduleCloudPush();
+    } else {
+      debugPrint('☁️ cloud settings newer or equal — no push needed');
     }
-
-    if (remoteCoins > coins.coins) {
-      await coins.addCoins(remoteCoins - coins.coins);
-    }
-  } catch (e) {
-    debugPrint('Cloud merge skipped: $e');
+  } catch (e, st) {
+    debugPrint('🔴 merge error: $e\n$st');
   }
 }
 
-/// Force an immediate cloud sync: merge cloud + local, then push immediately.
-/// Bypasses the 3-second debounce in `_scheduleCloudPush`.
-/// Used by the tap-to-sync badge in the profile header.
 Future<void> forceCloudSync(
     ProgressRepository progress,
     CoinsRepository coins,
@@ -151,16 +197,32 @@ Future<void> forceCloudSync(
   await _flushCloudPush();
 }
 
-// ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────
+// main()
+// ─────────────────────────────────────────────────────────────────────
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // NOTE: immersive mode is applied from _ArrowPuzzleState.initState,
+  // not here, because the Flutter surface doesn't exist yet at this
+  // point and the OS would ignore the call.
+
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('🔴 FlutterError: ${details.exception}');
+    debugPrint('🔴 STACK: ${details.stack}');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('🔴 PlatformError: $error');
+    debugPrint('🔴 STACK: $stack');
+    return true;
+  };
 
   try {
     await Hive.initFlutter();
   } catch (e, st) {
     debugPrint('Hive.initFlutter failed: $e\n$st');
-
     rethrow;
   }
 
@@ -187,7 +249,7 @@ void main() async {
     try {
       UnityAds.init(
         gameId: '800386220',
-        testMode: true,
+        testMode: kDebugMode,
         onComplete: () {
           debugPrint('Unity Ads initialized');
           UnityRewardedAd.preload();
@@ -206,14 +268,6 @@ void main() async {
     debugPrint('Orientation lock skipped: $e');
   }
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-  ));
-
-
-
-  // ── Huawei IAP warmup (Huawei devices + installed from AppGallery only) ──
   try {
     if (await StoreDetector.isHuaweiDevice() &&
         await StoreDetector.isHuaweiAppGallery()) {
@@ -223,10 +277,6 @@ void main() async {
     debugPrint('Huawei IAP warmup skipped: $e');
   }
 
-  // ── Auth bootstrap ──
-  // Restores the cached user from Hive, then verifies with Appwrite.
-  // This MUST run before runApp so the first frame shows the correct
-  // signed-in state.
   try {
     await AuthService.instance.bootstrap();
     await mergeCloudAndLocal(progressRepo, coinsRepo);
@@ -237,10 +287,8 @@ void main() async {
   progressRepo.addListener(_scheduleCloudPush);
   coinsRepo.addListener(_scheduleCloudPush);
 
-
-  progressRepo.addListener(_scheduleCloudPush);
-  coinsRepo.addListener(_scheduleCloudPush);
-
+  _lastMergedUserId = AuthService.instance.userId;
+  _attachAuthListener();
 
   AppLifecycleListener(
     onPause: () => _flushCloudPush(),
@@ -259,6 +307,10 @@ void main() async {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// Root widget
+// ─────────────────────────────────────────────────────────────────────
+
 class ArrowPuzzle extends ConsumerStatefulWidget {
   const ArrowPuzzle({super.key});
 
@@ -266,20 +318,59 @@ class ArrowPuzzle extends ConsumerStatefulWidget {
   ConsumerState<ArrowPuzzle> createState() => _ArrowPuzzleState();
 }
 
-class _ArrowPuzzleState extends ConsumerState<ArrowPuzzle> {
+class _ArrowPuzzleState extends ConsumerState<ArrowPuzzle>
+    with WidgetsBindingObserver {
   bool _consentJustAccepted = false;
+  Timer? _immersiveTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _applyImmersive();
+    // Re-assert every 2s. Prevents the OS from leaving the bars visible
+    // after a dialog, keyboard, or notification-shade interaction.
+    _immersiveTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (mounted) _applyImmersive();
+    });
+  }
+
+  @override
+  void dispose() {
+    _immersiveTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _applyImmersive();
+    }
+  }
+
+  void _applyImmersive() {
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.immersiveSticky,
+      overlays: const [],
+    );
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+      systemStatusBarContrastEnforced: false,
+      systemNavigationBarContrastEnforced: false,
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
     final progress = ref.watch(progressRepositoryProvider);
     final themeMode = progress.themeMode;
     final accentColor = progress.accentColor;
-
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness:
-      themeMode == ThemeMode.dark ? Brightness.light : Brightness.dark,
-    ));
 
     final showConsent = !progress.privacyAccepted && !_consentJustAccepted;
 
@@ -305,8 +396,6 @@ class _ArrowPuzzleState extends ConsumerState<ArrowPuzzle> {
           brightness: Brightness.dark,
         ).copyWith(primary: accentColor),
       ),
-
-      // ── Locale configuration ─────────────────────────────────────
       locale: progress.languageCode == 'system'
           ? null
           : Locale(progress.languageCode),
@@ -332,7 +421,6 @@ class _ArrowPuzzleState extends ConsumerState<ArrowPuzzle> {
         }
         return const Locale('en');
       },
-
       home: showConsent
           ? PrivacyConsentScreen(
         onAccepted: () {
@@ -340,6 +428,18 @@ class _ArrowPuzzleState extends ConsumerState<ArrowPuzzle> {
         },
       )
           : const MainScreen(),
+      // Strip the top MediaQuery padding so SafeArea doesn't reserve
+      // a strip where the (hidden) status bar would be.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            padding: mq.padding.copyWith(top: 0),
+            viewPadding: mq.viewPadding.copyWith(top: 0),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

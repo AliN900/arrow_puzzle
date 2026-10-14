@@ -1042,12 +1042,6 @@ class AppStringsEn extends AppStrings {
   String get accentColorLabel => 'Accent Color';
 
   @override
-  String get settingsShareFriends => 'Share with friends';
-
-  @override
-  String get settingsSharingSoon => 'Sharing coming soon';
-
-  @override
   String get settingsPrivacyPolicy => 'Privacy Policy';
 
   @override
@@ -1102,11 +1096,49 @@ class AppStringsEn extends AppStrings {
   String get leaderboardTitle => 'Leaderboard';
 
   @override
-  String get leaderboardComingSoon => 'Coming soon';
+  String get leaderboardTabWeekly => 'Weekly';
 
   @override
-  String get leaderboardDescription =>
-      'Compete with players around the world. Your scores and rankings will appear here once the online leaderboard goes live.';
+  String get leaderboardTabMonthly => 'Monthly';
+
+  @override
+  String get leaderboardTabAllTime => 'All-Time';
+
+  @override
+  String get leaderboardYourRank => 'Your Rank';
+
+  @override
+  String get leaderboardNotRanked => 'Not ranked yet';
+
+  @override
+  String get leaderboardSignInToRank => 'Sign in to appear on the leaderboard';
+
+  @override
+  String get leaderboardEmptyState => 'No scores yet — be the first!';
+
+  @override
+  String get leaderboardScore => 'Score';
+
+  @override
+  String get leaderboardLevel => 'Level';
+
+  @override
+  String get leaderboardStars => 'Stars';
+
+  @override
+  String get leaderboardTrophies => 'Trophies';
+
+  @override
+  String get leaderboardYou => 'You';
+
+  @override
+  String get leaderboardRankPrefix => '#';
+
+  @override
+  String get leaderboardOptInTitle => 'Show me on leaderboard';
+
+  @override
+  String get leaderboardOptInSubtitle => 'Let other players see your rank';
 
   @override
   String get inventoryTitle => 'Inventory';
@@ -1662,4 +1694,19 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get profileUpdated => 'Profile updated';
+
+  @override
+  String get shareMessage => 'Check out Arrow Puzzle — a fun maze escape game!';
+
+  @override
+  String get copyLink => 'Copy Link';
+
+  @override
+  String get linkCopied => 'Link copied';
+
+  @override
+  String get settingsShareFriends => 'Share with friends';
+
+  @override
+  String get settingsSharingSoon => 'Sharing coming soon';
 }

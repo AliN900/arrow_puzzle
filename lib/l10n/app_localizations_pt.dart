@@ -1042,12 +1042,6 @@ class AppStringsPt extends AppStrings {
   String get accentColorLabel => 'Cor de destaque';
 
   @override
-  String get settingsShareFriends => 'Compartilhar com amigos';
-
-  @override
-  String get settingsSharingSoon => 'Compartilhamento em breve';
-
-  @override
   String get settingsPrivacyPolicy => 'Política de Privacidade';
 
   @override
@@ -1102,11 +1096,49 @@ class AppStringsPt extends AppStrings {
   String get leaderboardTitle => 'Classificação';
 
   @override
-  String get leaderboardComingSoon => 'Em breve';
+  String get leaderboardTabWeekly => 'Semanal';
 
   @override
-  String get leaderboardDescription =>
-      'Compita com jogadores do mundo todo. Suas pontuações e classificações aparecerão aqui quando a classificação online estiver disponível.';
+  String get leaderboardTabMonthly => 'Mensal';
+
+  @override
+  String get leaderboardTabAllTime => 'Geral';
+
+  @override
+  String get leaderboardYourRank => 'Sua Posição';
+
+  @override
+  String get leaderboardNotRanked => 'Sem classificação';
+
+  @override
+  String get leaderboardSignInToRank => 'Faça login para aparecer';
+
+  @override
+  String get leaderboardEmptyState => 'Sem pontuações ainda';
+
+  @override
+  String get leaderboardScore => 'Pontos';
+
+  @override
+  String get leaderboardLevel => 'Nível';
+
+  @override
+  String get leaderboardStars => 'Estrelas';
+
+  @override
+  String get leaderboardTrophies => 'Troféus';
+
+  @override
+  String get leaderboardYou => 'Você';
+
+  @override
+  String get leaderboardRankPrefix => '#';
+
+  @override
+  String get leaderboardOptInTitle => 'Mostrar na classificação';
+
+  @override
+  String get leaderboardOptInSubtitle => 'Permita que outros vejam sua posição';
 
   @override
   String get inventoryTitle => 'Inventário';
@@ -1662,4 +1694,20 @@ class AppStringsPt extends AppStrings {
 
   @override
   String get profileUpdated => 'Perfil atualizado';
+
+  @override
+  String get shareMessage =>
+      'Confira Arrow Puzzle — um jogo divertido de escape de labirinto!';
+
+  @override
+  String get copyLink => 'Copiar link';
+
+  @override
+  String get linkCopied => 'Link copiado';
+
+  @override
+  String get settingsShareFriends => 'Compartilhar com amigos';
+
+  @override
+  String get settingsSharingSoon => 'Em breve';
 }

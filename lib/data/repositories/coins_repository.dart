@@ -235,6 +235,58 @@ class CoinsRepository extends ChangeNotifier {
     });
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // Cloud export / import
+  // ─────────────────────────────────────────────────────────────────
+
+  Map<String, dynamic> exportState() {
+    return {
+      'coins': _coins,
+      'items': Map<String, int>.from(_items),
+      'dailyStreak': _dailyStreak,
+      'lastDailyClaimDate': _lastDailyClaimDate?.toUtc().toIso8601String(),
+      'loginStreak': _loginStreak,
+      'lastLoginDate': _lastLoginDate?.toUtc().toIso8601String(),
+    };
+  }
+
+  /// Merge cloud coins/items into local. Never regresses — max wins.
+  Future<bool> importState(Map<String, dynamic> data) async {
+    bool changed = false;
+
+    final remoteCoins = (data['coins'] as num?)?.toInt() ?? 0;
+    if (remoteCoins > _coins) {
+      _coins = remoteCoins;
+      changed = true;
+    }
+
+    final remoteItems = data['items'] as Map<String, dynamic>? ?? const {};
+    for (final e in remoteItems.entries) {
+      final remote = (e.value as num).toInt();
+      final local = _items[e.key] ?? 0;
+      if (remote > local) {
+        _items[e.key] = remote;
+        changed = true;
+      }
+    }
+
+    final remoteDailyStreak = (data['dailyStreak'] as num?)?.toInt() ?? 0;
+    if (remoteDailyStreak > _dailyStreak) {
+      _dailyStreak = remoteDailyStreak;
+      final dt = DateTime.tryParse(
+        (data['lastDailyClaimDate'] as String?) ?? '',
+      );
+      if (dt != null) _lastDailyClaimDate = dt.toLocal();
+      changed = true;
+    }
+
+    if (changed) {
+      await _save();
+      notifyListeners();
+    }
+    return changed;
+  }
+
   /// Add [count] of [item] to the player's inventory.
   Future<void> addItem(ItemType item, {int count = 1}) async {
     if (count <= 0) return;

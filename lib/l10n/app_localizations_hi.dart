@@ -1041,12 +1041,6 @@ class AppStringsHi extends AppStrings {
   String get accentColorLabel => 'एक्सेंट रंग';
 
   @override
-  String get settingsShareFriends => 'दोस्तों के साथ साझा करें';
-
-  @override
-  String get settingsSharingSoon => 'साझाकरण जल्द आ रहा है';
-
-  @override
   String get settingsPrivacyPolicy => 'गोपनीयता नीति';
 
   @override
@@ -1101,11 +1095,51 @@ class AppStringsHi extends AppStrings {
   String get leaderboardTitle => 'लीडरबोर्ड';
 
   @override
-  String get leaderboardComingSoon => 'जल्द आ रहा है';
+  String get leaderboardTabWeekly => 'साप्ताहिक';
 
   @override
-  String get leaderboardDescription =>
-      'दुनिया भर के खिलाड़ियों से मुकाबला करें। ऑनलाइन लीडरबोर्ड शुरू होते ही आपके स्कोर और रैंकिंग यहाँ दिखेंगे।';
+  String get leaderboardTabMonthly => 'मासिक';
+
+  @override
+  String get leaderboardTabAllTime => 'सर्वकालिक';
+
+  @override
+  String get leaderboardYourRank => 'आपकी रैंक';
+
+  @override
+  String get leaderboardNotRanked => 'अभी रैंक नहीं';
+
+  @override
+  String get leaderboardSignInToRank =>
+      'लीडरबोर्ड पर दिखने के लिए साइन इन करें';
+
+  @override
+  String get leaderboardEmptyState => 'अभी कोई स्कोर नहीं';
+
+  @override
+  String get leaderboardScore => 'स्कोर';
+
+  @override
+  String get leaderboardLevel => 'स्तर';
+
+  @override
+  String get leaderboardStars => 'सितारे';
+
+  @override
+  String get leaderboardTrophies => 'ट्रॉफियाँ';
+
+  @override
+  String get leaderboardYou => 'आप';
+
+  @override
+  String get leaderboardRankPrefix => '#';
+
+  @override
+  String get leaderboardOptInTitle => 'लीडरबोर्ड पर दिखाएँ';
+
+  @override
+  String get leaderboardOptInSubtitle =>
+      'अन्य खिलाड़ियों को आपकी रैंक दिखने दें';
 
   @override
   String get inventoryTitle => 'इन्वेंटरी';
@@ -1660,4 +1694,19 @@ class AppStringsHi extends AppStrings {
 
   @override
   String get profileUpdated => 'प्रोफ़ाइल अपडेट हो गई';
+
+  @override
+  String get shareMessage => 'Arrow Puzzle आज़माएँ — एक मज़ेदार भूलभुलैया गेम!';
+
+  @override
+  String get copyLink => 'लिंक कॉपी करें';
+
+  @override
+  String get linkCopied => 'लिंक कॉपी हो गया';
+
+  @override
+  String get settingsShareFriends => 'दोस्तों के साथ साझा करें';
+
+  @override
+  String get settingsSharingSoon => 'जल्द आ रहा है';
 }

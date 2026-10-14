@@ -354,8 +354,6 @@
   "arrowSpeedFast": "Fast",
 
   "accentColorLabel": "Accent Color",
-  "settingsShareFriends": "Share with friends",
-  "settingsSharingSoon": "Sharing coming soon",
   "settingsPrivacyPolicy": "Privacy Policy",
   "settingsTermsConditions": "Terms & Conditions",
   "settingsChooseLanguage": "Choose Language",
@@ -378,8 +376,21 @@
   "trophiesPerkHeart": "✨ Perk: +1 Permanent Max Heart",
 
   "leaderboardTitle": "Leaderboard",
-  "leaderboardComingSoon": "Coming soon",
-  "leaderboardDescription": "Compete with players around the world. Your scores and rankings will appear here once the online leaderboard goes live.",
+  "leaderboardTabWeekly": "Weekly",
+  "leaderboardTabMonthly": "Monthly",
+  "leaderboardTabAllTime": "All-Time",
+  "leaderboardYourRank": "Your Rank",
+  "leaderboardNotRanked": "Not ranked yet",
+  "leaderboardSignInToRank": "Sign in to appear on the leaderboard",
+  "leaderboardEmptyState": "No scores yet — be the first!",
+  "leaderboardScore": "Score",
+  "leaderboardLevel": "Level",
+  "leaderboardStars": "Stars",
+  "leaderboardTrophies": "Trophies",
+  "leaderboardYou": "You",
+  "leaderboardRankPrefix": "#",
+  "leaderboardOptInTitle": "Show me on leaderboard",
+  "leaderboardOptInSubtitle": "Let other players see your rank",
 
   "inventoryTitle": "Inventory",
   "inventoryTabArrows": "Arrows",
@@ -564,6 +575,11 @@
   "timeBlitzLevelsLabel": "Levels reached",
   "profileEditName": "Edit Name",
   "profileSave": "Save",
-  "profileUpdated": "Profile updated"
+  "profileUpdated": "Profile updated",
+  "shareMessage": "Check out Arrow Puzzle — a fun maze escape game!",
+  "copyLink": "Copy Link",
+  "linkCopied": "Link copied",
+  "settingsShareFriends": "Share with friends",
+  "settingsSharingSoon": "Sharing coming soon"
 
 }

@@ -15,8 +15,9 @@ class AppwriteService {
   // Database ID (from the URL: /databases/tablesdb/<THIS>)
   static const String databaseId = '6ac33f510029701224d3';
 
-  // Table ID (from the URL: /tables/<THIS>)
+  // Table IDs (from the URL: /tables/<THIS>)
   static const String playerSavesTableId = '6ac343f1002096fab535';
+  static const String leaderboardTableId = 'leaderboard';
 
   static const String updatePlayerDataFunctionId = '6ac34013001f8181821d';
 

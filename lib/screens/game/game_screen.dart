@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:arrow_puzzle/screens/game/widgets/game_dialog_button.dart';
 import 'package:arrow_puzzle/screens/game/widgets/leaving_arrow_counter.dart';
 import 'package:arrow_puzzle/screens/game/widgets/telegraph_overlay.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart' hide Matrix4;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,7 @@ import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../widgets/game_item_bar.dart';
 import '../../widgets/pop_dialog.dart';
+import '../../widgets/status_flash.dart';
 import '../../widgets/unlock_celebration_screen.dart';
 import 'widgets/game_top_bar.dart';
 import 'widgets/game_bottom_bar.dart';
@@ -186,11 +188,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
   static int _blitzTimerForStage({
     required int stageIndex,
     required int stageCount,
+    required int arrowCount,
   }) {
-    if (stageCount <= 1) return 35;
-    final t = stageIndex / (stageCount - 1);
-    final seconds = 35 - (t * 17); // 35 .. 18
-    return seconds.round().clamp(18, 35);
+    final t = stageCount > 1 ? stageIndex / (stageCount - 1) : 0.0;
+
+    // Base buffer: 15s early → 10s late. Covers board scan + first tap.
+    final base = 15.0 - t * 5.0;
+
+    // Per-arrow budget: 2.5s → 1.8s. Tightens as stages progress but
+    // never drops below a fair reading speed.
+    final perArrow = 2.5 - t * 0.7;
+
+    final seconds = (base + perArrow * arrowCount).round();
+    return seconds.clamp(10, 300);
   }
 
   /// Classic: leaving arrows start at level 20.
@@ -767,6 +777,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _totalTime = _blitzTimerForStage(
         stageIndex: _blitzStage,
         stageCount: _blitzStageCount,
+        arrowCount: _level.arrows.length,
       );
       _timeRemaining = _totalTime;
       _startLevelTimer();
@@ -1472,6 +1483,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
   }
 
   Future<void> _useItem(ItemType item) async {
+    // Zen and Time Blitz have no item mechanics at all.
+    if (widget.gameMode == GameMode.zen ||
+        widget.gameMode == GameMode.timeBlitz) {
+      return;
+    }
+
     final strings = AppStrings.of(context);
     final coinsRepo = ref.read(coinsRepositoryProvider);
     if (coinsRepo.getItemCount(item) <= 0) return;
@@ -1487,7 +1504,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         maxUses = 999;
         break;
       case ItemType.undo:
-        maxUses = isTimed ? 2 : 1;
+        maxUses = 999;
         break;
       case ItemType.bomb:
         maxUses = 1;
@@ -1511,12 +1528,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     switch (item) {
       case ItemType.heartFlask:
         if (_gameState!.lives >= AppConstants.maxLives) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(strings.heartsAlreadyFull),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          StatusFlash.fail(context, strings.heartsAlreadyFull);
           return;
         }
         _gameState!.restoreLife();
@@ -1528,12 +1540,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
           final elapsed = _totalTime - _timeRemaining;
           if (elapsed < 30) {
             final wait = 30 - elapsed;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(strings.timeFreezeWait(wait)),
-                duration: const Duration(seconds: 2),
-              ),
-            );
+            StatusFlash.fail(context, strings.timeFreezeWait(wait));
             return;
           }
         }
@@ -1543,23 +1550,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
       case ItemType.bomb:
         _rocksBeforeBomb = _gameState!.rocks.length;
         _gameState!.setBombArmed(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(strings.tapRockToDestroy),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        StatusFlash.success(context, strings.tapRockToDestroy);
         return;
 
       case ItemType.hint:
         final arrowId = _gameState!.findNextSolvableArrowId();
         if (arrowId == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(strings.noSolvableArrowFound),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          StatusFlash.fail(context, strings.noSolvableArrowFound);
           return;
         }
         _gameState!.setHintArrow(arrowId);
@@ -1571,12 +1568,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       case ItemType.undo:
         final ok = _gameState!.undoLastExit();
         if (!ok) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(strings.nothingToUndo),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          StatusFlash.fail(context, strings.nothingToUndo);
           return;
         }
         break;
@@ -1597,6 +1589,30 @@ class _GameScreenState extends ConsumerState<GameScreen>
     } else {
       _game.resumeEngine();
     }
+  }
+
+
+  void _debugWinLevel() {
+    if (!mounted) return;
+    if (_showingComplete || _showingGameOver) return;
+
+    AudioHapticHelper.playClick();
+
+    if (widget.gameMode == GameMode.classic ||
+        widget.gameMode == GameMode.zen ||
+        widget.gameMode == GameMode.timeAttack) {
+      final gs = _gameState;
+      if (gs != null) {
+        while (gs.arrows.isNotEmpty) {
+          final id = gs.arrows.first.id;
+          gs.arrows.removeWhere((a) => a.id == id);
+        }
+        gs.cancelAllTelegraphs();
+        gs.refresh();
+      }
+    }
+
+    _onLevelComplete();
   }
 
   void _handleResume() {
@@ -1945,14 +1961,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
                             children: [
                               TimerDisplay(
                                 timeRemaining: _timeRemaining,
-                                totalTime: widget.gameMode == GameMode.timeAttack
+                                totalTime:
+                                widget.gameMode == GameMode.timeAttack
                                     ? 99
                                     : widget.gameMode == GameMode.timeBlitz
                                     ? 90
                                     : _totalTime,
                               ),
-
-                              // ── Floating +Ns / -Ns pulses, all anchored at center ──
                               Positioned(
                                 top: 44,
                                 left: 0,
@@ -1962,7 +1977,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                   child: Stack(
                                     alignment: Alignment.topCenter,
                                     children: [
-                                      for (final pulse in _timerPulses) _buildPulseAnimated(pulse),
+                                      for (final pulse in _timerPulses)
+                                        _buildPulseAnimated(pulse),
                                     ],
                                   ),
                                 ),
@@ -1973,146 +1989,210 @@ class _GameScreenState extends ConsumerState<GameScreen>
                       ),
                     Expanded(
                       child: Stack(
-                          children: [
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final viewportSize = Size(
-                                  constraints.maxWidth,
-                                  constraints.maxHeight,
-                                );
-                                final contentSize = _contentSize;
+                        children: [
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final viewportSize = Size(
+                                constraints.maxWidth,
+                                constraints.maxHeight,
+                              );
+                              final contentSize = _contentSize;
 
-                            // Fit scale: how much we need to shrink the board
-                            // so it (plus padding) fits inside the viewport.
-                            final paddedW =
-                            (viewportSize.width - _kBoardPadding * 2)
-                                .clamp(1.0, double.infinity);
-                            final paddedH =
-                            (viewportSize.height - _kBoardPadding * 2)
-                                .clamp(1.0, double.infinity);
-                            final fitScale = min(
-                              paddedW / contentSize,
-                              paddedH / contentSize,
-                            );
+                              final paddedW =
+                              (viewportSize.width - _kBoardPadding * 2)
+                                  .clamp(1.0, double.infinity);
+                              final paddedH =
+                              (viewportSize.height - _kBoardPadding * 2)
+                                  .clamp(1.0, double.infinity);
+                              final fitScale = min(
+                                paddedW / contentSize,
+                                paddedH / contentSize,
+                              );
 
-                            // Zoom range: allow zooming slightly further out
-                            // than the auto-fit, and in for detail.
-                            final minScale = (fitScale * 0.6).clamp(0.05, 1.0);
-                            final maxScale = max(3.0, fitScale * 4.0);
+                              final minScale =
+                              (fitScale * 0.6).clamp(0.05, 1.0);
+                              final maxScale = max(3.0, fitScale * 4.0);
 
-                            final liveGridSize = _gameState?.level.gridSize ?? _level.gridSize;
-                            final fitKey = Object.hash(
-                              _gameState?.level.levelNumber ?? _level.levelNumber,
-                              liveGridSize,
-                              viewportSize.width,
-                              viewportSize.height,
-                            );
-                            if (_lastFitKey != fitKey) {
-                              _lastFitKey = fitKey;
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (!mounted) return;
-                                _applyFitTransform(
-                                  viewportSize: viewportSize,
-                                  contentSize: contentSize,
-                                  fitScale: fitScale,
-                                );
-                              });
-                            }
+                              final liveGridSize =
+                                  _gameState?.level.gridSize ?? _level.gridSize;
+                              final fitKey = Object.hash(
+                                _gameState?.level.levelNumber ??
+                                    _level.levelNumber,
+                                liveGridSize,
+                                viewportSize.width,
+                                viewportSize.height,
+                              );
+                              if (_lastFitKey != fitKey) {
+                                _lastFitKey = fitKey;
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  if (!mounted) return;
+                                  _applyFitTransform(
+                                    viewportSize: viewportSize,
+                                    contentSize: contentSize,
+                                    fitScale: fitScale,
+                                  );
+                                });
+                              }
 
-                            return Transform.translate(
-                              offset: Offset(_shakeOffset, 0),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  RepaintBoundary(
-                                    child: InteractiveViewer(
-                                      transformationController:
-                                      _transformationController,
-                                      // Allow the board to be larger than the
-                                      // viewport; users can pan / zoom.
-                                      constrained: false,
-                                      minScale: minScale,
-                                      maxScale: maxScale,
-                                      boundaryMargin:
-                                      EdgeInsets.all(contentSize * 0.5),
-                                      clipBehavior: Clip.hardEdge,
-                                      onInteractionStart: (_) => _fitAnimController.stop(),
-                                      child: SizedBox(
-                                        width: contentSize,
-                                        height: contentSize,
-                                        child: Stack(
-                                          children: [
-                                            GameWidget(
-                                              key: ValueKey(
-                                                'game_widget_${_gameState?.level.levelNumber ?? _level.levelNumber}',
+                              return Transform.translate(
+                                offset: Offset(_shakeOffset, 0),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    RepaintBoundary(
+                                      child: InteractiveViewer(
+                                        transformationController:
+                                        _transformationController,
+                                        constrained: false,
+                                        minScale: minScale,
+                                        maxScale: maxScale,
+                                        boundaryMargin:
+                                        EdgeInsets.all(contentSize * 0.5),
+                                        clipBehavior: Clip.hardEdge,
+                                        onInteractionStart: (_) =>
+                                            _fitAnimController.stop(),
+                                        child: SizedBox(
+                                          width: contentSize,
+                                          height: contentSize,
+                                          child: Stack(
+                                            children: [
+                                              GameWidget(
+                                                key: ValueKey(
+                                                  'game_widget_${_gameState?.level.levelNumber ?? _level.levelNumber}',
+                                                ),
+                                                game: _game,
                                               ),
-                                              game: _game,
-                                            ),
-                                            if (_gameState != null)
-                                              ListenableBuilder(
-                                                listenable: _gameState!,
-                                                builder: (context, _) {
-                                                  return TelegraphOverlay(
-                                                    gameState: _gameState!,
-                                                    boardSize: contentSize,
-                                                  );
-                                                },
-                                              ),
-                                          ],
+                                              if (_gameState != null)
+                                                ListenableBuilder(
+                                                  listenable: _gameState!,
+                                                  builder: (context, _) {
+                                                    return TelegraphOverlay(
+                                                      gameState: _gameState!,
+                                                      boardSize: contentSize,
+                                                    );
+                                                  },
+                                                ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  if (_showBonusAnimation)
-                                    Positioned(
-                                      top: 60,
-                                      child: Text(
-                                        _bonusText,
-                                        style: const TextStyle(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.orangeAccent,
-                                          letterSpacing: 1.5,
-                                          shadows: [
-                                            Shadow(
-                                              color: Colors.black87,
-                                              blurRadius: 12,
-                                              offset: Offset(0, 2),
-                                            ),
-                                          ],
+                                    if (_showBonusAnimation)
+                                      Positioned(
+                                        top: 60,
+                                        child: Text(
+                                          _bonusText,
+                                          style: const TextStyle(
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.orangeAccent,
+                                            letterSpacing: 1.5,
+                                            shadows: [
+                                              Shadow(
+                                                color: Colors.black87,
+                                                blurRadius: 12,
+                                                offset: Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                            .animate()
+                                            .fadeIn(duration: 200.ms)
+                                            .slideY(
+                                          begin: 0.5,
+                                          end: -0.2,
+                                          duration: 600.ms,
+                                          curve: Curves.easeOut,
+                                        )
+                                            .fadeOut(
+                                          delay: 500.ms,
+                                          duration: 300.ms,
                                         ),
-                                      )
-                                          .animate()
-                                          .fadeIn(duration: 200.ms)
-                                          .slideY(
-                                        begin: 0.5,
-                                        end: -0.2,
-                                        duration: 600.ms,
-                                        curve: Curves.easeOut,
-                                      )
-                                          .fadeOut(
-                                        delay: 500.ms,
-                                        duration: 300.ms,
                                       ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),Positioned(
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+
+                          // ── Item bar (bottom-left) ──
+// Hidden in Zen and Time Blitz — both modes are pure-arrow gameplay
+// with no lives, no timers, and no item mechanics.
+                          if (widget.gameMode != GameMode.zen &&
+                              widget.gameMode != GameMode.timeBlitz)
+                            Positioned(
                               left: 12,
                               bottom: 12,
                               child: GameItemBar(
                                 isTimedLevel: _totalTime > 0 ||
-                                    widget.gameMode == GameMode.timeAttack ||
-                                    widget.gameMode == GameMode.timeBlitz,
+                                    widget.gameMode == GameMode.timeAttack,
                                 hasRocks: (_gameState?.rocks.isNotEmpty) ?? false,
                                 usesThisLevel: _itemUsesThisLevel,
                                 onUseItem: _useItem,
-                                gameMode: widget.gameMode,   // ← add this
                               ),
                             ),
-                          ],
+
+                          // ── DEBUG: WIN button (bottom-right) ──
+                          if (kDebugMode)
+                            Positioned(
+                              right: 12,
+                              bottom: 12,
+                              child: GestureDetector(
+                                onTap: _debugWinLevel,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE53935)
+                                        .withValues(alpha: 0.85),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                        color: Colors.white, width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.25),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.bolt_rounded,
+                                          color: Colors.white, size: 14),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        'WIN',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // ── Leaving arrow counter (top-left) ──
+                          if (_gameState?.hasActiveLeavingArrow == true)
+                            Positioned(
+                              top: 8,
+                              left: 12,
+                              child: LeavingArrowCounter(
+                                count: _gameState!.leavingArrowTapCount,
+                                max: _gameState!.leavingArrowTapLimit,
+                                color: const Color(0xFFFF9800),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     GameBottomBar(
@@ -2121,17 +2201,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
                       gameMode: widget.gameMode,
                       heartRemover: progressState.heartRemover,
                     ),
-                    // Leaving-arrow counter — top-left corner
-                    if (_gameState?.hasActiveLeavingArrow == true)
-                      Positioned(
-                        top: 8,
-                        left: 12,
-                        child: LeavingArrowCounter(
-                          count: _gameState!.leavingArrowTapCount,
-                          max: GameState.kLeavingArrowTapLimit,
-                          color: const Color(0xFFFF9800),
-                        ),
-                      ),
                     const GameBanner(),
                   ],
                 ),
@@ -2142,7 +2211,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 onResume: _handleResume,
                 onRestart: (widget.gameMode == GameMode.blitz ||
                     widget.gameMode == GameMode.timeBlitz)
-                    ? null // no restart — would reset the survival timer
+                    ? null
                     : _handlePauseRestart,
                 onMainMenu: _handlePauseMainMenu,
               ),

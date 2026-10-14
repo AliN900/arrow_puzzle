@@ -40,6 +40,18 @@ class ProgressRepository extends ChangeNotifier {
   int _itemsGrantedFromStars = 0;
   bool _privacyAccepted = false;
 
+  DateTime? _lastSettingsModified;
+  // ── Leaderboard ──
+  bool _leaderboardOptIn = true;
+  int _lbWeeklyScore = 0;
+  int _lbMonthlyScore = 0;
+  int _lbAllTimeScore = 0;
+  DateTime? _lbWeeklyPeriodStart;
+  DateTime? _lbMonthlyPeriodStart;
+  DateTime? _lbWeeklyReachedAt;
+  DateTime? _lbMonthlyReachedAt;
+
+
   int get lives => _lives;
   int get maxLives => AppConstants.maxLives;
   int get currentLevel => _currentLevel;
@@ -62,6 +74,22 @@ class ProgressRepository extends ChangeNotifier {
   double get soundVolume => _soundVolume;
   int get arrowSpeed => _arrowSpeed;
   bool get privacyAccepted => _privacyAccepted;
+
+
+  bool get leaderboardOptIn => _leaderboardOptIn;
+  int get lbWeeklyScore => _lbWeeklyScore;
+  int get lbMonthlyScore => _lbMonthlyScore;
+  int get lbAllTimeScore => _lbAllTimeScore;
+  DateTime? get lbWeeklyPeriodStart => _lbWeeklyPeriodStart;
+  DateTime? get lbMonthlyPeriodStart => _lbMonthlyPeriodStart;
+  DateTime? get lbWeeklyReachedAt => _lbWeeklyReachedAt;
+  DateTime? get lbMonthlyReachedAt => _lbMonthlyReachedAt;
+
+  int get totalStars =>
+      _levelResults.values.fold(0, (sum, r) => sum + r.stars);
+
+
+
   RushDifficulty get rushDifficulty => RushDifficulty.values[
   _rushDifficultyIndex.clamp(0, RushDifficulty.values.length - 1)];
 
@@ -90,7 +118,7 @@ class ProgressRepository extends ChangeNotifier {
   Future<void> _init() async {
     _box = await Hive.openBox('progress');
     _resultsBox = await Hive.openBox('levelResults');
-    _load();
+    await _load();
   }
 
   Future<void> toggleSound() async {
@@ -131,7 +159,7 @@ class ProgressRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _load() {
+  Future<void> _load() async {
     _lives = _box.get('lives', defaultValue: AppConstants.maxLives);
     _currentLevel = _box.get('currentLevel', defaultValue: 1);
     _highestUnlockedLevel = _box.get('highestUnlockedLevel', defaultValue: 1);
@@ -184,6 +212,38 @@ class ProgressRepository extends ChangeNotifier {
     _arrowSpeed = _box.get('arrowSpeed', defaultValue: 0);
     _rushDifficultyIndex = _box.get('rushDifficultyIndex', defaultValue: 0);
 
+    // ── Leaderboard ──
+    _leaderboardOptIn = _box.get('leaderboardOptIn', defaultValue: true);
+    _lbWeeklyScore = _box.get('lbWeeklyScore', defaultValue: 0);
+    _lbMonthlyScore = _box.get('lbMonthlyScore', defaultValue: 0);
+    _lbAllTimeScore = _box.get('lbAllTimeScore', defaultValue: 0);
+
+    final settingsModStr = _box.get('lastSettingsModified') as String?;
+    _lastSettingsModified = settingsModStr != null
+        ? DateTime.tryParse(settingsModStr)
+        : null;
+
+    final lbWeeklyStartStr = _box.get('lbWeeklyPeriodStart') as String?;
+    _lbWeeklyPeriodStart = lbWeeklyStartStr != null
+        ? DateTime.tryParse(lbWeeklyStartStr)
+        : null;
+    final lbMonthlyStartStr = _box.get('lbMonthlyPeriodStart') as String?;
+    _lbMonthlyPeriodStart = lbMonthlyStartStr != null
+        ? DateTime.tryParse(lbMonthlyStartStr)
+        : null;
+    final lbWeeklyReachedStr = _box.get('lbWeeklyReachedAt') as String?;
+    _lbWeeklyReachedAt = lbWeeklyReachedStr != null
+        ? DateTime.tryParse(lbWeeklyReachedStr)
+        : null;
+    final lbMonthlyReachedStr = _box.get('lbMonthlyReachedAt') as String?;
+    _lbMonthlyReachedAt = lbMonthlyReachedStr != null
+        ? DateTime.tryParse(lbMonthlyReachedStr)
+        : null;
+
+    _rolloverLbPeriodsIfNeeded();
+
+
+
     AudioHapticHelper.hapticsEnabled = _hapticsEnabled;
 
     for (final key in _resultsBox.keys) {
@@ -201,10 +261,15 @@ class ProgressRepository extends ChangeNotifier {
     }
 
     // Retroactive check: Grant any trophies earned based on past level progress
-    _syncTrophiesWithProgress();
+    await _syncTrophiesWithProgress();
   }
 
   bool isBoardNew(BoardTheme board) => _newBoards.contains(board.name);
+
+  // Future<void> _saveWithSettingsStamp() async {
+  //   _lastSettingsModified = DateTime.now().toUtc();
+  //   await _save();
+  // }
 
   Future<void> _save() async {
     await _box.putAll({
@@ -233,6 +298,19 @@ class ProgressRepository extends ChangeNotifier {
       'arrowSpeed': _arrowSpeed,
       'privacyAccepted': _privacyAccepted,
       'rushDifficultyIndex': _rushDifficultyIndex,
+      'lastSettingsModified': _lastSettingsModified?.toUtc().toIso8601String(),
+
+
+      'leaderboardOptIn': _leaderboardOptIn,
+      'lbWeeklyScore': _lbWeeklyScore,
+      'lbMonthlyScore': _lbMonthlyScore,
+      'lbAllTimeScore': _lbAllTimeScore,
+      'lbWeeklyPeriodStart': _lbWeeklyPeriodStart?.toUtc().toIso8601String(),
+      'lbMonthlyPeriodStart': _lbMonthlyPeriodStart?.toUtc().toIso8601String(),
+      'lbWeeklyReachedAt': _lbWeeklyReachedAt?.toUtc().toIso8601String(),
+      'lbMonthlyReachedAt': _lbMonthlyReachedAt?.toUtc().toIso8601String(),
+
+
       // ── ADDED: Save Unlocked Trophies to Hive ──
       'unlockedTrophies': _unlockedTrophies.toList(),
     });
@@ -240,6 +318,11 @@ class ProgressRepository extends ChangeNotifier {
     for (final entry in _levelResults.entries) {
       await _resultsBox.put(entry.key.toString(), jsonEncode(entry.value.toJson()));
     }
+    await _box.flush();
+    await _resultsBox.flush();
+    debugPrint('💾 SAVED: theme=${_themeMode.name} '
+        'accent=0x${_accentColor.toARGB32().toRadixString(16)} '
+        'vol=$_soundVolume haptics=$_hapticsEnabled');
   }
 
   Future<void> setRushDifficulty(RushDifficulty d) async {
@@ -248,7 +331,7 @@ class ProgressRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _syncTrophiesWithProgress() {
+  Future<void> _syncTrophiesWithProgress() async {
     bool hasNewUnlock = false;
     for (final trophy in TrophyConstants.allTrophies) {
       final isEarned = _highestUnlockedLevel > trophy.unlockLevel ||
@@ -260,7 +343,7 @@ class ProgressRepository extends ChangeNotifier {
       }
     }
     if (hasNewUnlock) {
-      _save();
+      await _save();
     }
   }
 
@@ -518,6 +601,349 @@ class ProgressRepository extends ChangeNotifier {
     _newBoards.add(board.name); // also add to red dot set
     await _save();
     notifyListeners();
+  }
+
+
+  // ─────────────────────────────────────────────────────────────────
+// Leaderboard
+// ─────────────────────────────────────────────────────────────────
+
+  Future<void> setLeaderboardOptIn(bool value) async {
+    _leaderboardOptIn = value;
+    await _save();
+    notifyListeners();
+  }
+
+  /// Roll over stale weekly/monthly periods on launch.
+  void _rolloverLbPeriodsIfNeeded() {
+    final now = DateTime.now().toUtc();
+    final currentWeekStart = _mondayUtc(now);
+    final currentMonthStart = DateTime.utc(now.year, now.month, 1);
+
+    if (_lbWeeklyPeriodStart == null ||
+        _lbWeeklyPeriodStart!.isBefore(currentWeekStart)) {
+      _lbWeeklyScore = 0;
+      _lbWeeklyPeriodStart = currentWeekStart;
+      _lbWeeklyReachedAt = null;
+    }
+    if (_lbMonthlyPeriodStart == null ||
+        _lbMonthlyPeriodStart!.isBefore(currentMonthStart)) {
+      _lbMonthlyScore = 0;
+      _lbMonthlyPeriodStart = currentMonthStart;
+      _lbMonthlyReachedAt = null;
+    }
+  }
+
+  static DateTime _mondayUtc(DateTime utc) {
+    final daysSinceMonday = utc.weekday - 1;
+    return DateTime.utc(utc.year, utc.month, utc.day)
+        .subtract(Duration(days: daysSinceMonday));
+  }
+
+  /// Call after a first-clear. Rolls periods if needed, adds points to all
+  /// three buckets, and stamps reached-at.
+  Future<void> addLbPoints(int points) async {
+    if (points <= 0) return;
+    _rolloverLbPeriodsIfNeeded();
+
+    final now = DateTime.now().toUtc();
+
+    _lbWeeklyScore += points;
+    _lbMonthlyScore += points;
+    _lbAllTimeScore += points;
+    _lbWeeklyReachedAt = now;
+    _lbMonthlyReachedAt = now;
+
+    await _save();
+    notifyListeners();
+  }
+
+  Map<String, dynamic> exportState() {
+    return {
+      'currentLevel': _currentLevel,
+      'highestUnlockedLevel': _highestUnlockedLevel,
+      'skinsUnlocked': _skinsUnlocked,
+      'purchasedBoards': _purchasedBoards.toList(),
+      'purchasedArrows': _purchasedArrows.toList(),
+      'unlockedTrophies': _unlockedTrophies.toList(),
+      'itemsGrantedFromStars': _itemsGrantedFromStars,
+      'newBoards': _newBoards.toList(),
+      'celebratedBoards': _celebratedBoards.toList(),
+      'settings': {
+        'themeMode': _themeMode.name,
+        'accentColor': _accentColor.toARGB32(),
+        'soundEnabled': _soundEnabled,
+        'soundVolume': _soundVolume,
+        'musicEnabled': _musicEnabled,
+        'hapticsEnabled': _hapticsEnabled,
+        'languageCode': _languageCode,
+        'arrowSpeed': _arrowSpeed,
+        'selectedTheme': _selectedTheme.name,
+        'selectedBoard': _selectedBoard.name,
+        'heartRemover': _heartRemover,
+        'assistMode': _assistMode,
+        'complexPaths': _complexPaths,
+        'privacyAccepted': _privacyAccepted,
+        'rushDifficultyIndex': _rushDifficultyIndex,
+        'lastModified': _lastSettingsModified?.toUtc().toIso8601String(),
+      },
+      'lb': {
+        'optIn': _leaderboardOptIn,
+        'weeklyScore': _lbWeeklyScore,
+        'monthlyScore': _lbMonthlyScore,
+        'allTimeScore': _lbAllTimeScore,
+        'weeklyPeriodStart': _lbWeeklyPeriodStart?.toUtc().toIso8601String(),
+        'monthlyPeriodStart': _lbMonthlyPeriodStart?.toUtc().toIso8601String(),
+        'weeklyReachedAt': _lbWeeklyReachedAt?.toUtc().toIso8601String(),
+        'monthlyReachedAt': _lbMonthlyReachedAt?.toUtc().toIso8601String(),
+      },
+      'levelResults': _levelResults.map(
+            (k, v) => MapEntry(k.toString(), v.toJson()),
+      ),
+    };
+  }
+
+
+  Future<bool> importState(Map<String, dynamic> data) async {
+    bool changed = false;
+
+    final remoteLevel =
+        (data['currentLevel'] as num?)?.toInt() ?? _currentLevel;
+    if (remoteLevel > _currentLevel) {
+      _currentLevel = remoteLevel;
+      changed = true;
+    }
+
+    final remoteHigh =
+        (data['highestUnlockedLevel'] as num?)?.toInt() ?? _highestUnlockedLevel;
+    if (remoteHigh > _highestUnlockedLevel) {
+      _highestUnlockedLevel = remoteHigh;
+      changed = true;
+    }
+
+    if ((data['skinsUnlocked'] as bool?) == true && !_skinsUnlocked) {
+      _skinsUnlocked = true;
+      changed = true;
+    }
+
+    final beforeBoards = _purchasedBoards.length;
+    _purchasedBoards
+        .addAll(((data['purchasedBoards'] as List?) ?? []).cast<String>());
+    if (_purchasedBoards.length != beforeBoards) changed = true;
+
+    final beforeArrows = _purchasedArrows.length;
+    _purchasedArrows
+        .addAll(((data['purchasedArrows'] as List?) ?? []).cast<String>());
+    if (_purchasedArrows.length != beforeArrows) changed = true;
+
+    final beforeTrophies = _unlockedTrophies.length;
+    _unlockedTrophies
+        .addAll(((data['unlockedTrophies'] as List?) ?? []).cast<String>());
+    if (_unlockedTrophies.length != beforeTrophies) changed = true;
+
+    _newBoards.addAll(((data['newBoards'] as List?) ?? []).cast<String>());
+    _celebratedBoards
+        .addAll(((data['celebratedBoards'] as List?) ?? []).cast<String>());
+
+    final remoteGranted =
+        (data['itemsGrantedFromStars'] as num?)?.toInt() ?? 0;
+    if (remoteGranted > _itemsGrantedFromStars) {
+      _itemsGrantedFromStars = remoteGranted;
+      changed = true;
+    }
+
+    final remoteResults =
+        data['levelResults'] as Map<String, dynamic>? ?? const {};
+    for (final entry in remoteResults.entries) {
+      final level = int.tryParse(entry.key);
+      if (level == null) continue;
+      try {
+        final remote =
+        LevelResult.fromJson(entry.value as Map<String, dynamic>);
+        final local = _levelResults[level];
+        if (local == null || remote.stars > local.stars) {
+          _levelResults[level] = remote;
+          changed = true;
+        }
+      } catch (e) {
+        debugPrint('Skipped bad level result $level: $e');
+      }
+    }
+
+    final settingsChanged = _applySettingsFromRemote(
+      data['settings'] as Map<String, dynamic>? ?? const {},
+    );
+    if (settingsChanged) changed = true;
+
+    // ── Leaderboard merge ──
+    final lb = data['lb'] as Map<String, dynamic>? ?? const {};
+
+    final remoteOptIn = lb['optIn'] as bool?;
+    if (remoteOptIn != null && remoteOptIn != _leaderboardOptIn) {
+      _leaderboardOptIn = remoteOptIn;
+      changed = true;
+    }
+
+    final remoteWeeklyStart =
+    DateTime.tryParse((lb['weeklyPeriodStart'] as String?) ?? '');
+    final remoteMonthlyStart =
+    DateTime.tryParse((lb['monthlyPeriodStart'] as String?) ?? '');
+    final remoteWeeklyScore = (lb['weeklyScore'] as num?)?.toInt() ?? 0;
+    final remoteMonthlyScore = (lb['monthlyScore'] as num?)?.toInt() ?? 0;
+    final remoteAllTimeScore = (lb['allTimeScore'] as num?)?.toInt() ?? 0;
+
+    final localWeeklyStart = _lbWeeklyPeriodStart;
+    if (remoteWeeklyStart != null &&
+        (localWeeklyStart == null ||
+            remoteWeeklyStart.isAfter(localWeeklyStart))) {
+      _lbWeeklyScore = remoteWeeklyScore;
+      _lbWeeklyPeriodStart = remoteWeeklyStart;
+      _lbWeeklyReachedAt =
+          DateTime.tryParse((lb['weeklyReachedAt'] as String?) ?? '');
+      changed = true;
+    } else if (remoteWeeklyStart != null &&
+        localWeeklyStart != null &&
+        remoteWeeklyStart.isAtSameMomentAs(localWeeklyStart) &&
+        remoteWeeklyScore > _lbWeeklyScore) {
+      _lbWeeklyScore = remoteWeeklyScore;
+      changed = true;
+    }
+
+    final localMonthlyStart = _lbMonthlyPeriodStart;
+    if (remoteMonthlyStart != null &&
+        (localMonthlyStart == null ||
+            remoteMonthlyStart.isAfter(localMonthlyStart))) {
+      _lbMonthlyScore = remoteMonthlyScore;
+      _lbMonthlyPeriodStart = remoteMonthlyStart;
+      _lbMonthlyReachedAt =
+          DateTime.tryParse((lb['monthlyReachedAt'] as String?) ?? '');
+      changed = true;
+    } else if (remoteMonthlyStart != null &&
+        localMonthlyStart != null &&
+        remoteMonthlyStart.isAtSameMomentAs(localMonthlyStart) &&
+        remoteMonthlyScore > _lbMonthlyScore) {
+      _lbMonthlyScore = remoteMonthlyScore;
+      changed = true;
+    }
+
+    if (remoteAllTimeScore > _lbAllTimeScore) {
+      _lbAllTimeScore = remoteAllTimeScore;
+      changed = true;
+    }
+
+    if (changed) {
+      await _save();
+      notifyListeners();
+    }
+    return changed;
+  }
+
+  bool _applySettingsFromRemote(Map<String, dynamic> s) {
+    final remoteModified =
+    DateTime.tryParse((s['lastModified'] as String?) ?? '');
+    if (remoteModified == null) return false;
+
+    final localModified = _lastSettingsModified;
+    if (localModified != null && localModified.isAfter(remoteModified)) {
+      return false;
+    }
+
+    bool changed = false;
+
+    T? enumByName<T extends Enum>(List<T> values, String? name) {
+      if (name == null) return null;
+      for (final v in values) {
+        if (v.name == name) return v;
+      }
+      return null;
+    }
+
+    final themeMode = enumByName(ThemeMode.values, s['themeMode'] as String?);
+    if (themeMode != null && themeMode != _themeMode) {
+      _themeMode = themeMode;
+      changed = true;
+    }
+
+    final accent = (s['accentColor'] as num?)?.toInt();
+    if (accent != null && accent != _accentColor.toARGB32()) {
+      _accentColor = Color(accent);
+      changed = true;
+    }
+
+    bool? b(String key) => s[key] as bool?;
+    double? d(String key) => (s[key] as num?)?.toDouble();
+    int? i(String key) => (s[key] as num?)?.toInt();
+    String? str(String key) => s[key] as String?;
+
+    if (b('soundEnabled') != null && b('soundEnabled') != _soundEnabled) {
+      _soundEnabled = b('soundEnabled')!;
+      changed = true;
+    }
+    if (d('soundVolume') != null && d('soundVolume') != _soundVolume) {
+      _soundVolume = d('soundVolume')!;
+      changed = true;
+    }
+    if (b('musicEnabled') != null && b('musicEnabled') != _musicEnabled) {
+      _musicEnabled = b('musicEnabled')!;
+      changed = true;
+    }
+    if (b('hapticsEnabled') != null && b('hapticsEnabled') != _hapticsEnabled) {
+      _hapticsEnabled = b('hapticsEnabled')!;
+      changed = true;
+    }
+    if (str('languageCode') != null && str('languageCode') != _languageCode) {
+      _languageCode = str('languageCode')!;
+      changed = true;
+    }
+    if (i('arrowSpeed') != null && i('arrowSpeed') != _arrowSpeed) {
+      _arrowSpeed = i('arrowSpeed')!;
+      changed = true;
+    }
+
+    final selTheme =
+    enumByName(GameTheme.values, s['selectedTheme'] as String?);
+    if (selTheme != null && selTheme != _selectedTheme) {
+      _selectedTheme = selTheme;
+      changed = true;
+    }
+
+    final selBoard =
+    enumByName(BoardTheme.values, s['selectedBoard'] as String?);
+    if (selBoard != null && selBoard != _selectedBoard) {
+      _selectedBoard = selBoard;
+      changed = true;
+    }
+
+    if (b('heartRemover') != null && b('heartRemover') != _heartRemover) {
+      _heartRemover = b('heartRemover')!;
+      changed = true;
+    }
+    if (b('assistMode') != null && b('assistMode') != _assistMode) {
+      _assistMode = b('assistMode')!;
+      changed = true;
+    }
+    if (b('complexPaths') != null && b('complexPaths') != _complexPaths) {
+      _complexPaths = b('complexPaths')!;
+      changed = true;
+    }
+    if (b('privacyAccepted') != null &&
+        b('privacyAccepted') != _privacyAccepted) {
+      _privacyAccepted = b('privacyAccepted')!;
+      changed = true;
+    }
+    if (i('rushDifficultyIndex') != null &&
+        i('rushDifficultyIndex') != _rushDifficultyIndex) {
+      _rushDifficultyIndex = i('rushDifficultyIndex')!;
+      changed = true;
+    }
+
+    if (changed) {
+      SfxPlayer.instance.setEnabled(_soundEnabled);
+      SfxPlayer.instance.setVolume(_soundVolume);
+      AudioHapticHelper.hapticsEnabled = _hapticsEnabled;
+      _lastSettingsModified = remoteModified;
+    }
+    return changed;
   }
 
   Future<void> markBoardViewed(BoardTheme board) async {

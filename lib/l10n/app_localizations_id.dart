@@ -1043,12 +1043,6 @@ class AppStringsId extends AppStrings {
   String get accentColorLabel => 'Warna Aksen';
 
   @override
-  String get settingsShareFriends => 'Bagikan ke teman';
-
-  @override
-  String get settingsSharingSoon => 'Berbagi segera hadir';
-
-  @override
   String get settingsPrivacyPolicy => 'Kebijakan Privasi';
 
   @override
@@ -1100,14 +1094,53 @@ class AppStringsId extends AppStrings {
   String get trophiesPerkHeart => '✨ Perk: +1 Nyawa Maksimum Permanen';
 
   @override
-  String get leaderboardTitle => 'Peringkat';
+  String get leaderboardTitle => 'Papan Peringkat';
 
   @override
-  String get leaderboardComingSoon => 'Segera hadir';
+  String get leaderboardTabWeekly => 'Mingguan';
 
   @override
-  String get leaderboardDescription =>
-      'Bersaing dengan pemain di seluruh dunia. Skor dan peringkatmu akan muncul di sini setelah papan peringkat online aktif.';
+  String get leaderboardTabMonthly => 'Bulanan';
+
+  @override
+  String get leaderboardTabAllTime => 'Sepanjang Masa';
+
+  @override
+  String get leaderboardYourRank => 'Peringkat Anda';
+
+  @override
+  String get leaderboardNotRanked => 'Belum diperingkat';
+
+  @override
+  String get leaderboardSignInToRank => 'Masuk untuk muncul di papan';
+
+  @override
+  String get leaderboardEmptyState => 'Belum ada skor';
+
+  @override
+  String get leaderboardScore => 'Skor';
+
+  @override
+  String get leaderboardLevel => 'Level';
+
+  @override
+  String get leaderboardStars => 'Bintang';
+
+  @override
+  String get leaderboardTrophies => 'Trofi';
+
+  @override
+  String get leaderboardYou => 'Anda';
+
+  @override
+  String get leaderboardRankPrefix => '#';
+
+  @override
+  String get leaderboardOptInTitle => 'Tampilkan di papan peringkat';
+
+  @override
+  String get leaderboardOptInSubtitle =>
+      'Biarkan pemain lain melihat peringkat Anda';
 
   @override
   String get inventoryTitle => 'Inventaris';
@@ -1660,4 +1693,19 @@ class AppStringsId extends AppStrings {
 
   @override
   String get profileUpdated => 'Profil diperbarui';
+
+  @override
+  String get shareMessage => 'Coba Arrow Puzzle — game labirin yang seru!';
+
+  @override
+  String get copyLink => 'Salin Tautan';
+
+  @override
+  String get linkCopied => 'Tautan disalin';
+
+  @override
+  String get settingsShareFriends => 'Bagikan ke teman';
+
+  @override
+  String get settingsSharingSoon => 'Segera hadir';
 }

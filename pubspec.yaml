@@ -29,6 +29,8 @@ dependencies:
   huawei_iap: ^6.14.0+300
   device_info_plus: ^13.3.0
   huawei_in_app_update: ^1.2.2
+  qr_flutter: ^4.1.0
+  archive: ^4.5.2
 
 
 dev_dependencies:

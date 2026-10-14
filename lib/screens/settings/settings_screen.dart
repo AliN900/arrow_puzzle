@@ -1,4 +1,5 @@
 import 'package:arrow_puzzle/screens/settings/widgets/debug_level_jumper.dart';
+import 'package:arrow_puzzle/screens/settings/widgets/share_qr_dialog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,8 +7,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../core/constants.dart';
+import '../../data/repositories/leaderboard_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../../services/leaderboard_service.dart';
 import 'widgets/settings_section_header.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_switch_tile.dart';
@@ -249,16 +252,48 @@ class SettingsScreen extends ConsumerWidget {
             SettingsCard(
               cardColor: cardColor,
               children: [
+                // DEBUG-ONLY: LB opt-in toggle. In release builds, opt-in is
+                // automatic (see ProgressRepository default), so this tile is hidden.
+                if (kDebugMode) ...[
+                  SettingsSwitchTile(
+                    icon: Icons.emoji_events_outlined,
+                    title: strings.leaderboardOptInTitle,
+                    value: progress.leaderboardOptIn,
+                    onChanged: (value) async {
+                      AudioHapticHelper.playClick();
+                      final auth = ref.read(authServiceProvider);
+                      final repo = ref.read(progressRepositoryProvider);
+                      await repo.setLeaderboardOptIn(value);
+
+                      if (value && !auth.isGuest) {
+                        await LeaderboardRepository.instance.pushCurrentUser(
+                          level: progress.currentLevel,
+                          totalStars: progress.totalStars,
+                          trophies: progress.unlockedTrophies.length,
+                          weeklyScore: progress.lbWeeklyScore,
+                          monthlyScore: progress.lbMonthlyScore,
+                          allTimeScore: progress.lbAllTimeScore,
+                          weeklyPeriodStart: progress.lbWeeklyPeriodStart ??
+                              LeaderboardService.currentWeekStartUtc(),
+                          monthlyPeriodStart: progress.lbMonthlyPeriodStart ??
+                              LeaderboardService.currentMonthStartUtc(),
+                          weeklyReachedAt: progress.lbWeeklyReachedAt,
+                          monthlyReachedAt: progress.lbMonthlyReachedAt,
+                        );
+                      }
+                    },
+                    accentColor: accentColor,
+                    textPrimary: textPrimary,
+                    textSecondary: textSecondary,
+                  ),
+                  divider,
+                ],
                 SettingsNavTile(
-                  icon: Icons.share_outlined,
+                  icon: Icons.qr_code_rounded,
                   title: strings.settingsShareFriends,
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(strings.settingsSharingSoon),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
+                    AudioHapticHelper.playClick();
+                    showShareQR(context);
                   },
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
@@ -268,7 +303,7 @@ class SettingsScreen extends ConsumerWidget {
                   icon: Icons.shield_outlined,
                   title: strings.settingsPrivacyPolicy,
                   onTap: () => launchUrl(
-                    Uri.parse('https://alin900.github.io/arrow-puzzle/privacy.html'),
+                    Uri.parse('https://ahbdev.dev/arrow-puzzle/privacy.html'),
                     mode: LaunchMode.externalApplication,
                   ),
                   textPrimary: textPrimary,
@@ -279,7 +314,7 @@ class SettingsScreen extends ConsumerWidget {
                   icon: Icons.description_outlined,
                   title: strings.settingsTermsConditions,
                   onTap: () => launchUrl(
-                    Uri.parse('https://alin900.github.io/arrow-puzzle/terms.html'),
+                    Uri.parse('https://ahbdev.dev/arrow-puzzle/terms.html'),
                     mode: LaunchMode.externalApplication,
                   ),
                   textPrimary: textPrimary,

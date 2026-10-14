@@ -429,7 +429,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     }
 
     // Pulse timer for leaving arrows
-    if (arrowModel.isLeavingArrow && !_isAnimating) {
+    if (gameState.isArrowLeaving(arrowModel.id) && !_isAnimating) {
       _leavingPulseTime += dt * 4.0;
     }
 
@@ -708,7 +708,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
 
     // Pulsing glow for leaving arrows
-    if (arrowModel.isLeavingArrow && arrowModel.state == ArrowState.idle) {
+    if (gameState.isArrowLeaving(arrowModel.id) &&
+        arrowModel.state == ArrowState.idle) {
       final pulse = 0.5 + 0.5 * math.sin(_leavingPulseTime);
       canvas.drawPath(
         bodyPath,
@@ -877,6 +878,11 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   }
 
   Color _color() {
+    // Leaving arrows get a distinct orange tint regardless of theme.
+    if (gameState.isArrowLeaving(arrowModel.id) &&
+        arrowModel.state == ArrowState.idle) {
+      return const Color(0xFFFF9800);
+    }
     if (arrowModel.type == ArrowType.bomb) {
       return const Color(0xFFE53935);
     }

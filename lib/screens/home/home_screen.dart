@@ -9,6 +9,7 @@ import '../../core/board_themes.dart';
 import '../../core/game_mode.dart';
 import '../../core/items.dart';
 import '../../data/models/trophy.dart';
+import '../../data/repositories/leaderboard_repository.dart';
 import '../../main.dart';
 import '../../widgets/coin_pill.dart';
 import '../../widgets/daily_reward_popup.dart';
@@ -317,19 +318,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _buildGridCard(
-                      context: context,
-                      title: strings.homeLeaderboard,
-                      subtitle: strings.homeComingSoon,
-                      icon: Icons.leaderboard_rounded,
-                      iconColor: coinYellow,
-                      badgeColor: trophyRed,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const LeaderboardScreen(),
-                          ),
+                    child: Consumer(
+                      builder: (context, ref, _) {
+                        final ranksAsync = ref.watch(myRanksProvider);
+                        final rankText = ranksAsync.maybeWhen(
+                          data: (r) {
+                            final w = r.weekly == null ? '—' : 'W ${r.weekly}';
+                            final m = r.monthly == null ? '—' : 'M ${r.monthly}';
+                            final a = r.allTime == null ? '—' : 'A ${r.allTime}';
+                            return '$w   $m   $a';
+                          },
+                          orElse: () => strings.homeComingSoon,
+                        );
+                        return _buildGridCard(
+                          context: context,
+                          title: strings.homeLeaderboard,
+                          subtitle: rankText,
+                          icon: Icons.leaderboard_rounded,
+                          iconColor: coinYellow,
+                          badgeColor: trophyRed,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+                            );
+                          },
                         );
                       },
                     ),

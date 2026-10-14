@@ -1031,12 +1031,6 @@ class AppStringsAr extends AppStrings {
   String get accentColorLabel => 'لون التمييز';
 
   @override
-  String get settingsShareFriends => 'شارك مع الأصدقاء';
-
-  @override
-  String get settingsSharingSoon => 'المشاركة قريبًا';
-
-  @override
   String get settingsPrivacyPolicy => 'سياسة الخصوصية';
 
   @override
@@ -1088,14 +1082,52 @@ class AppStringsAr extends AppStrings {
   String get trophiesPerkHeart => '✨ ميزة: +1 حياة قصوى دائمة';
 
   @override
-  String get leaderboardTitle => 'المتصدرون';
+  String get leaderboardTitle => 'قائمة المتصدرين';
 
   @override
-  String get leaderboardComingSoon => 'قريبًا';
+  String get leaderboardTabWeekly => 'أسبوعي';
 
   @override
-  String get leaderboardDescription =>
-      'تنافس مع لاعبين من جميع أنحاء العالم. ستظهر نتائجك وترتيبك هنا بمجرد إطلاق لوحة المتصدرين عبر الإنترنت.';
+  String get leaderboardTabMonthly => 'شهري';
+
+  @override
+  String get leaderboardTabAllTime => 'الإجمالي';
+
+  @override
+  String get leaderboardYourRank => 'ترتيبك';
+
+  @override
+  String get leaderboardNotRanked => 'غير مصنّف بعد';
+
+  @override
+  String get leaderboardSignInToRank => 'سجّل الدخول للظهور في القائمة';
+
+  @override
+  String get leaderboardEmptyState => 'لا توجد نتائج بعد';
+
+  @override
+  String get leaderboardScore => 'النقاط';
+
+  @override
+  String get leaderboardLevel => 'المستوى';
+
+  @override
+  String get leaderboardStars => 'النجوم';
+
+  @override
+  String get leaderboardTrophies => 'الجوائز';
+
+  @override
+  String get leaderboardYou => 'أنت';
+
+  @override
+  String get leaderboardRankPrefix => '#';
+
+  @override
+  String get leaderboardOptInTitle => 'اعرضني في قائمة المتصدرين';
+
+  @override
+  String get leaderboardOptInSubtitle => 'اسمح للاعبين برؤية ترتيبك';
 
   @override
   String get inventoryTitle => 'المخزون';
@@ -1647,4 +1679,19 @@ class AppStringsAr extends AppStrings {
 
   @override
   String get profileUpdated => 'تم تحديث الملف الشخصي';
+
+  @override
+  String get shareMessage => 'جرّب Arrow Puzzle — لعبة متاهة ممتعة!';
+
+  @override
+  String get copyLink => 'نسخ الرابط';
+
+  @override
+  String get linkCopied => 'تم نسخ الرابط';
+
+  @override
+  String get settingsShareFriends => 'شارك مع الأصدقاء';
+
+  @override
+  String get settingsSharingSoon => 'قريباً';
 }

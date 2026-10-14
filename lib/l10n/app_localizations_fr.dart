@@ -1042,12 +1042,6 @@ class AppStringsFr extends AppStrings {
   String get accentColorLabel => 'Couleur d\'accent';
 
   @override
-  String get settingsShareFriends => 'Partager avec des amis';
-
-  @override
-  String get settingsSharingSoon => 'Partage bientôt disponible';
-
-  @override
   String get settingsPrivacyPolicy => 'Politique de confidentialité';
 
   @override
@@ -1102,11 +1096,49 @@ class AppStringsFr extends AppStrings {
   String get leaderboardTitle => 'Classement';
 
   @override
-  String get leaderboardComingSoon => 'Bientôt disponible';
+  String get leaderboardTabWeekly => 'Hebdo';
 
   @override
-  String get leaderboardDescription =>
-      'Affrontez des joueurs du monde entier. Vos scores et classements apparaîtront ici dès que le classement en ligne sera disponible.';
+  String get leaderboardTabMonthly => 'Mensuel';
+
+  @override
+  String get leaderboardTabAllTime => 'Général';
+
+  @override
+  String get leaderboardYourRank => 'Votre rang';
+
+  @override
+  String get leaderboardNotRanked => 'Non classé';
+
+  @override
+  String get leaderboardSignInToRank => 'Connectez-vous pour apparaître';
+
+  @override
+  String get leaderboardEmptyState => 'Aucun score pour l\'instant';
+
+  @override
+  String get leaderboardScore => 'Score';
+
+  @override
+  String get leaderboardLevel => 'Niveau';
+
+  @override
+  String get leaderboardStars => 'Étoiles';
+
+  @override
+  String get leaderboardTrophies => 'Trophées';
+
+  @override
+  String get leaderboardYou => 'Vous';
+
+  @override
+  String get leaderboardRankPrefix => '#';
+
+  @override
+  String get leaderboardOptInTitle => 'Afficher dans le classement';
+
+  @override
+  String get leaderboardOptInSubtitle => 'Laissez les autres voir votre rang';
 
   @override
   String get inventoryTitle => 'Inventaire';
@@ -1665,4 +1697,20 @@ class AppStringsFr extends AppStrings {
 
   @override
   String get profileUpdated => 'Profil mis à jour';
+
+  @override
+  String get shareMessage =>
+      'Découvrez Arrow Puzzle — un jeu de labyrinthe amusant !';
+
+  @override
+  String get copyLink => 'Copier le lien';
+
+  @override
+  String get linkCopied => 'Lien copié';
+
+  @override
+  String get settingsShareFriends => 'Partager avec des amis';
+
+  @override
+  String get settingsSharingSoon => 'Bientôt disponible';
 }

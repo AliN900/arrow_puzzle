@@ -1938,18 +1938,6 @@ abstract class AppStrings {
   /// **'Accent Color'**
   String get accentColorLabel;
 
-  /// No description provided for @settingsShareFriends.
-  ///
-  /// In en, this message translates to:
-  /// **'Share with friends'**
-  String get settingsShareFriends;
-
-  /// No description provided for @settingsSharingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Sharing coming soon'**
-  String get settingsSharingSoon;
-
   /// No description provided for @settingsPrivacyPolicy.
   ///
   /// In en, this message translates to:
@@ -2046,17 +2034,95 @@ abstract class AppStrings {
   /// **'Leaderboard'**
   String get leaderboardTitle;
 
-  /// No description provided for @leaderboardComingSoon.
+  /// No description provided for @leaderboardTabWeekly.
   ///
   /// In en, this message translates to:
-  /// **'Coming soon'**
-  String get leaderboardComingSoon;
+  /// **'Weekly'**
+  String get leaderboardTabWeekly;
 
-  /// No description provided for @leaderboardDescription.
+  /// No description provided for @leaderboardTabMonthly.
   ///
   /// In en, this message translates to:
-  /// **'Compete with players around the world. Your scores and rankings will appear here once the online leaderboard goes live.'**
-  String get leaderboardDescription;
+  /// **'Monthly'**
+  String get leaderboardTabMonthly;
+
+  /// No description provided for @leaderboardTabAllTime.
+  ///
+  /// In en, this message translates to:
+  /// **'All-Time'**
+  String get leaderboardTabAllTime;
+
+  /// No description provided for @leaderboardYourRank.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Rank'**
+  String get leaderboardYourRank;
+
+  /// No description provided for @leaderboardNotRanked.
+  ///
+  /// In en, this message translates to:
+  /// **'Not ranked yet'**
+  String get leaderboardNotRanked;
+
+  /// No description provided for @leaderboardSignInToRank.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to appear on the leaderboard'**
+  String get leaderboardSignInToRank;
+
+  /// No description provided for @leaderboardEmptyState.
+  ///
+  /// In en, this message translates to:
+  /// **'No scores yet — be the first!'**
+  String get leaderboardEmptyState;
+
+  /// No description provided for @leaderboardScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get leaderboardScore;
+
+  /// No description provided for @leaderboardLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get leaderboardLevel;
+
+  /// No description provided for @leaderboardStars.
+  ///
+  /// In en, this message translates to:
+  /// **'Stars'**
+  String get leaderboardStars;
+
+  /// No description provided for @leaderboardTrophies.
+  ///
+  /// In en, this message translates to:
+  /// **'Trophies'**
+  String get leaderboardTrophies;
+
+  /// No description provided for @leaderboardYou.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get leaderboardYou;
+
+  /// No description provided for @leaderboardRankPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'#'**
+  String get leaderboardRankPrefix;
+
+  /// No description provided for @leaderboardOptInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show me on leaderboard'**
+  String get leaderboardOptInTitle;
+
+  /// No description provided for @leaderboardOptInSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let other players see your rank'**
+  String get leaderboardOptInSubtitle;
 
   /// No description provided for @inventoryTitle.
   ///
@@ -3023,6 +3089,36 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Profile updated'**
   String get profileUpdated;
+
+  /// No description provided for @shareMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Check out Arrow Puzzle — a fun maze escape game!'**
+  String get shareMessage;
+
+  /// No description provided for @copyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Link'**
+  String get copyLink;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get linkCopied;
+
+  /// No description provided for @settingsShareFriends.
+  ///
+  /// In en, this message translates to:
+  /// **'Share with friends'**
+  String get settingsShareFriends;
+
+  /// No description provided for @settingsSharingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing coming soon'**
+  String get settingsSharingSoon;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {
