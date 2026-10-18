@@ -266,20 +266,25 @@ class SettingsScreen extends ConsumerWidget {
                       await repo.setLeaderboardOptIn(value);
 
                       if (value && !auth.isGuest) {
-                        await LeaderboardRepository.instance.pushCurrentUser(
-                          level: progress.currentLevel,
-                          totalStars: progress.totalStars,
-                          trophies: progress.unlockedTrophies.length,
-                          weeklyScore: progress.lbWeeklyScore,
-                          monthlyScore: progress.lbMonthlyScore,
-                          allTimeScore: progress.lbAllTimeScore,
-                          weeklyPeriodStart: progress.lbWeeklyPeriodStart ??
-                              LeaderboardService.currentWeekStartUtc(),
-                          monthlyPeriodStart: progress.lbMonthlyPeriodStart ??
-                              LeaderboardService.currentMonthStartUtc(),
-                          weeklyReachedAt: progress.lbWeeklyReachedAt,
-                          monthlyReachedAt: progress.lbMonthlyReachedAt,
-                        );
+                        try {
+                          await LeaderboardRepository.instance.pushCurrentUser(
+                            level: progress.currentLevel,
+                            totalStars: progress.totalStars,
+                            trophies: progress.unlockedTrophies.length,
+                            weeklyScore: progress.lbWeeklyScore,
+                            monthlyScore: progress.lbMonthlyScore,
+                            allTimeScore: progress.lbAllTimeScore,
+                            weeklyPeriodStart: progress.lbWeeklyPeriodStart ??
+                                LeaderboardService.currentWeekStartUtc(),
+                            monthlyPeriodStart: progress.lbMonthlyPeriodStart ??
+                                LeaderboardService.currentMonthStartUtc(),
+                            weeklyReachedAt: progress.lbWeeklyReachedAt,
+                            monthlyReachedAt: progress.lbMonthlyReachedAt,
+                          );
+                          await repo.markLbClean();
+                        } catch (e) {
+                          debugPrint('Opt-in push failed: $e');
+                        }
                       }
                     },
                     accentColor: accentColor,

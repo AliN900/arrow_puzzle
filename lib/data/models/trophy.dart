@@ -3,7 +3,7 @@ import 'package:flutter/cupertino.dart';
 import '../../l10n/app_localizations.dart';
 
 enum TrophyType { benefit, monumental }
-enum TrophyBenefit { extraHeart, none }
+enum TrophyBenefit { extraHeart, leaderboard, none }   // ← added `leaderboard`
 
 class TrophyModel {
   final int index;
@@ -14,6 +14,10 @@ class TrophyModel {
   final TrophyBenefit benefit;
   final int unlockLevel;
 
+  /// If non-null, this trophy is LC-gated instead of level-gated.
+  /// [unlockLevel] is ignored when this is set.
+  final int? requiredLc;   // ← new
+
   const TrophyModel({
     required this.index,
     required this.id,
@@ -22,12 +26,13 @@ class TrophyModel {
     required this.type,
     required this.benefit,
     required this.unlockLevel,
+    this.requiredLc,       // ← new (optional)
   });
 }
 
 class TrophyConstants {
   static final List<TrophyModel> allTrophies = [
-    // 1. Reworked Introduction Trophy (Level 1)
+    // ── Lv 1-50 (onboarding + early) ──────────────────────────
     const TrophyModel(
       index: 1,
       id: 'first_escape',
@@ -37,7 +42,6 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 1,
     ),
-    // 2. Point Blank
     const TrophyModel(
       index: 2,
       id: 'point_blank',
@@ -47,17 +51,6 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 1,
     ),
-    // 3. Trial of Two
-    const TrophyModel(
-      index: 3,
-      id: 'trial_of_two',
-      title: 'Trial of Two',
-      description: 'Conquer the intense two-heart restriction of the early trials.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 5,
-    ),
-    // 4. Quick Thinker (Stretched time window)
     const TrophyModel(
       index: 4,
       id: 'quick_thinker',
@@ -67,27 +60,6 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 3,
     ),
-    // 5. Arrow Smith
-    const TrophyModel(
-      index: 5,
-      id: 'arrow_smith',
-      title: 'Arrow Smith',
-      description: 'Clear 10 levels without giving up or restarting.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 10,
-    ),
-    // 6. Clean Slate
-    const TrophyModel(
-      index: 6,
-      id: 'clean_slate',
-      title: 'Clean Slate',
-      description: 'Finish a level without a single blocked arrow tap.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 8,
-    ),
-    // 7. Spark of Genius
     const TrophyModel(
       index: 7,
       id: 'spark_of_genius',
@@ -95,29 +67,17 @@ class TrophyConstants {
       description: 'Use your first hint item to find a path through a sticky situation.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 4,
+      unlockLevel: 12,
     ),
-    // 8. Unwind
     const TrophyModel(
-      index: 8,
-      id: 'unwind',
-      title: 'Unwind',
-      description: 'Use your first undo item to reverse a misstep.',
+      index: 3,
+      id: 'trial_of_two',
+      title: 'Trial of Two',
+      description: 'Conquer the intense two-heart restriction of the early trials.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 6,
+      unlockLevel: 22,
     ),
-    // 9. Rock Breaker
-    const TrophyModel(
-      index: 9,
-      id: 'rock_breaker',
-      title: 'Rock Breaker',
-      description: 'Successfully blast away your first rock obstacle using a tactical bomb arrow.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 25,
-    ),
-    // 10. The Survivalist (Benefit Trophy)
     const TrophyModel(
       index: 10,
       id: 'survivalist_badge',
@@ -127,7 +87,24 @@ class TrophyConstants {
       benefit: TrophyBenefit.extraHeart,
       unlockLevel: 25,
     ),
-    // 11. Wayfinder
+    const TrophyModel(
+      index: 8,
+      id: 'unwind',
+      title: 'Unwind',
+      description: 'Use your first undo item to reverse a misstep.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 32,
+    ),
+    const TrophyModel(
+      index: 6,
+      id: 'clean_slate',
+      title: 'Clean Slate',
+      description: 'Finish a level without a single blocked arrow tap.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 42,
+    ),
     const TrophyModel(
       index: 11,
       id: 'wayfinder',
@@ -137,27 +114,44 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 50,
     ),
-    // 12. Tangle Tamer
+
+    // ── Lv 51-100 ─────────────────────────────────────────────
     const TrophyModel(
-      index: 12,
-      id: 'tangle_tamer',
-      title: 'Tangle Tamer',
-      description: 'Clear 10 levels in a row without making a single directional error.',
+      index: 5,
+      id: 'arrow_smith',
+      title: 'Arrow Smith',
+      description: 'Clear 10 levels without giving up or restarting.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 35,
+      unlockLevel: 55,
     ),
-    // 13. Time Lord
     const TrophyModel(
-      index: 13,
-      id: 'time_lord',
-      title: 'Time Lord',
-      description: 'Survive a timed God-level trial with countdown seconds to spare.',
+      index: 24,
+      id: 'golden_touch',
+      title: 'Golden Touch',
+      description: 'Unlock your very first custom board or arrow skin theme.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 110,
+      unlockLevel: 65,
     ),
-    // 14. Century Mark
+    const TrophyModel(
+      index: 21,
+      id: 'the_strategist',
+      title: 'The Strategist',
+      description: 'Utilize all available inventory items at least once during a single session.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 75,
+    ),
+    const TrophyModel(
+      index: 9,
+      id: 'rock_breaker',
+      title: 'Rock Breaker',
+      description: 'Successfully blast away your first rock obstacle using a tactical bomb arrow.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 85,
+    ),
     const TrophyModel(
       index: 14,
       id: 'century_mark',
@@ -167,47 +161,17 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 100,
     ),
-    // 16. Bomb Technician
+
+    // ── Lv 101-150 ────────────────────────────────────────────
     const TrophyModel(
-      index: 16,
-      id: 'bomb_technician',
-      title: 'Bomb Technician',
-      description: 'Clear 25 rock obstacles across your campaign using tactical bombs.',
+      index: 12,
+      id: 'tangle_tamer',
+      title: 'Tangle Tamer',
+      description: 'Clear 10 levels in a row without making a single directional error.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 75,
+      unlockLevel: 115,
     ),
-    // 17. Untouchable
-    const TrophyModel(
-      index: 17,
-      id: 'untouchable',
-      title: 'Untouchable',
-      description: 'Complete 5 levels consecutively without losing a single heart.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 45,
-    ),
-    // 18. Stargazer
-    const TrophyModel(
-      index: 18,
-      id: 'stargazer',
-      title: 'Stargazer',
-      description: 'Earn 3 stars across 30 different puzzle boards.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 60,
-    ),
-    // 19. Master of Angles
-    const TrophyModel(
-      index: 19,
-      id: 'master_of_angles',
-      title: 'Master of Angles',
-      description: 'Complete a complex puzzle heavily featuring orphan redirector dots.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 40,
-    ),
-    // 20. Halfway to Glory
     const TrophyModel(
       index: 20,
       id: 'halfway_to_glory',
@@ -217,47 +181,15 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 125,
     ),
-    // 21. The Strategist
     const TrophyModel(
-      index: 21,
-      id: 'the_strategist',
-      title: 'The Strategist',
-      description: 'Utilize all available inventory items at least once during a single session.',
+      index: 19,
+      id: 'master_of_angles',
+      title: 'Master of Angles',
+      description: 'Complete a complex puzzle heavily featuring orphan redirector dots.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 30,
+      unlockLevel: 135,
     ),
-    // 22. Quick Silver
-    const TrophyModel(
-      index: 22,
-      id: 'quick_silver',
-      title: 'Quick Silver',
-      description: 'Accumulate 5 minutes of active high-speed play in Time Attack mode.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 55,
-    ),
-    // 23. Iron Will
-    const TrophyModel(
-      index: 23,
-      id: 'iron_will',
-      title: 'Iron Will',
-      description: 'Win a boss level after dropping down to your absolute final heart.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 70,
-    ),
-    // 24. Golden Touch
-    const TrophyModel(
-      index: 24,
-      id: 'golden_touch',
-      title: 'Golden Touch',
-      description: 'Unlock your very first custom board or arrow skin theme.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 20,
-    ),
-    // 26. Deep Diver
     const TrophyModel(
       index: 26,
       id: 'deep_diver',
@@ -267,37 +199,44 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 150,
     ),
-    // 27. The Puzzler
+
+    // ── Lv 151-200 ────────────────────────────────────────────
     const TrophyModel(
-      index: 27,
-      id: 'the_puzzler',
-      title: 'The Puzzler',
-      description: 'Complete 50 randomly generated procedural puzzle boards.',
+      index: 17,
+      id: 'untouchable',
+      title: 'Untouchable',
+      description: 'Complete 5 levels consecutively without losing a single heart.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 90,
+      unlockLevel: 165,
     ),
-    // 28. Sharp Shooter
     const TrophyModel(
-      index: 28,
-      id: 'sharp_shooter',
-      title: 'Sharp Shooter',
-      description: 'Finish 20 levels using the minimum possible moves.',
+      index: 22,
+      id: 'quick_silver',
+      title: 'Quick Silver',
+      description: 'Accumulate 5 minutes of active high-speed play in Time Attack mode.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 135,
+      unlockLevel: 175,
     ),
-    // 30. Vault Keeper
     const TrophyModel(
-      index: 30,
-      id: 'vault_keeper',
-      title: 'Vault Keeper',
-      description: 'Accumulate a massive total of 500 coins from gameplay and ad rewards.',
+      index: 18,
+      id: 'stargazer',
+      title: 'Stargazer',
+      description: 'Earn 3 stars across 30 different puzzle boards.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 80,
+      unlockLevel: 185,
     ),
-    // 31. Milestone Master
+    const TrophyModel(
+      index: 34,
+      id: 'resilient_spirit',
+      title: 'Resilient Spirit',
+      description: 'Recover from a game-over state using an ad continuation reward.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 195,
+    ),
     const TrophyModel(
       index: 31,
       id: 'milestone_master',
@@ -307,47 +246,35 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 200,
     ),
-    // 32. Boss Slayer
+
+    // ── Lv 201-250 ────────────────────────────────────────────
     const TrophyModel(
-      index: 32,
-      id: 'boss_slayer',
-      title: 'Boss Slayer',
-      description: 'Defeat 8 boss levels consecutively without a single defeat.',
+      index: 23,
+      id: 'iron_will',
+      title: 'Iron Will',
+      description: 'Win a boss level after dropping down to your absolute final heart.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 175,
+      unlockLevel: 215,
     ),
-    // 33. Time Bender
     const TrophyModel(
-      index: 33,
-      id: 'time_bender',
-      title: 'Time Bender',
-      description: 'Freeze time successfully 10 times on intense countdown levels.',
+      index: 16,
+      id: 'bomb_technician',
+      title: 'Bomb Technician',
+      description: 'Clear 25 rock obstacles across your campaign using tactical bombs.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 220,
+      unlockLevel: 230,
     ),
-    // 34. Resilient Spirit
     const TrophyModel(
-      index: 34,
-      id: 'resilient_spirit',
-      title: 'Resilient Spirit',
-      description: 'Recover from a game-over state using an ad continuation reward.',
+      index: 30,
+      id: 'vault_keeper',
+      title: 'Vault Keeper',
+      description: 'Accumulate a massive total of 500 coins from gameplay and ad rewards.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 65,
+      unlockLevel: 245,
     ),
-    // 35. Board Collector
-    const TrophyModel(
-      index: 35,
-      id: 'board_collector',
-      title: 'Board Collector',
-      description: 'Unlock 5 different custom board themes for your collection.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 160,
-    ),
-    // 36. Apex Predator
     const TrophyModel(
       index: 36,
       id: 'apex_predator',
@@ -357,27 +284,17 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 250,
     ),
-    // 37. Flawless Execution
+
+    // ── Lv 251-300 ────────────────────────────────────────────
     const TrophyModel(
-      index: 37,
-      id: 'flawless_execution',
-      title: 'Flawless Execution',
-      description: 'Earn 3 stars across 100 separate levels.',
+      index: 27,
+      id: 'the_puzzler',
+      title: 'The Puzzler',
+      description: 'Complete 50 randomly generated procedural puzzle boards.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 210,
+      unlockLevel: 265,
     ),
-    // 38. Tactical Mindset
-    const TrophyModel(
-      index: 38,
-      id: 'tactical_mindset',
-      title: 'Tactical Mindset',
-      description: 'Solve a god-tier puzzle without relying on any hints.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 280,
-    ),
-    // 39. Daily Devotee
     const TrophyModel(
       index: 39,
       id: 'daily_devotee',
@@ -385,19 +302,17 @@ class TrophyConstants {
       description: 'Maintain a 7-day login streak on your daily rewards tracker.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 95,
+      unlockLevel: 280,
     ),
-    // 40. Monumental Pioneer
     const TrophyModel(
-      index: 40,
-      id: 'monumental_pioneer',
-      title: 'Monumental Pioneer',
-      description: 'Unlock your first purely decorative, prestige monumental trophy.',
+      index: 13,
+      id: 'time_lord',
+      title: 'Time Lord',
+      description: 'Survive a timed God-level trial with countdown seconds to spare.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 180,
+      unlockLevel: 290,
     ),
-    // 41. The High Climber
     const TrophyModel(
       index: 41,
       id: 'high_climber',
@@ -407,7 +322,35 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 300,
     ),
-    // 42. Grandmaster
+
+    // ── Lv 301-350 ────────────────────────────────────────────
+    const TrophyModel(
+      index: 28,
+      id: 'sharp_shooter',
+      title: 'Sharp Shooter',
+      description: 'Finish 20 levels using the minimum possible moves.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 310,
+    ),
+    const TrophyModel(
+      index: 32,
+      id: 'boss_slayer',
+      title: 'Boss Slayer',
+      description: 'Defeat 8 boss levels consecutively without a single defeat.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 325,
+    ),
+    const TrophyModel(
+      index: 35,
+      id: 'board_collector',
+      title: 'Board Collector',
+      description: 'Unlock 5 different custom board themes for your collection.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 340,
+    ),
     const TrophyModel(
       index: 42,
       id: 'grandmaster',
@@ -417,17 +360,35 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 350,
     ),
-    // 43. Eternal Flame
+
+    // ── Lv 351-400 ────────────────────────────────────────────
     const TrophyModel(
-      index: 43,
-      id: 'eternal_flame',
-      title: 'Eternal Flame',
-      description: 'Maintain an incredible 14-day continuous login streak.',
+      index: 40,
+      id: 'monumental_pioneer',
+      title: 'Monumental Pioneer',
+      description: 'Unlock your first purely decorative, prestige monumental trophy.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 260,
+      unlockLevel: 360,
     ),
-    // 44. Ironclad
+    const TrophyModel(
+      index: 37,
+      id: 'flawless_execution',
+      title: 'Flawless Execution',
+      description: 'Earn 3 stars across 100 separate levels.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 375,
+    ),
+    const TrophyModel(
+      index: 33,
+      id: 'time_bender',
+      title: 'Time Bender',
+      description: 'Freeze time successfully 10 times on intense countdown levels.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 390,
+    ),
     const TrophyModel(
       index: 44,
       id: 'ironclad',
@@ -437,17 +398,26 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 400,
     ),
-    // 45. Perfectionist
+
+    // ── Lv 401-450 ────────────────────────────────────────────
     const TrophyModel(
-      index: 45,
-      id: 'perfectionist',
-      title: 'Perfectionist',
-      description: 'Earn 3 stars on every single level from 1 up to 400.',
+      index: 43,
+      id: 'eternal_flame',
+      title: 'Eternal Flame',
+      description: 'Maintain an incredible 14-day continuous login streak.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
-      unlockLevel: 420,
+      unlockLevel: 415,
     ),
-    // 46. Titan of the Maze
+    const TrophyModel(
+      index: 38,
+      id: 'tactical_mindset',
+      title: 'Tactical Mindset',
+      description: 'Solve a god-tier puzzle without relying on any hints.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 430,
+    ),
     const TrophyModel(
       index: 46,
       id: 'titan_of_the_maze',
@@ -457,7 +427,35 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 450,
     ),
-    // 47. The 500 Club
+
+    // ── Lv 451-500 (endgame) ──────────────────────────────────
+    const TrophyModel(
+      index: 49,
+      id: 'monument_of_time',
+      title: 'Monument of Time',
+      description: 'A prestige monumental artifact for dedicating over 10 active hours to escaping mazes.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 465,
+    ),
+    const TrophyModel(
+      index: 45,
+      id: 'perfectionist',
+      title: 'Perfectionist',
+      description: 'Earn 3 stars on every single level from 1 up to 400.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 480,
+    ),
+    const TrophyModel(
+      index: 50,
+      id: 'absolute_void',
+      title: 'The Absolute Void',
+      description: 'A pitch-black monumental prestige trophy awarded for maxing out key progression features.',
+      type: TrophyType.monumental,
+      benefit: TrophyBenefit.none,
+      unlockLevel: 495,
+    ),
     const TrophyModel(
       index: 47,
       id: 'the_500_club',
@@ -467,7 +465,6 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 500,
     ),
-    // 48. Living Legend
     const TrophyModel(
       index: 48,
       id: 'living_legend',
@@ -477,27 +474,6 @@ class TrophyConstants {
       benefit: TrophyBenefit.none,
       unlockLevel: 500,
     ),
-    // 49. Monument of Time
-    const TrophyModel(
-      index: 49,
-      id: 'monument_of_time',
-      title: 'Monument of Time',
-      description: 'A prestige monumental artifact for dedicating over 10 active hours to escaping mazes.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 320,
-    ),
-    // 50. The Absolute Void
-    const TrophyModel(
-      index: 50,
-      id: 'absolute_void',
-      title: 'The Absolute Void',
-      description: 'A pitch-black monumental prestige trophy awarded for maxing out key progression features.',
-      type: TrophyType.monumental,
-      benefit: TrophyBenefit.none,
-      unlockLevel: 480,
-    ),
-    // 51. Infinite Horizon
     const TrophyModel(
       index: 51,
       id: 'infinite_horizon',
@@ -506,6 +482,18 @@ class TrophyConstants {
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 500,
+    ),
+    const TrophyModel(
+      index: 52,
+      id: 'leaderboard_legend',
+      title: '🏆 LEADERBOARD LEGEND',
+      description:
+      'Accumulate 1,000 LC to unlock the global leaderboard. '
+          'Compete with players worldwide for the top spot!',
+      type: TrophyType.benefit,
+      benefit: TrophyBenefit.leaderboard,
+      unlockLevel: 0,          // not level-gated
+      requiredLc: 1000,
     ),
   ];
 }
@@ -566,7 +554,7 @@ extension TrophyLocalization on TrophyModel {
       case 'monument_of_time':    return s.trophyMonumentOfTimeTitle;
       case 'absolute_void':       return s.trophyAbsoluteVoidTitle;
       case 'infinite_horizon':    return s.trophyInfiniteHorizonTitle;
-      default:                    return title; // English fallback
+      default:                    return title;
     }
   }
 

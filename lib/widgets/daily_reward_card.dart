@@ -1,3 +1,4 @@
+import 'package:arrow_puzzle/widgets/status_flash.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:arrow_puzzle/l10n/app_localizations.dart';
@@ -45,9 +46,7 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
 
   void _showSnack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-    );
+    StatusFlash.success(context, msg);
   }
 
   @override

@@ -527,10 +527,10 @@ class AppStringsAr extends AppStrings {
   String get pauseMainMenu => 'القائمة الرئيسية';
 
   @override
-  String get itemBombName => 'قنبلة';
+  String get itemBombName => 'لغم';
 
   @override
-  String get itemBombDesc => 'دمّر صخرة واحدة';
+  String get itemBombDesc => 'أزل لغماً واحداً من اللوحة';
 
   @override
   String get itemHintName => 'تلميح';
@@ -1694,4 +1694,45 @@ class AppStringsAr extends AppStrings {
 
   @override
   String get settingsSharingSoon => 'قريباً';
+
+  @override
+  String get blitzTimeLeftLabel => 'الوقت المتبقي';
+
+  @override
+  String get levelSelectButton => 'المستويات';
+
+  @override
+  String levelDetailsTitle(int level) {
+    return 'المستوى $level';
+  }
+
+  @override
+  String get levelDetailsCompleted => 'مكتمل';
+
+  @override
+  String get levelDetailsNotPlayed => 'لم تُلعب بعد';
+
+  @override
+  String get levelDetailsGrid => 'الشبكة';
+
+  @override
+  String get levelDetailsTimed => 'مؤقت';
+
+  @override
+  String get levelDetailsMines => 'الألغام';
+
+  @override
+  String get levelDetailsMoves => 'الحركات';
+
+  @override
+  String get levelDetailsStart => 'ابدأ';
+
+  @override
+  String get zenModeLabel => 'استرخِ';
+
+  @override
+  String get zenModeTitle => 'الوضع الهادئ';
+
+  @override
+  String get zenModeSubtitle => 'بدون قلوب أو مؤقتات. فقط الألغاز.';
 }

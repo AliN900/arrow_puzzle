@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../data/repositories/leaderboard_repository.dart';
+import '../../data/repositories/progress_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
@@ -43,6 +44,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     final textSecondary = AppColors.textSecondary(context);
     final accent = AppColors.accent(context);
     final auth = ref.watch(authServiceProvider);
+
+    final progress = ref.watch(progressRepositoryProvider);
+
+    if (!progress.isLeaderboardUnlocked) {
+      return _LockedLeaderboardView(progress: progress);
+    }
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -535,6 +542,86 @@ class _SignInPrompt extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class _LockedLeaderboardView extends StatelessWidget {
+  const _LockedLeaderboardView({required this.progress});
+  final ProgressRepository progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary   = AppColors.textPrimary(context);
+    final textSecondary = AppColors.textSecondary(context);
+    final accent        = AppColors.accent(context);
+    final bg            = AppColors.background(context);
+    final target        = progress.leaderboardUnlockTarget;
+    final earned        = progress.lbAllTimeScore;
+    final pct           = progress.leaderboardUnlockProgress;
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Leaderboard',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            color: textPrimary,
+          ),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.lock_rounded, size: 64, color: textSecondary),
+              const SizedBox(height: 20),
+              Text(
+                'Locked',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Earn $target LC to unlock the global leaderboard.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: textSecondary, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: pct,
+                  minHeight: 8,
+                  backgroundColor: accent.withValues(alpha: 0.15),
+                  valueColor: AlwaysStoppedAnimation(accent),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$earned / $target LC',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: textPrimary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

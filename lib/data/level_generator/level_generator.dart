@@ -44,6 +44,87 @@ class LevelGenerator {
     );
   }
 
+
+  /// Builds a level from an **externally supplied mask** (e.g. an ASCII art
+  /// silhouette) using the same reverse-generation pipeline as campaign
+  /// levels. The result is guaranteed solvable, and arrows only occupy cells
+  /// inside [mask] — so the shape is preserved.
+  ///
+  /// [avgLengthOverride] lets the caller request longer, snakier arrows than
+  /// the level-based default. Good values for art levels: 4–8.
+  static LevelModel generateFromMask({
+    required int levelNumber,
+    required Set<String> mask,
+    required int gridSize,
+    required MaskShape maskShape,
+    int? seed,
+    bool complexPaths = false,
+    int? avgLengthOverride,
+  }) {
+    final baseSeed = seed ?? (levelNumber * 103 + 51 + (complexPaths ? 99991 : 0));
+
+    for (int attempt = 0; attempt < 20; attempt++) {
+      final actualSeed = baseSeed + (attempt * 1337); // Shift seed on retry
+      final rng = Random(actualSeed);
+
+      const type = LevelType.normal;
+      var params = _paramsFor(
+        levelNumber, type, gridSize, mask, complexPaths: complexPaths,
+      );
+
+      int? veryLongMinOv;
+      int? longMinOv;
+      int? veryLongMaxOv;
+
+      if (avgLengthOverride != null) {
+        veryLongMinOv = avgLengthOverride + 1;
+        longMinOv = avgLengthOverride;
+        veryLongMaxOv = 25;
+      }
+
+      final level = _generateReverse(
+        levelNumber: levelNumber,
+        gridSize: gridSize,
+        mask: mask,
+        params: params,
+        type: type,
+        rng: rng,
+        maskShape: maskShape,
+        complexPaths: complexPaths,
+        veryLongMinOv: veryLongMinOv,
+        longMinOv: longMinOv,
+        veryLongMaxOv: veryLongMaxOv,
+      );
+
+      // ── THE FIX: Verify the ENTIRE level before returning it ──
+      if (LevelSolver.solve(level, 80000) != null) {
+        debugPrint('✅ Solvable level $levelNumber generated on attempt $attempt');
+        return level;
+      }
+
+      debugPrint('❌ Attempt $attempt failed to generate solvable level $levelNumber. Retrying...');
+    }
+
+    debugPrint('⚠️ FATAL: Could not generate solvable level $levelNumber after 20 attempts.');
+    // Fallback: Return a very simple 1-arrow level so the game doesn't crash
+    final mid = gridSize ~/ 2;
+    return LevelModel(
+      levelNumber: levelNumber,
+      gridSize: gridSize,
+      arrows: [
+        ArrowModel(
+          id: 'fallback_0',
+          row: mid,
+          col: mid,
+          direction: ArrowDirection.right,
+          path: [[mid, mid], [mid, max(0, mid - 1)]],
+        )
+      ],
+      maskShape: maskShape,
+      mask: mask,
+    );
+  }
+
   static LevelModel _generateReverse({
     required int levelNumber,
     required int gridSize,
@@ -53,6 +134,9 @@ class LevelGenerator {
     required Random rng,
     required MaskShape maskShape,
     bool complexPaths = false,
+    int? veryLongMinOv,
+    int? longMinOv,
+    int? veryLongMaxOv,
   }) {
     final maskCells = mask.map((k) {
       final parts = k.split(',');
@@ -67,8 +151,6 @@ class LevelGenerator {
     final occupied = <String>{};
     final occupiedPacked = <int>{};
     final reverseArrows = <ArrowModel>[];
-
-
 
     final double tangleFactor;
     double baseTangle;
@@ -87,36 +169,40 @@ class LevelGenerator {
     } else {
       baseTangle = 1.0;
     }
+
     if (type == LevelType.boss) {
       baseTangle = (baseTangle + 0.15).clamp(0.15, 1.0);
+    } else if (maskShape == MaskShape.silhouette) {
+      // Silhouette shapes need straight lines to trace the outline clearly
+      baseTangle = 0.10;
     } else if (type == LevelType.god) {
       baseTangle = (baseTangle + 0.25).clamp(0.40, 1.0);
     }
 
-    // Snake levels always max out tangle for maximum winding
     if (AppConstants.isSnakeLevel(levelNumber)) {
       baseTangle = 1.0;
     }
 
     tangleFactor = baseTangle;
 
-    int veryLongMin = 5 + (gridSize ~/ 6);
-    int longMin = 3 + (gridSize ~/ 10);
-    int veryLongMax = max(
+    int veryLongMin = veryLongMinOv ?? (5 + (gridSize ~/ 6));
+    int longMin = longMinOv ?? (3 + (gridSize ~/ 10));
+    int veryLongMax = veryLongMaxOv ?? max(
       veryLongMin + 1,
       (veryLongMin + 4).clamp(veryLongMin + 1, mask.length),
     );
 
-    if (complexPaths) {
-      veryLongMin = max(6, veryLongMin + 1);
-      longMin = max(4, longMin + 1);
-      veryLongMax = max(veryLongMin + 2, veryLongMax + 2);
-    }
-
-    if (maskShape != MaskShape.square) {
-      veryLongMin = max(5, (veryLongMin * 0.8).round());
-      longMin = max(3, (longMin * 0.8).round());
-      veryLongMax = max(veryLongMin + 1, (veryLongMax * 0.8).round());
+    if (veryLongMinOv == null) {
+      if (complexPaths) {
+        veryLongMin = max(6, veryLongMin + 1);
+        longMin = max(4, longMin + 1);
+        veryLongMax = max(veryLongMin + 2, veryLongMax + 2);
+      }
+      if (maskShape != MaskShape.square) {
+        veryLongMin = max(5, (veryLongMin * 0.8).round());
+        longMin = max(3, (longMin * 0.8).round());
+        veryLongMax = max(veryLongMin + 1, (veryLongMax * 0.8).round());
+      }
     }
 
     int targetLenForTier(_LenTier tier) {
@@ -134,7 +220,10 @@ class LevelGenerator {
     int longCount = 0;
     int medCount = 0;
     int failures = 0;
-    final int maxFailures = AppConstants.isSnakeLevel(levelNumber) ? 100 : 40;
+    // Was: final int maxFailures = AppConstants.isSnakeLevel(levelNumber) ? 100 : 40;
+    final int maxFailures = AppConstants.isSnakeLevel(levelNumber)
+        ? 100
+        : (maskShape == MaskShape.silhouette ? 150 : 40);
 
     while (failures < maxFailures && occupiedPacked.length < mask.length) {
       final candidates = _exitCandidates(
@@ -144,8 +233,6 @@ class LevelGenerator {
       );
 
       if (candidates.isEmpty) break;
-
-      _shuffleCandidates(candidates, gridSize, rng, complexPaths);
 
       final total = veryLongCount + longCount + medCount;
       final _LenTier wantTier;
@@ -166,14 +253,30 @@ class LevelGenerator {
       } else {
         final vlRatio = veryLongCount / total;
         final lRatio = longCount / total;
-        if (vlRatio < 0.33) {
+
+        // CHANGE THIS: Raise the threshold for silhouettes from 0.33 to 0.60
+        final double veryLongThreshold = (maskShape == MaskShape.silhouette) ? 0.60 : 0.33;
+
+        if (vlRatio < veryLongThreshold) {
           wantTier = _LenTier.veryLong;
-        } else if (lRatio < 0.33) {
+        } else if (lRatio < 0.25) { // Changed from 0.33 to 0.25
           wantTier = _LenTier.long;
         } else {
           wantTier = _LenTier.medium;
         }
       }
+
+      // Only apply the edge bias to 50% of the very long arrows.
+// The other 50% will shoot straight into the center and fill it up!
+      final bool edgeBias = (maskShape == MaskShape.silhouette) &&
+          (wantTier == _LenTier.veryLong) &&
+          (rng.nextDouble() < 0.5);
+      final recentArrows = reverseArrows.length > 20
+          ? reverseArrows.sublist(reverseArrows.length - 20)
+          : reverseArrows;
+
+      _shuffleCandidates(candidates, gridSize, rng, complexPaths,
+          edgeBias: edgeBias, recentArrows: recentArrows); // <--- ADD recentArrows
 
       int targetLen = targetLenForTier(wantTier);
       if (failures > 5) {
@@ -195,6 +298,7 @@ class LevelGenerator {
           gridSize: gridSize,
           tangleFactor: tangleFactor,
           complexPaths: complexPaths,
+          edgeBias: edgeBias,
         );
 
         if (path != null && path.length >= 2) {
@@ -250,7 +354,7 @@ class LevelGenerator {
           exitDir: cand.dir,
           maskPacked: maskPacked,
           occupiedPacked: occupiedPacked,
-          targetLen: 2,
+          targetLen: 3,
           rng: rng,
           gridSize: gridSize,
           tangleFactor: 0.0,
@@ -288,18 +392,20 @@ class LevelGenerator {
     }
 
 
-    // === Place rocks on blocker arrows ===
-    // A rock replaces a blocker arrow's cell. The bomb arrow is placed
-    // on the BLOCKED arrow's exit path (guaranteed empty up to the blocker).
+    // === Place mines on blocker arrows, and a slash arrow to clear them ===
+    //
+    // A mine replaces a blocker arrow's cell. The slash arrow is placed on
+    // the blocked arrow's exit path (guaranteed clear up to the mine),
+    // and its body must be at least 5 cells long.
     final rocks = <RockModel>[];
-    final bombArrows = <ArrowModel>[];
+    final slashArrows = <ArrowModel>[];
     final rockCount = AppConstants.rockCountForLevel(levelNumber);
 
     if (rockCount > 0 && arrows.isNotEmpty) {
-      // Find (blocked arrow A, blocker cell Q) pairs where A's exit path
-      // hits Q and Q is at least 3 cells from A's head.
-      final candidates = <({int aIdx, int qR, int qC, ArrowDirection dir})>[];
+      final candidates =
+      <({int aIdx, int qR, int qC, ArrowDirection dir})>[];
 
+      // Pass 1: mines at cells that actually block another arrow's exit.
       for (int i = 0; i < arrows.length; i++) {
         final arrow = arrows[i];
         final head = arrow.path[0];
@@ -313,7 +419,6 @@ class LevelGenerator {
           final packed = nr * 1000 + nc;
           if (visited.contains(packed)) break;
           visited.add(packed);
-
           if (occupiedPacked.contains(packed)) {
             if (steps >= 2) {
               candidates.add((
@@ -331,7 +436,7 @@ class LevelGenerator {
         }
       }
 
-
+      // Pass 2 (fallback): mines on empty cells along an arrow's exit path.
       if (candidates.isEmpty && rockCount > 0) {
         for (int i = 0; i < arrows.length; i++) {
           final arrow = arrows[i];
@@ -346,10 +451,7 @@ class LevelGenerator {
             final packed = nr * 1000 + nc;
             if (visited.contains(packed)) break;
             visited.add(packed);
-
-
             if (occupiedPacked.contains(packed)) break;
-
 
             if (steps >= 2) {
               candidates.add((
@@ -359,7 +461,6 @@ class LevelGenerator {
               dir: arrow.direction,
               ));
             }
-
             nr += d[0];
             nc += d[1];
             steps++;
@@ -385,15 +486,15 @@ class LevelGenerator {
         }
         if (tooClose) continue;
 
-        // The rock cell might be occupied by a blocker arrow (original
-        // case) or empty (fallback case). Handle both.
         final rockPackedHere = rockR * 1000 + rockC;
         final rockIsEmpty = !occupiedPacked.contains(rockPackedHere);
 
         int blockerIdx = -1;
         if (!rockIsEmpty) {
           for (int j = 0; j < arrows.length; j++) {
-            if (arrows[j].path.any((pt) => pt[0] == rockR && pt[1] == rockC)) {
+            if (arrows[j]
+                .path
+                .any((pt) => pt[0] == rockR && pt[1] == rockC)) {
               blockerIdx = j;
               break;
             }
@@ -401,14 +502,10 @@ class LevelGenerator {
           if (blockerIdx == -1) continue;
         }
 
-        // Try bomb placements in multiple directions, 2-cell first, then 1-cell
-        // Score every possible bomb placement 3-7 cells from the rock.
-        // Prefer placements where 1-2 normal arrows block the path.
         final placements = <({
         int headR,
         int headC,
-        int tailR,
-        int tailC,
+        List<List<int>> path,
         ArrowDirection dir,
         int score,
         int blockers,
@@ -417,7 +514,7 @@ class LevelGenerator {
         for (final tryDir in ArrowDirection.values) {
           final td = tryDir.delta;
 
-          for (int dist = 2; dist <= 8; dist++) {
+          for (int dist = 3; dist <= 8; dist++) {
             final hR = rockR - td[0] * dist;
             final hC = rockC - td[1] * dist;
 
@@ -426,37 +523,48 @@ class LevelGenerator {
             if (!mask.contains('$hR,$hC')) continue;
             if (occupiedPacked.contains(hR * 1000 + hC)) continue;
 
-            // Try 2-cell body, fall back to 1-cell
-            final tR = hR - td[0];
-            final tC = hC - td[1];
-
-            int finalTailR = hR;
-            int finalTailC = hC;
-            bool twoCell = false;
-
-            if (tR >= 0 &&
-                tR < gridSize &&
-                tC >= 0 &&
-                tC < gridSize &&
-                mask.contains('$tR,$tC') &&
-                !occupiedPacked.contains(tR * 1000 + tC)) {
-              finalTailR = tR;
-              finalTailC = tC;
-              twoCell = true;
+            // Build a 5-cell slash arrow body: head + 4 tail cells,
+            // walking backwards along -td.
+            final slashPath = <List<int>>[
+              [hR, hC]
+            ];
+            bool bodyValid = true;
+            for (int step = 1; step <= 4; step++) {
+              final sr = hR - td[0] * step;
+              final sc = hC - td[1] * step;
+              if (sr < 0 || sr >= gridSize) {
+                bodyValid = false;
+                break;
+              }
+              if (sc < 0 || sc >= gridSize) {
+                bodyValid = false;
+                break;
+              }
+              if (!mask.contains('$sr,$sc')) {
+                bodyValid = false;
+                break;
+              }
+              if (occupiedPacked.contains(sr * 1000 + sc)) {
+                bodyValid = false;
+                break;
+              }
+              slashPath.add([sr, sc]);
             }
+            if (!bodyValid) continue;
 
-            // Find which arrows block the path from bomb head to rock.
-            // Only count them if they can be cleared WITHOUT the rock
-            // being destroyed first — otherwise it's a deadlock.
+            // Count blockers on the path from head to the mine.
             int blockers = 0;
             bool deadlock = false;
 
-
-            // We also need to check the rock itself + any existing placed rocks
             final rocksForCheck = <RockModel>[
               ...rocks,
-              RockModel(id: 'future_${rocks.length}', row: rockR, col: rockC),
+              RockModel(
+                  id: 'future_${rocks.length}', row: rockR, col: rockC),
             ];
+
+            final slashCells = <int>{
+              for (final pt in slashPath) pt[0] * 1000 + pt[1],
+            };
 
             for (int s = 1; s < dist; s++) {
               final pr = hR + td[0] * s;
@@ -464,30 +572,22 @@ class LevelGenerator {
               final packed = pr * 1000 + pc;
 
               if (occupiedPacked.contains(packed)) {
-                // Which arrow occupies this cell?
                 int blockerArrowIdx = -1;
                 for (int b = 0; b < arrows.length; b++) {
-                  if (arrows[b].path.any((pt) => pt[0] == pr && pt[1] == pc)) {
+                  if (arrows[b]
+                      .path
+                      .any((pt) => pt[0] == pr && pt[1] == pc)) {
                     blockerArrowIdx = b;
                     break;
                   }
                 }
                 if (blockerArrowIdx != -1) {
                   final blockerArrow = arrows[blockerArrowIdx];
-
-                  // The bomb arrow we're about to place also blocks.
-                  // Include its cells so the blocker's own path is
-                  // checked against them too.
-                  final bombCells = <int>{
-                    hR * 1000 + hC,
-                    finalTailR * 1000 + finalTailC,
-                  };
-
                   final clearable = _arrowPathClearOfRocks(
                     blockerArrow,
                     rocksForCheck,
                     gridSize,
-                    extraBlocked: bombCells,
+                    extraBlocked: slashCells,
                   );
                   if (clearable) {
                     blockers++;
@@ -501,27 +601,25 @@ class LevelGenerator {
 
             if (deadlock) continue;
 
-            // Score
-            int score = 0;
+            int score;
             if (blockers == 1) {
-              score = 100; // sweet spot — one arrow to clear
+              score = 100;
             } else if (blockers == 2) {
-              score = 90; // still good
+              score = 90;
             } else if (blockers == 3) {
               score = 60;
             } else if (blockers > 3) {
-              score = 20; // too many, but still allowed
+              score = 20;
             } else {
-              score = 5; // 0 blockers — last resort
+              score = 5;
             }
-            if (twoCell) score += 10;
+            score += 10;
             if (tryDir == cand.dir) score += 3;
 
             placements.add((
             headR: hR,
             headC: hC,
-            tailR: finalTailR,
-            tailC: finalTailC,
+            path: slashPath,
             dir: tryDir,
             score: score,
             blockers: blockers,
@@ -535,11 +633,9 @@ class LevelGenerator {
 
         final int headR = best.headR;
         final int headC = best.headC;
-        final int tailR = best.tailR;
-        final int tailC = best.tailC;
+        final List<List<int>> slashPath = best.path;
         final ArrowDirection dir = best.dir;
 
-        // Only remove a blocker arrow if the rock cell was occupied
         ArrowModel? removedBlocker;
         if (blockerIdx != -1) {
           removedBlocker = arrows[blockerIdx];
@@ -550,42 +646,27 @@ class LevelGenerator {
           arrows.removeAt(blockerIdx);
         }
 
-        // Place rock
         final rockId = 'rock_${levelNumber}_$rocksPlaced';
         rocks.add(RockModel(id: rockId, row: rockR, col: rockC));
         occupiedPacked.add(rockR * 1000 + rockC);
         occupied.add('$rockR,$rockC');
 
-        // Place bomb arrow
-        final bombId = 'bomb_${levelNumber}_$rocksPlaced';
-        final List<List<int>> bombPath =
-        (headR == tailR && headC == tailC)
-            ? [
-          [headR, headC]
-        ]
-            : [
-          [headR, headC],
-          [tailR, tailC]
-        ];
-
-        bombArrows.add(ArrowModel(
-          id: bombId,
+        final slashId = 'slash_${levelNumber}_$rocksPlaced';
+        slashArrows.add(ArrowModel(
+          id: slashId,
           row: headR,
           col: headC,
           direction: dir,
-          type: ArrowType.bomb,
-          targetRockId: rockId,
-          path: bombPath,
+          type: ArrowType.slash,
+          path: slashPath,
         ));
 
-        occupiedPacked.add(headR * 1000 + headC);
-        occupiedPacked.add(tailR * 1000 + tailC);
-        occupied.add('$headR,$headC');
-        occupied.add('$tailR,$tailC');
+        for (final pt in slashPath) {
+          occupiedPacked.add(pt[0] * 1000 + pt[1]);
+          occupied.add('${pt[0]},${pt[1]}');
+        }
 
-        // Verify the placement didn't create a deadlock cycle.
-        // If it did, undo everything and try the next candidate.
-        final trialArrows = <ArrowModel>[...bombArrows, ...arrows];
+        final trialArrows = <ArrowModel>[...slashArrows, ...arrows];
         final solvable = _isSolvableWithRocks(
           trialArrows,
           rocks,
@@ -593,18 +674,16 @@ class LevelGenerator {
         );
 
         if (!solvable) {
-          // Roll back this placement
           rocks.removeLast();
-          bombArrows.removeLast();
+          slashArrows.removeLast();
 
-          occupiedPacked.remove(headR * 1000 + headC);
-          occupiedPacked.remove(tailR * 1000 + tailC);
+          for (final pt in slashPath) {
+            occupiedPacked.remove(pt[0] * 1000 + pt[1]);
+            occupied.remove('${pt[0]},${pt[1]}');
+          }
           occupiedPacked.remove(rockR * 1000 + rockC);
-          occupied.remove('$headR,$headC');
-          occupied.remove('$tailR,$tailC');
           occupied.remove('$rockR,$rockC');
 
-          // Restore the blocker arrow we removed earlier
           if (removedBlocker != null) {
             arrows.insert(blockerIdx, removedBlocker);
             for (final pt in removedBlocker.path) {
@@ -613,14 +692,15 @@ class LevelGenerator {
             }
           }
 
-          debugPrint('⚙️ LEVEL $levelNumber: rolled back rock (deadlock)');
+          debugPrint('⚙️ LEVEL $levelNumber: rolled back mine (deadlock)');
           continue;
         }
 
         rocksPlaced++;
       }
 
-      debugPrint('⚙️ LEVEL $levelNumber: placed ${rocks.length} rocks');
+      debugPrint('⚙️ LEVEL $levelNumber: placed ${rocks.length} mines, '
+          '${slashArrows.length} slash arrows');
     }
 
     if (arrows.isEmpty) {
@@ -643,29 +723,25 @@ class LevelGenerator {
     final orphanDots = <OrphanDot>[];
 
 
-    // === Mark bomb paths as off-limits for redirector dots ===
-    // A bomb arrow must travel straight to its target rock. If a redirector
-    // sits on that line, the bomb turns and misses. So we forbid orphan dots
-    // anywhere on a bomb's straight line between head and rock.
-    final bombPathCells = <int>{};
-    for (final bomb in bombArrows) {
-      if (bomb.targetRockId == null) continue;
-      final head = bomb.path[0];
-      final d = bomb.direction.delta;
+    // === Mark slash-arrow lines as off-limits for redirector dots ===
+    // A slash arrow must travel straight to the first mine on its path.
+    // If a redirector sits on that line, it turns and misses.
+    final slashPathCells = <int>{};
+    for (final slash in slashArrows) {
+      final head = slash.path[0];
+      final d = slash.direction.delta;
       int nr = head[0] + d[0];
       int nc = head[1] + d[1];
       while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
-        bombPathCells.add(nr * 1000 + nc);
-        // Stop at the target rock
-        bool hitRock = false;
+        slashPathCells.add(nr * 1000 + nc);
+        bool hitMine = false;
         for (final rock in rocks) {
-          if (rock.row == nr && rock.col == nc &&
-              rock.id == bomb.targetRockId) {
-            hitRock = true;
+          if (rock.row == nr && rock.col == nc) {
+            hitMine = true;
             break;
           }
         }
-        if (hitRock) break;
+        if (hitMine) break;
         nr += d[0];
         nc += d[1];
       }
@@ -735,7 +811,7 @@ class LevelGenerator {
 
           if (emptyKeysPacked.contains(keyPacked)) {
             // Never place a redirector on a bomb arrow's path
-            if (bombPathCells.contains(keyPacked)) {
+            if (slashPathCells.contains(keyPacked)) {
               orphanMap[keyPacked] = OrphanDotType.neutral;
               // Continue tracing the path — other arrows may still benefit
               d = currentDir.delta;
@@ -809,7 +885,7 @@ class LevelGenerator {
               } else {
                 orphanMap[keyPacked] = OrphanDotType.neutral;
               }
-            } else if (!bombPathCells.contains(keyPacked)) {
+            } else if (!slashPathCells.contains(keyPacked)) {
               final dotType = orphanMap[keyPacked]!;
               if (dotType == OrphanDotType.up) {
                 currentDir = ArrowDirection.up;
@@ -857,7 +933,7 @@ class LevelGenerator {
         orphanDots: orphanDots,
       );
 
-      if (LevelSolver.solve(tempLevel, 2000) == null) {
+      if (LevelSolver.solve(tempLevel, 50000) == null) {
         orphanDots.clear();
         orphanDots.addAll(orphanMap.entries.map((entry) => OrphanDot(
               row: entry.key ~/ 1000,
@@ -867,8 +943,8 @@ class LevelGenerator {
       }
     }
 
-    // Prepend bomb arrows so they're processed first
-    final allArrows = <ArrowModel>[...bombArrows, ...arrows];
+    // Prepend slash arrows so they're processed first.
+    final allArrows = <ArrowModel>[...slashArrows, ...arrows];
 
     return LevelModel(
       levelNumber: levelNumber,
@@ -948,7 +1024,7 @@ class LevelGenerator {
       for (int i = 0; i < remainingArrows.length; i++) {
         if (!active[i]) continue;
         final arrow = remainingArrows[i];
-        final isBomb = arrow.type == ArrowType.bomb && arrow.targetRockId != null;
+        final isSlash = arrow.type == ArrowType.slash;
 
         final head = arrow.path[0];
         final d = arrow.direction.delta;
@@ -956,44 +1032,36 @@ class LevelGenerator {
         int nc = head[1] + d[1];
         final visited = <int>{};
         bool canExit = true;
-        String? rockHit;
+        final rocksHit = <String>[];
 
         while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
           final packed = nr * 1000 + nc;
-          if (visited.contains(packed)) {
-            canExit = false;
-            break;
-          }
+          if (visited.contains(packed)) { canExit = false; break; }
           visited.add(packed);
 
           RockModel? hitRock;
           for (final rock in remainingRocks) {
-            if (rock.row == nr && rock.col == nc) {
-              hitRock = rock;
-              break;
-            }
+            if (rock.row == nr && rock.col == nc) { hitRock = rock; break; }
           }
           if (hitRock != null) {
-            if (isBomb && hitRock.id == arrow.targetRockId) {
-              rockHit = hitRock.id;
+            if (isSlash) {
+              rocksHit.add(hitRock.id);
+            } else {
+              canExit = false;
               break;
             }
-            canExit = false;
-            break;
           }
 
           bool hitArrow = false;
           for (int j = 0; j < remainingArrows.length; j++) {
             if (j == i || !active[j]) continue;
-            if (remainingArrows[j].path.any((pt) => pt[0] == nr && pt[1] == nc)) {
+            if (remainingArrows[j].path
+                .any((pt) => pt[0] == nr && pt[1] == nc)) {
               hitArrow = true;
               break;
             }
           }
-          if (hitArrow) {
-            canExit = false;
-            break;
-          }
+          if (hitArrow) { canExit = false; break; }
 
           nr += d[0];
           nc += d[1];
@@ -1003,18 +1071,56 @@ class LevelGenerator {
           active[i] = false;
           remaining--;
           progress = true;
-          if (rockHit != null) {
-            remainingRocks.removeWhere((r) => r.id == rockHit);
+          for (final rid in rocksHit) {
+            remainingRocks.removeWhere((r) => r.id == rid);
           }
         }
       }
     }
-
     return remaining == 0;
   }
 
   static void _shuffleCandidates(
-      List<_Cand> candidates, int gridSize, Random rng, bool complexPaths) {
+      List<_Cand> candidates, int gridSize, Random rng, bool complexPaths,
+      {bool edgeBias = false, List<ArrowModel> recentArrows = const []}) {
+
+    if (edgeBias) {
+      final centerRow = gridSize / 2.0;
+      final centerCol = gridSize / 2.0;
+      candidates.sort((a, b) {
+        final distA = (a.row - centerRow).abs() + (a.col - centerCol).abs();
+        final distB = (b.row - centerRow).abs() + (b.col - centerCol).abs();
+
+        // Base score prioritizes edges
+        double scoreA = -distA;
+        double scoreB = -distB;
+
+        // ── NEW: Direction Diversity Penalty ──
+        for (final arrow in recentArrows) {
+          final headR = arrow.path[0][0];
+          final headC = arrow.path[0][1];
+
+          // Check if the candidate is adjacent to an existing arrow (within 2 cells)
+          if ((headR - a.row).abs() + (headC - a.col).abs() <= 2) {
+            if (arrow.direction == a.dir) scoreA -= 15; // Heavy penalty for same direction
+          }
+          if ((headR - b.row).abs() + (headC - b.col).abs() <= 2) {
+            if (arrow.direction == b.dir) scoreB -= 15;
+          }
+        }
+
+        // Add random jitter
+        scoreA += (rng.nextDouble() * 4.0 - 2.0);
+        scoreB += (rng.nextDouble() * 4.0 - 2.0);
+
+        // Sort descending (higher score first)
+        if (scoreA > scoreB) return -1;
+        if (scoreA < scoreB) return 1;
+        return 0;
+      });
+      return;
+    }
+
     if (complexPaths) {
       candidates.sort((a, b) {
         final exitA = _exitDist(a.row, a.col, a.dir, gridSize);
@@ -1065,6 +1171,7 @@ class LevelGenerator {
     required int gridSize,
     double tangleFactor = 0.0,
     bool complexPaths = false,
+    bool edgeBias = false,
   }) {
     final exitPath = _getExitPathPacked(startRow, startCol, exitDir, gridSize);
     final path = <List<int>>[
@@ -1072,15 +1179,16 @@ class LevelGenerator {
     ];
     final pathPacked = <int>{startRow * 1000 + startCol};
     int cr = startRow, cc = startCol;
-    var growDir = exitDir.opposite; 
+    var growDir = exitDir.opposite;
     int straight = 0;
 
     final bool isSnake = complexPaths ||
         (tangleFactor >= 0.99 && !complexPaths);
 
+    // Edge arrows go straight (0.20), Center arrows snake to fill gaps (0.50)
     final double turnBias = isSnake
         ? 0.94
-        : (0.70 + tangleFactor * 0.25);
+        : (edgeBias ? 0.20 : 0.50);
 
     final int maxStraight;
     if (isSnake) {
@@ -1089,17 +1197,24 @@ class LevelGenerator {
       maxStraight = 1;
     } else if (tangleFactor >= 0.50) {
       maxStraight = 2;
-    } else {
+    } else if (tangleFactor >= 0.15) {
       maxStraight = 3;
+    } else {
+      // CHANGE THIS: Let edge-biased arrows run straight for up to 15 cells!
+      maxStraight = edgeBias ? 15 : 6;
     }
+
+    final centerRow = gridSize / 2.0;
+    final centerCol = gridSize / 2.0;
 
     for (int step = 1; step < targetLen; step++) {
       final valid = <ArrowDirection>[];
       for (final d in ArrowDirection.values) {
-        if (d == growDir.opposite) continue; 
+        if (d == growDir.opposite) continue;
         final nd = d.delta;
         final nr = cr + nd[0], nc = cc + nd[1];
         final np = nr * 1000 + nc;
+
         if (!maskPacked.contains(np)) continue;
         if (occupiedPacked.contains(np)) continue;
         if (exitPath.contains(np)) continue;
@@ -1107,10 +1222,7 @@ class LevelGenerator {
 
         bool wouldFormLoop = false;
         for (final nb in [
-          [-1, 0],
-          [1, 0],
-          [0, -1],
-          [0, 1]
+          [-1, 0], [1, 0], [0, -1], [0, 1]
         ]) {
           final adjR = nr + nb[0], adjC = nc + nb[1];
           final adjP = adjR * 1000 + adjC;
@@ -1121,12 +1233,24 @@ class LevelGenerator {
         }
         if (wouldFormLoop) continue;
 
+        // ── EDGE HUGGING PENALTY ──
+        if (edgeBias) {
+          final currDist = (cr - centerRow).abs() + (cc - centerCol).abs();
+          final nextDist = (nr - centerRow).abs() + (nc - centerCol).abs();
+
+          // If moving towards the center, 85% chance to reject this direction
+          if (nextDist < currDist && rng.nextDouble() < 0.4) {
+            continue;
+          }
+        }
+
         valid.add(d);
       }
+
       if (valid.isEmpty) break;
 
       if (step == 1 && !valid.contains(growDir)) {
-        return null; 
+        return null;
       }
 
       final mustTurn = straight >= maxStraight;
@@ -1435,57 +1559,20 @@ class LevelGenerator {
       for (final cellKey in orphans) {
         final parts = cellKey.split(',');
         final r = int.parse(parts[0]), c = int.parse(parts[1]);
+        final ptPacked = r * 1000 + c;
 
+        // Find ANY arrow whose tail is adjacent to this orphan cell
         for (int i = 0; i < arrows.length; i++) {
           final arrow = arrows[i];
           final tail = arrow.path.last;
-          final dist = (tail[0] - r).abs() + (tail[1] - c).abs();
-          if (dist == 1) {
-            final ptPacked = r * 1000 + c;
-            final exitPath = _getExitPathPacked(arrow.path[0][0],
-                arrow.path[0][1], arrow.direction, gridSize);
-            if (exitPath.contains(ptPacked)) continue;
 
-            bool blocksOther = false;
-            for (int j = i + 1; j < arrows.length; j++) {
-              final otherExit = _getExitPathPacked(
-                arrows[j].path[0][0],
-                arrows[j].path[0][1],
-                arrows[j].direction,
-                gridSize,
-              );
-              if (otherExit.contains(ptPacked)) {
-                blocksOther = true;
-                break;
-              }
-            }
-            if (blocksOther) continue;
+          if ((tail[0] - r).abs() + (tail[1] - c).abs() == 1) {
 
-            bool wouldFormLoop = false;
-            if (arrow.path.length >= 3) {
-              for (final nb in [
-                [-1, 0],
-                [1, 0],
-                [0, -1],
-                [0, 1]
-              ]) {
-                final adjR = r + nb[0], adjC = c + nb[1];
-                if (adjR == tail[0] && adjC == tail[1]) continue;
-                for (final pt in arrow.path) {
-                  if (pt[0] == adjR && pt[1] == adjC) {
-                    wouldFormLoop = true;
-                    break;
-                  }
-                }
-                if (wouldFormLoop) break;
-              }
-            }
-            if (wouldFormLoop) continue;
-
+            // Just attach it, no matter what.
             final newPath = List<List<int>>.from(arrow.path)..add([r, c]);
             arrows[i] = arrow.copyWith(path: newPath);
             occupied.add(cellKey);
-            occupiedPacked.add(r * 1000 + c);
+            occupiedPacked.add(ptPacked);
             madeProgress = true;
             break;
           }

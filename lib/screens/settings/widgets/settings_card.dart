@@ -24,7 +24,16 @@ class SettingsCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(children: children),
+      // THE FIX: Wrap the column in a Material widget
+      child: Material(
+        color: Colors.transparent, // Transparent so the Container's color shows
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias, // Keeps the ripple effect inside the rounded corners
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: children,
+        ),
+      ),
     );
   }
 }

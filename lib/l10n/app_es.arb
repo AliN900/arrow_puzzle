@@ -89,8 +89,8 @@
   "pauseResume": "Continuar",
   "pauseRestart": "Reiniciar",
   "pauseMainMenu": "Menú principal",
-  "itemBombName": "Bomba",
-  "itemBombDesc": "Destruye una roca",
+  "itemBombName": "Mina",
+  "itemBombDesc": "Elimina una mina del tablero",
   "itemHintName": "Pista",
   "itemHintDesc": "Revela la siguiente flecha solucionable",
   "itemUndoName": "Deshacer",
@@ -504,5 +504,21 @@
   "copyLink": "Copiar enlace",
   "linkCopied": "Enlace copiado",
   "settingsShareFriends": "Compartir con amigos",
-  "settingsSharingSoon": "Próximamente"
+  "settingsSharingSoon": "Próximamente",
+  "blitzTimeLeftLabel": "TIEMPO RESTANTE",
+  "levelSelectButton": "Niveles",
+  "levelDetailsTitle": "Nivel {level}",
+  "@levelDetailsTitle": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+  "levelDetailsCompleted": "Completado",
+  "levelDetailsNotPlayed": "Aún no jugado",
+  "levelDetailsGrid": "Cuadrícula",
+  "levelDetailsTimed": "Cronometrado",
+  "levelDetailsMines": "Minas",
+  "levelDetailsMoves": "Movimientos",
+  "levelDetailsStart": "Empezar",
+  "zenModeLabel": "RELAX",
+  "zenModeTitle": "Modo Zen",
+  "zenModeSubtitle": "Sin vidas, sin tiempo. Solo puzzles."
 }

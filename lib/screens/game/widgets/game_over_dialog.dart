@@ -8,6 +8,7 @@ import '../../../core/audio_haptic_helper.dart';
 import '../../../core/game_mode.dart';
 import '../../../data/models/level.dart';
 import '../../../unity_rewarded_ad.dart';
+import '../../../widgets/status_flash.dart';
 import 'game_dialog_button.dart';
 
 class GameOverDialog extends ConsumerStatefulWidget {
@@ -60,12 +61,7 @@ class _GameOverDialogState extends ConsumerState<GameOverDialog> {
       onFailed: () {
         if (!mounted) return;
         setState(() => _isWatchingAd = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(strings.adNotAvailable),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        StatusFlash.fail(context, strings.adNotAvailable);
       },
       onDismissed: () {
         if (!mounted) return;

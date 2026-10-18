@@ -26,7 +26,8 @@ class TimerDisplay extends StatelessWidget {
     isLowTime ? const Color(0xFFFF5252) : AppColors.accent(context);
 
     Widget content = Container(
-      width: 140,
+      constraints: const BoxConstraints(minWidth: 120, maxWidth: 200),
+      width: MediaQuery.of(context).size.width * 0.35,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E).withValues(alpha: 0.85),

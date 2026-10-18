@@ -293,9 +293,9 @@ class _ItemButton extends StatelessWidget {
               ),
             ),
             // ── Count badge — top-right, blue circle (matches reference) ──
-            Positioned(
+            PositionedDirectional(
               top: -4,
-              right: -4,
+              end: -4,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 6,

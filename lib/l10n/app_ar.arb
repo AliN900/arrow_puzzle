@@ -89,8 +89,8 @@
   "pauseResume": "استئناف",
   "pauseRestart": "إعادة",
   "pauseMainMenu": "القائمة الرئيسية",
-  "itemBombName": "قنبلة",
-  "itemBombDesc": "دمّر صخرة واحدة",
+  "itemBombName": "لغم",
+  "itemBombDesc": "أزل لغماً واحداً من اللوحة",
   "itemHintName": "تلميح",
   "itemHintDesc": "اكشف السهم التالي القابل للحل",
   "itemUndoName": "تراجع",
@@ -505,5 +505,21 @@
   "copyLink": "نسخ الرابط",
   "linkCopied": "تم نسخ الرابط",
   "settingsShareFriends": "شارك مع الأصدقاء",
-  "settingsSharingSoon": "قريباً"
+  "settingsSharingSoon": "قريباً",
+  "blitzTimeLeftLabel": "الوقت المتبقي",
+  "levelSelectButton": "المستويات",
+  "levelDetailsTitle": "المستوى {level}",
+  "@levelDetailsTitle": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+  "levelDetailsCompleted": "مكتمل",
+  "levelDetailsNotPlayed": "لم تُلعب بعد",
+  "levelDetailsGrid": "الشبكة",
+  "levelDetailsTimed": "مؤقت",
+  "levelDetailsMines": "الألغام",
+  "levelDetailsMoves": "الحركات",
+  "levelDetailsStart": "ابدأ",
+  "zenModeLabel": "استرخِ",
+  "zenModeTitle": "الوضع الهادئ",
+  "zenModeSubtitle": "بدون قلوب أو مؤقتات. فقط الألغاز."
 }

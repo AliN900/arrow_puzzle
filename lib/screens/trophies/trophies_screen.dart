@@ -119,7 +119,9 @@ class TrophiesScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              strings.trophiesLevelBadge(trophy.unlockLevel),
+                              trophy.requiredLc != null
+                                  ? '${trophy.requiredLc} LC'
+                                  : strings.trophiesLevelBadge(trophy.unlockLevel),
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -154,6 +156,25 @@ class TrophiesScreen extends ConsumerWidget {
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: Colors.amber,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (trophy.type == TrophyType.benefit &&
+                          trophy.benefit == TrophyBenefit.leaderboard) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Unlocks Leaderboard',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueAccent,
                             ),
                           ),
                         ),

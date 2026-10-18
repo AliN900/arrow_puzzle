@@ -2,11 +2,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/app_colors.dart';
 import '../../core/app_themes.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../../widgets/status_flash.dart';
 import '../game/game_screen.dart';
 
 class MultiplayerSeedScreen extends ConsumerStatefulWidget {
@@ -65,13 +65,7 @@ class _MultiplayerSeedScreenState extends ConsumerState<MultiplayerSeedScreen> {
     AudioHapticHelper.playClick();
     Clipboard.setData(ClipboardData(text: _roomCode));
     final strings = AppStrings.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(strings.multiplayerRoomCodeCopied(_roomCode)),
-        backgroundColor: AppColors.surfaceLight(context),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    StatusFlash.success(context, strings.multiplayerRoomCodeCopied(_roomCode));
   }
 
   @override

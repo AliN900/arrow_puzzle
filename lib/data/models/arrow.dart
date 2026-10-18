@@ -52,16 +52,16 @@ enum ArrowDirection {
   }
 }
 
-enum ArrowState {
-  idle,
-  sliding,
-  blocked,
-}
+enum ArrowState { idle, sliding, blocked }
 
-/// NEW — distinguishes normal arrows from bomb arrows.
-enum ArrowType {
-  normal,
-  bomb,
+/// Normal arrows behave as before. Slash arrows pass through every mine
+/// on their exit path, clearing each one; they are still blocked by
+/// other arrows exactly like normal arrows.
+enum ArrowType { normal, slash }
+
+class ArrowConstants {
+  /// A slash arrow must have at least this many cells in its body.
+  static const int slashMinLength = 5;
 }
 
 class ArrowModel {
@@ -70,17 +70,8 @@ class ArrowModel {
   int col;
   ArrowDirection direction;
   ArrowState state;
-
-  /// 'normal' by default; 'bomb' when paired with a rock.
   final ArrowType type;
-
-  /// For bomb arrows, the id of the RockModel this arrow destroys.
-  final String? targetRockId;
-
-  /// When true, this arrow is a "leaving arrow" — it force-launches after
-  /// N user taps on the board. Only used in Classic and Time Blitz.
   final bool isLeavingArrow;
-
   final List<List<int>> path;
 
   ArrowModel({
@@ -90,10 +81,15 @@ class ArrowModel {
     required this.direction,
     this.state = ArrowState.idle,
     this.type = ArrowType.normal,
-    this.targetRockId,
     this.isLeavingArrow = false,
     List<List<int>>? path,
   }) : path = path ?? [[row, col]];
+
+  bool get isSlash => type == ArrowType.slash;
+
+  /// True when this arrow is a slash arrow with an acceptable body length.
+  bool get isValidSlash =>
+      isSlash && path.length >= ArrowConstants.slashMinLength;
 
   ArrowModel copyWith({
     String? id,
@@ -102,7 +98,6 @@ class ArrowModel {
     ArrowDirection? direction,
     ArrowState? state,
     ArrowType? type,
-    String? targetRockId,
     bool? isLeavingArrow,
     List<List<int>>? path,
   }) {
@@ -113,7 +108,6 @@ class ArrowModel {
       direction: direction ?? this.direction,
       state: state ?? this.state,
       type: type ?? this.type,
-      targetRockId: targetRockId ?? this.targetRockId,
       isLeavingArrow: isLeavingArrow ?? this.isLeavingArrow,
       path: path ?? this.path,
     );
@@ -126,7 +120,6 @@ class ArrowModel {
     'direction': direction.index,
     'state': state.index,
     'type': type.index,
-    'targetRockId': targetRockId,
     'isLeavingArrow': isLeavingArrow,
     'path': path,
   };
@@ -137,10 +130,11 @@ class ArrowModel {
     col: json['col'] as int,
     direction: ArrowDirection.values[json['direction'] as int],
     state: ArrowState.values[json['state'] as int],
+    // Old saves used index 1 for 'bomb'; after the rename that's 'slash'.
     type: json['type'] != null
-        ? ArrowType.values[json['type'] as int]
+        ? ArrowType.values[(json['type'] as int)
+        .clamp(0, ArrowType.values.length - 1)]
         : ArrowType.normal,
-    targetRockId: json['targetRockId'] as String?,
     isLeavingArrow: json['isLeavingArrow'] as bool? ?? false,
     path: (json['path'] as List<dynamic>?)
         ?.map((e) => (e as List<dynamic>).map((x) => x as int).toList())

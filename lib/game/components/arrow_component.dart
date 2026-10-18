@@ -19,16 +19,20 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
   bool _isAnimating = false;
   bool _isBlockedAnimating = false;
-  double _blockDuration = 0.0;
-  double _blockTime = 0.0;
-  double _maxBlockSlide = 0.0;
-  double _slideOffset = 0.0;
-  // ignore: unused_field
-  bool _isBombExiting = false;
-// ignore: unused_field
-  Offset? _bombRockCenterPx;
-  final double _hintPulseTime = 0.0;
-  double _bombPulseTime = 0.0;
+
+  // ── Block shake state ──
+  double _blockShakeTime = 0.0;
+  double _blockShakeOffset = 0.0;
+  static const double _kBlockShakeDuration = 0.5;   // half a second
+  static const double _kBlockShakeAmplitude = 0.12; // fraction of cellSize
+  static const double _kBlockShakeFrequency = 45.0; // rad/s ≈ 7 Hz
+
+  // ── Slash steel-shine sweep ──
+  // Cycle: 0 → 5.0 seconds. First 1.0s the shine is visible and sweeps
+  // head → tail. Remaining 4.0s the arrow sits quiet.
+  double _slashShineTime = 0.0;
+  static const double _kSlashShineCycleSeconds = 3.0;
+  static const double _kSlashShineSweepSeconds = 1.5;
 
   static const double _kLongPressThreshold = 0.30;
   double _longPressAccum = 0.0;
@@ -37,7 +41,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   List<Offset>? _previewPath;
   double _previewPulseTime = 0.0;
   double _leavingPulseTime = 0.0;
-
+  final double _hintPulseTime = 0.0;
 
   bool _isExiting = false;
   double _exitProgress = 0.0;
@@ -70,11 +74,10 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _computeBounds();
   }
 
-  // Bomb arrows now use the exact same path-mapping logic as normal arrows,
-  // ensuring zero overlaps and respecting whatever path length/twists are defined.
   List<Offset> _computePathPx() {
     return arrowModel.path
-        .map((pt) => Offset((pt[1] + 0.5) * cellSize, (pt[0] + 0.5) * cellSize))
+        .map((pt) =>
+        Offset((pt[1] + 0.5) * cellSize, (pt[0] + 0.5) * cellSize))
         .toList();
   }
 
@@ -103,6 +106,11 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round;
 
+  static final Paint _bladePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+
   ArrowComponent({
     required this.arrowModel,
     required this.cellSize,
@@ -117,7 +125,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     size = Vector2.all(newSize * gameState.level.gridSize);
     _invalidateCache();
   }
-
 
   int _minR = 0, _maxR = 0, _minC = 0, _maxC = 0;
 
@@ -140,7 +147,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   @override
   bool containsLocalPoint(Vector2 point) {
     if (_isExiting || _isRestoring || _isEntering) return false;
-    if (gameState.isBombArmed) return false;
     final col = (point.x / cellSize).floor();
     final row = (point.y / cellSize).floor();
     if (row < _minR || row > _maxR || col < _minC || col > _maxC) {
@@ -156,7 +162,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _isTouchDown = true;
     _longPressAccum = 0.0;
     _pressScale = 0.93;
-
   }
 
   @override
@@ -219,21 +224,9 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     }
 
     final rushDiv = gameState.rushSpeedMultiplier;
-
-    if (arrowModel.type == ArrowType.bomb) {
-      gameState.removeRockOnImpact(arrowModel.id);
-      _isBombExiting = false;
-      _bombRockCenterPx = null;
-      _exitDuration =
-          (0.4 + arrowModel.path.length * 0.08) * speedMultiplier / rushDiv;
-      _deflectedExtension = _buildDeflectedExtension();
-    } else {
-      _isBombExiting = false;
-      _bombRockCenterPx = null;
-      _exitDuration =
-          (0.4 + arrowModel.path.length * 0.08) * speedMultiplier / rushDiv;
-      _deflectedExtension = _buildDeflectedExtension();
-    }
+    _exitDuration =
+        (0.4 + arrowModel.path.length * 0.08) * speedMultiplier / rushDiv;
+    _deflectedExtension = _buildDeflectedExtension();
 
     _exitProgress = 0.0;
     _isExiting = true;
@@ -264,8 +257,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _invalidateCache();
   }
 
-  /// Slides a freshly-spawned arrow forward into its position, entering
-  /// from behind its travel direction. Used by Endless Rush spawns.
   void startEnterAnimation() {
     _isEntering = true;
     _enterProgress = 0.0;
@@ -330,95 +321,35 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     return pts.reversed.toList();
   }
 
-  List<Offset> _buildBlockedExtension() {
-    ArrowDirection currentDir = arrowModel.direction;
-    final head = arrowModel.path[0];
-    final gridSize = gameState.level.gridSize;
-    final pts = <Offset>[];
-    var d = currentDir.delta;
-    int nr = head[0] + d[0];
-    int nc = head[1] + d[1];
-    final visited = <String>{};
-
-    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
-      final key = '$nr,$nc';
-      if (visited.contains(key)) break;
-      visited.add(key);
-
-      bool occupied = false;
-      for (final other in gameState.arrows) {
-        if (other.id == arrowModel.id) continue;
-        if (other.state == ArrowState.sliding) continue;
-        for (final pt in other.path) {
-          if (pt[0] == nr && pt[1] == nc) {
-            occupied = true;
-            break;
-          }
-        }
-        if (occupied) break;
-      }
-
-      if (occupied) {
-        break;
-      }
-
-      pts.add(Offset((nc + 0.5) * cellSize, (nr + 0.5) * cellSize));
-
-      if (gameState.orphanDots.containsKey(key)) {
-        final dotType = gameState.orphanDots[key]!;
-        if (dotType == OrphanDotType.up) {
-          currentDir = ArrowDirection.up;
-        } else if (dotType == OrphanDotType.down) {
-          currentDir = ArrowDirection.down;
-        } else if (dotType == OrphanDotType.left) {
-          currentDir = ArrowDirection.left;
-        } else if (dotType == OrphanDotType.right) {
-          currentDir = ArrowDirection.right;
-        }
-      }
-
-      d = currentDir.delta;
-      nr += d[0];
-      nc += d[1];
-    }
-
-    final lastPoint = pts.isNotEmpty
-        ? pts.last
-        : Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
-    final overshootPoint = lastPoint + Offset(d[1] * cellSize * 0.25, d[0] * cellSize * 0.25);
-    pts.add(overshootPoint);
-
-    return pts.reversed.toList();
-  }
+  // ─────────────────────────────────────────────────────────────────
+  // Blocked animation — shake in place, red tint for 0.5 s.
+  // ─────────────────────────────────────────────────────────────────
 
   void _playBlockAnimation() {
     _invalidateCache();
-
-    _cachedPathPx ??= _computePathPx();
-    final pathPx = _cachedPathPx!;
-    final blockedExt = _buildBlockedExtension();
-    final track = <Offset>[...blockedExt, ...pathPx];
-    final dist = <double>[0.0];
-    for (int i = 1; i < track.length; i++) {
-      dist.add(dist[i - 1] + (track[i] - track[i - 1]).distance);
-    }
-
-    _cachedTrack = track;
-    _cachedDist = dist;
-    _cachedHeadDist = dist[blockedExt.length];
-    _cachedTailDist = dist[blockedExt.length + pathPx.length - 1];
-
-    _maxBlockSlide = _cachedHeadDist!;
-    _blockDuration = 0.12 + (blockedExt.length - 1) * 0.06;
-    _blockTime = 0.0;
     _isBlockedAnimating = true;
+    _blockShakeTime = 0.0;
+    _blockShakeOffset = 0.0;
+  }
+
+  /// Perpendicular shake axis. Vertical arrows shake horizontally,
+  /// horizontal arrows shake vertically — so it reads as bouncing off a
+  /// wall rather than sliding along it.
+  Offset _blockShakeAxis(ArrowDirection dir) {
+    switch (dir) {
+      case ArrowDirection.up:
+      case ArrowDirection.down:
+        return const Offset(1, 0);
+      case ArrowDirection.left:
+      case ArrowDirection.right:
+        return const Offset(0, 1);
+    }
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    // Leaving-arrow forced launch — fires automatically when the tap
-    // counter hits 0.
+
     if (gameState.pendingForceLaunch.contains(arrowModel.id) &&
         !_isAnimating &&
         !_isExiting &&
@@ -428,16 +359,17 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       triggerMove(isForced: true);
     }
 
-    // Pulse timer for leaving arrows
     if (gameState.isArrowLeaving(arrowModel.id) && !_isAnimating) {
       _leavingPulseTime += dt * 4.0;
     }
-
-    if (arrowModel.type == ArrowType.bomb &&
+    if (arrowModel.type == ArrowType.slash &&
         !_isAnimating &&
         !_isExiting &&
         !_isRestoring) {
-      _bombPulseTime += dt * 6.0;
+      _slashShineTime += dt;
+      if (_slashShineTime >= _kSlashShineCycleSeconds) {
+        _slashShineTime -= _kSlashShineCycleSeconds;
+      }
     }
 
     if (_isEntering) {
@@ -486,19 +418,22 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     }
 
     if (_isBlockedAnimating) {
-      _blockTime += dt;
-      final half = _blockDuration * 0.4;
-      if (_blockTime < half) {
-        final t = _blockTime / half;
-        _slideOffset = Curves.easeOutBack.transform(t) * _maxBlockSlide;
-      } else if (_blockTime < _blockDuration) {
-        final t = (_blockTime - half) / (_blockDuration - half);
-        _slideOffset = (1.0 - Curves.elasticOut.transform(t)) * _maxBlockSlide;
-      } else {
-        _slideOffset = 0.0;
+      _blockShakeTime += dt;
+
+      if (_blockShakeTime >= _kBlockShakeDuration) {
         _isBlockedAnimating = false;
         _isAnimating = false;
+        _blockShakeOffset = 0.0;
         _invalidateCache();
+      } else {
+        // Sinusoidal shake with gentle decay toward the end.
+        final t = _blockShakeTime / _kBlockShakeDuration;
+        final decay = 1.0 - t * 0.35;
+        _blockShakeOffset =
+            math.sin(_blockShakeTime * _kBlockShakeFrequency) *
+                cellSize *
+                _kBlockShakeAmplitude *
+                decay;
       }
     }
   }
@@ -507,39 +442,43 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   void render(Canvas canvas) {
     if (arrowModel.path.isEmpty) return;
 
+    final bool isSlashArrow = arrowModel.type == ArrowType.slash;
     final bool hasPressScale = _pressScale != 1.0;
-    final bool isBombIdle = arrowModel.type == ArrowType.bomb &&
-        !_isAnimating &&
-        !_isExiting &&
-        !_isRestoring;
+    final bool needsTransform = hasPressScale || _isBlockedAnimating;
 
-    if (hasPressScale || isBombIdle) {
-      final head = arrowModel.path[0];
-      final center = Offset(
-          (head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
+    if (needsTransform) {
       canvas.save();
-      canvas.translate(center.dx, center.dy);
 
-      double effectiveScale = _pressScale;
-      if (isBombIdle && !hasPressScale) {
-        effectiveScale = 1.0 + math.sin(_bombPulseTime) * 0.07;
+      if (hasPressScale) {
+        final head = arrowModel.path[0];
+        final center =
+        Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
+        canvas.translate(center.dx, center.dy);
+        canvas.scale(_pressScale, _pressScale);
+        canvas.translate(-center.dx, -center.dy);
       }
 
-      canvas.scale(effectiveScale, effectiveScale);
-      canvas.translate(-center.dx, -center.dy);
+      if (_isBlockedAnimating) {
+        final axis = _blockShakeAxis(arrowModel.direction);
+        canvas.translate(
+          axis.dx * _blockShakeOffset,
+          axis.dy * _blockShakeOffset,
+        );
+      }
     }
 
     _cachedPathPx ??= _computePathPx();
     final pathPx = _cachedPathPx!;
 
     final List<Offset> pts;
-    final bool isAnimatingNow =
-        _isExiting || _isBlockedAnimating || _isRestoring || _isEntering;
+    final bool isAnimatingNow = _isExiting ||
+        _isBlockedAnimating ||
+        _isRestoring ||
+        _isEntering;
 
     if (_isRestoring && _cachedTrack == null) {
       final delta = arrowModel.direction.delta;
       final headPx = pathPx.first;
-
       final track = <Offset>[];
       final int extCount;
       if (_deflectedExtension != null) {
@@ -564,7 +503,10 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       _cachedTailDist = dist[extCount + pathPx.length - 1];
     }
 
-    if (_isRestoring) {
+    if (_isBlockedAnimating) {
+      // No travel — the shake is applied via the canvas transform above.
+      pts = pathPx;
+    } else if (_isRestoring) {
       final track = _cachedTrack!;
       final dist = _cachedDist!;
       final headDist = _cachedHeadDist!;
@@ -577,7 +519,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
       pts = _slice(track, dist, animHead, animTail);
     } else if (_isEntering) {
-      // ─── snake-in ─────────────────────────────────────────────
       final track = pathPx;
       final dist = <double>[0.0];
       for (int i = 1; i < track.length; i++) {
@@ -586,8 +527,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       final totalLen = dist.last;
       final p = Curves.easeOutCubic.transform(_enterProgress.clamp(0.0, 1.0));
       pts = _slice(track, dist, 0.0, p * totalLen);
-      // ──────────────────────────────────────────────────────────
-      } else if (isAnimatingNow) {
+    } else if (isAnimatingNow) {
       if (_cachedTrack == null) {
         final delta = arrowModel.direction.delta;
         final headPx = pathPx.first;
@@ -627,9 +567,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
         animHead = (headDist - traveled).clamp(0.0, headDist);
         animTail = (tailDist - traveled).clamp(0.0, tailDist);
       } else {
-        final traveled = _slideOffset.clamp(0.0, tailDist);
-        animHead = (headDist - traveled).clamp(0.0, headDist);
-        animTail = (tailDist - traveled).clamp(0.0, tailDist);
+        animHead = headDist;
+        animTail = tailDist;
       }
 
       pts = _slice(track, dist, animHead, animTail);
@@ -655,11 +594,13 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       pts = pathPx;
     }
 
-    if (pts.isEmpty) return;
+    if (pts.isEmpty) {
+      if (needsTransform) canvas.restore();
+      return;
+    }
 
     final mainColor = _color();
-    final isBombArrow = arrowModel.type == ArrowType.bomb;
-    final sw = cellSize * (isBombArrow ? 0.16 : 0.13);
+    final sw = cellSize * (isSlashArrow ? 0.18 : 0.13);
 
     final Path bodyPath;
     if (isAnimatingNow) {
@@ -680,7 +621,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     final themeColors = AppThemes.getThemeColors(gameState.theme);
 
-    if (themeColors.hasGlow) {
+
+    if (themeColors.hasGlow && !_isBlockedAnimating) {
       _glowPaintOuter
         ..color = mainColor.withValues(alpha: 0.15)
         ..strokeWidth = sw * 2.2;
@@ -704,10 +646,21 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       ..strokeWidth = sw;
     canvas.drawPath(bodyPath, _bodyPaint);
 
+    // ── Slash arrow: white "blade" down the centre ──
+    if (isSlashArrow && !_isBlockedAnimating) {
+      _bladePaint
+        ..color = Colors.white.withValues(alpha: 0.85)
+        ..strokeWidth = sw * 0.28;
+      canvas.drawPath(bodyPath, _bladePaint);
+    }
+
+    // ── Slash arrow: periodic steel shine sweep ──
+    if (isSlashArrow && !_isBlockedAnimating && !isAnimatingNow) {
+      _drawSlashShine(canvas, bodyPath, sw);
+    }
+
     _drawHead(canvas, pts, mainColor, sw);
 
-
-    // Pulsing glow for leaving arrows
     if (gameState.isArrowLeaving(arrowModel.id) &&
         arrowModel.state == ArrowState.idle) {
       final pulse = 0.5 + 0.5 * math.sin(_leavingPulseTime);
@@ -737,7 +690,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       canvas.drawPath(
         bodyPath,
         Paint()
-          ..color = const Color(0xFFFFEB3B).withValues(alpha: 0.5 + pulse * 0.4)
+          ..color =
+          const Color(0xFFFFEB3B).withValues(alpha: 0.5 + pulse * 0.4)
           ..style = PaintingStyle.stroke
           ..strokeWidth = sw * 3.5
           ..strokeCap = StrokeCap.round
@@ -746,14 +700,106 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       );
     }
 
-    if (hasPressScale || isBombIdle) {
-      canvas.restore();
+    if (needsTransform) canvas.restore();
+  }
+
+  /// Draws a bright highlight that travels from the arrow's head toward
+  /// its tail once every [_kSlashShineCycleSeconds]. The shine starts
+  /// loud (thick, bright, with a flare at the head), then tapers off as
+  /// it reaches the tail — so the player's eye is caught immediately.
+  void _drawSlashShine(Canvas canvas, Path bodyPath, double sw) {
+    // Quiet phase — no shine on screen.
+    if (_slashShineTime > _kSlashShineSweepSeconds) return;
+
+    final sweepT =
+    (_slashShineTime / _kSlashShineSweepSeconds).clamp(0.0, 1.0);
+
+    // Intensity: starts at 1.0, still ~0.65 mid-sweep, ~0.3 at the end.
+    // This makes the shine "punch" as soon as it appears.
+    final intensity = (1.0 - sweepT * 0.7).clamp(0.0, 1.0);
+    if (intensity <= 0.01) return;
+
+    // Streak gets narrower as it travels tail-ward, so the shine reads
+    // as a wave cresting away from the head.
+    final streakScale = 1.0 - sweepT * 0.55;
+
+    final metrics = bodyPath.computeMetrics().toList();
+    if (metrics.isEmpty) return;
+
+    // Highlight length along the path — bigger at the start.
+    final tailLength = sw * 3.5 * streakScale;
+
+    for (final m in metrics) {
+      final total = m.length;
+      if (total <= 0) continue;
+
+      final center = sweepT * total;
+      final from = (center - tailLength).clamp(0.0, total);
+      final to = (center + tailLength).clamp(0.0, total);
+      if (to <= from) continue;
+
+      final shine = m.extractPath(from, to);
+
+      // Outer bloom — noticeably bigger and brighter at the start.
+      canvas.drawPath(
+        shine,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.65 * intensity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = sw * 2.6 * streakScale
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = MaskFilter.blur(
+            BlurStyle.normal,
+            sw * 1.4 * streakScale,
+          ),
+      );
+
+      // Bright core streak.
+      canvas.drawPath(
+        shine,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.98 * intensity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = sw * 0.7 * streakScale
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
+      );
+    }
+
+    // Extra flare at the head during the first 35 % of the sweep.
+    // Reads as the shine "igniting" from the arrow's tip.
+    if (sweepT < 0.35) {
+      final flareT = sweepT / 0.35; // 0 → 1 across the first 35 %
+      final flareIntensity = (1.0 - flareT) * (1.0 - flareT);
+      if (flareIntensity > 0.01) {
+        final head = arrowModel.path[0];
+        final headCenter = Offset(
+          (head[1] + 0.5) * cellSize,
+          (head[0] + 0.5) * cellSize,
+        );
+        final radius = cellSize * 0.55 * (0.6 + flareT * 0.6);
+        canvas.drawCircle(
+          headCenter,
+          radius,
+          Paint()
+            ..color =
+            Colors.white.withValues(alpha: 0.6 * flareIntensity)
+            ..maskFilter = MaskFilter.blur(
+              BlurStyle.normal,
+              radius * 0.6,
+            ),
+        );
+      }
     }
   }
 
   void _drawHead(Canvas canvas, List<Offset> pts, Color mainColor, double sw) {
     final Path caretPath;
-    final bool isAnimatingNow = _isExiting || _isBlockedAnimating;
+    final bool isAnimatingNow = _isExiting ||
+        _isBlockedAnimating ||
+        _isRestoring ||
+        _isEntering;
 
     if (isAnimatingNow) {
       caretPath = _buildCaretPath(pts, sw);
@@ -767,8 +813,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       ..strokeWidth = sw;
     canvas.drawPath(caretPath, _headPaint);
   }
-
-
 
   Path _buildCaretPath(List<Offset> pts, double sw) {
     final prev = pts.length > 1 ? pts[1] : pts.first;
@@ -800,7 +844,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     final gridSize = gameState.level.gridSize;
     final pts = <Offset>[];
 
-    final headPx = Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
+    final headPx =
+    Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
     pts.add(headPx);
 
     var d = currentDir.delta;
@@ -817,11 +862,20 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       if (orphanDots.containsKey(key)) {
         final dotType = orphanDots[key]!;
         switch (dotType) {
-          case OrphanDotType.up:    currentDir = ArrowDirection.up;    break;
-          case OrphanDotType.down:  currentDir = ArrowDirection.down;  break;
-          case OrphanDotType.left:  currentDir = ArrowDirection.left;  break;
-          case OrphanDotType.right: currentDir = ArrowDirection.right; break;
-          default: break;
+          case OrphanDotType.up:
+            currentDir = ArrowDirection.up;
+            break;
+          case OrphanDotType.down:
+            currentDir = ArrowDirection.down;
+            break;
+          case OrphanDotType.left:
+            currentDir = ArrowDirection.left;
+            break;
+          case OrphanDotType.right:
+            currentDir = ArrowDirection.right;
+            break;
+          default:
+            break;
         }
       }
 
@@ -846,20 +900,18 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       rawPath.lineTo(preview[i].dx, preview[i].dy);
     }
 
-    final Color shadowColor = isBlocked
-        ? const Color(0xFF808080)
-        : Colors.white;
-
-    final Color coreColor = isBlocked
-        ? const Color(0xFF606060)
-        : Colors.white;
+    final Color shadowColor =
+    isBlocked ? const Color(0xFF808080) : Colors.white;
+    final Color coreColor =
+    isBlocked ? const Color(0xFF606060) : Colors.white;
 
     final double pulse = 0.85 + 0.15 * (1.0 + (0.5 * _previewPulseTime).abs());
 
     canvas.drawPath(
       rawPath,
       Paint()
-        ..color = shadowColor.withValues(alpha: (0.25 * pulse).clamp(0.05, 0.4))
+        ..color =
+        shadowColor.withValues(alpha: (0.25 * pulse).clamp(0.05, 0.4))
         ..style = PaintingStyle.stroke
         ..strokeWidth = cellSize * 0.45 * pulse
         ..strokeCap = StrokeCap.round
@@ -878,17 +930,21 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   }
 
   Color _color() {
-    // Leaving arrows get a distinct orange tint regardless of theme.
+    // Block animation: red for 0.5 s, then back to normal.
+    if (_isBlockedAnimating) {
+      return const Color(0xFFE53935);
+    }
+
     if (gameState.isArrowLeaving(arrowModel.id) &&
         arrowModel.state == ArrowState.idle) {
       return const Color(0xFFFF9800);
     }
-    if (arrowModel.type == ArrowType.bomb) {
-      return const Color(0xFFE53935);
+
+    if (arrowModel.type == ArrowType.slash) {
+      // Brushed gunmetal / steel blue.
+      return const Color(0xFFA8B8C4);
     }
-    if (arrowModel.state == ArrowState.blocked || _isBlockedAnimating) {
-      return const Color(0xFF606060);
-    }
+
     final themeColors = AppThemes.getThemeColors(gameState.theme);
     final palette = themeColors.arrowPalette;
     if (palette != null && palette.isNotEmpty) {
@@ -949,11 +1005,20 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     final ArrowDirection dir;
     switch (type) {
-      case OrphanDotType.up:    dir = ArrowDirection.up;    break;
-      case OrphanDotType.down:  dir = ArrowDirection.down;  break;
-      case OrphanDotType.left:  dir = ArrowDirection.left;  break;
-      case OrphanDotType.right: dir = ArrowDirection.right; break;
-      default: return;
+      case OrphanDotType.up:
+        dir = ArrowDirection.up;
+        break;
+      case OrphanDotType.down:
+        dir = ArrowDirection.down;
+        break;
+      case OrphanDotType.left:
+        dir = ArrowDirection.left;
+        break;
+      case OrphanDotType.right:
+        dir = ArrowDirection.right;
+        break;
+      default:
+        return;
     }
 
     canvas.save();

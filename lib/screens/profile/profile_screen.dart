@@ -7,10 +7,12 @@ import 'package:arrow_puzzle/l10n/app_localizations.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/audio_haptic_helper.dart';
+import '../../data/repositories/leaderboard_repository.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/coin_pill.dart';
 import '../../widgets/daily_reward_card.dart';
+import '../../widgets/status_flash.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -76,10 +78,22 @@ class ProfileScreen extends ConsumerWidget {
                   );
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              if (auth.isSignedIn) _SignedInCard(auth: auth),
-
+              // ── LC + Leaderboard rank card ──
+              _LeaderboardCard(
+                onSignInTap: () {
+                  AudioHapticHelper.playClick();
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => _GuestUpgradeCard(
+                      onSuccess: () => Navigator.pop(context),
+                    ),
+                  );
+                },
+              ),
               const SizedBox(height: 20),
 
               _StatsRow(
@@ -90,6 +104,11 @@ class ProfileScreen extends ConsumerWidget {
 
               const SizedBox(height: 20),
               const DailyRewardCard(),
+              const SizedBox(height: 24),
+
+              // ── Account actions (sign out / delete) — moved to bottom ──
+              if (auth.isSignedIn) _SignedInCard(auth: auth),
+
               const SizedBox(height: 20),
             ],
           ),
@@ -98,6 +117,224 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// LC + leaderboard rank card
+// ─────────────────────────────────────────────────────────────────────────
+
+class _LeaderboardCard extends ConsumerWidget {
+  const _LeaderboardCard({this.onSignInTap});
+  final VoidCallback? onSignInTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
+    final progress = ref.watch(progressRepositoryProvider);
+    final auth = ref.watch(authServiceProvider);
+    final ranksAsync = ref.watch(myRanksProvider);
+
+    final card = AppColors.surface(context);
+    final accent = AppColors.accent(context);
+    final textPrimary = AppColors.textPrimary(context);
+    final textSecondary = AppColors.textSecondary(context);
+
+    // ── Guest: greyed-out locked card ──
+    if (auth.isGuest) {
+      return _buildGuestLockedCard(
+        context,
+        card: card,
+        textPrimary: textPrimary,
+        textSecondary: textSecondary,
+        onSignInTap: onSignInTap,
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Header: LC icon + title + total ──
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.monetization_on_rounded,
+                  color: accent,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'LC',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: textPrimary,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      auth.isGuest
+                          ? 'Sign in to earn LC'
+                          : 'Earned from daily challenges',
+                      style: TextStyle(fontSize: 11, color: textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                _formatNumber(progress.lbAllTimeScore),
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: accent,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+          Divider(color: textSecondary.withValues(alpha: 0.15)),
+          const SizedBox(height: 12),
+
+          // ── Three rank rows ──
+          ranksAsync.when(
+            loading: () => Column(
+              children: [
+                _rankRow(strings.leaderboardTabWeekly, null, accent,
+                    textPrimary, textSecondary),
+                const SizedBox(height: 10),
+                _rankRow(strings.leaderboardTabMonthly, null, accent,
+                    textPrimary, textSecondary),
+                const SizedBox(height: 10),
+                _rankRow(strings.leaderboardTabAllTime, null, accent,
+                    textPrimary, textSecondary),
+              ],
+            ),
+            error: (_, _) => Column(
+              children: [
+                _rankRow(strings.leaderboardTabWeekly, null, accent,
+                    textPrimary, textSecondary),
+                const SizedBox(height: 10),
+                _rankRow(strings.leaderboardTabMonthly, null, accent,
+                    textPrimary, textSecondary),
+                const SizedBox(height: 10),
+                _rankRow(strings.leaderboardTabAllTime, null, accent,
+                    textPrimary, textSecondary),
+              ],
+            ),
+            data: (r) => Column(
+              children: [
+                _rankRow(
+                  strings.leaderboardTabWeekly,
+                  (score: progress.lbWeeklyScore, rank: r.weekly),
+                  accent,
+                  textPrimary,
+                  textSecondary,
+                ),
+                const SizedBox(height: 10),
+                _rankRow(
+                  strings.leaderboardTabMonthly,
+                  (score: progress.lbMonthlyScore, rank: r.monthly),
+                  accent,
+                  textPrimary,
+                  textSecondary,
+                ),
+                const SizedBox(height: 10),
+                _rankRow(
+                  strings.leaderboardTabAllTime,
+                  (score: progress.lbAllTimeScore, rank: r.allTime),
+                  accent,
+                  textPrimary,
+                  textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rankRow(
+      String label,
+      ({int score, int? rank})? data,
+      Color accent,
+      Color textPrimary,
+      Color textSecondary,
+      ) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 88,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: textSecondary,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            data == null ? '—' : _formatNumber(data.score),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: textPrimary,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            data?.rank == null ? '—' : '#${data!.rank}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: accent,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatNumber(int n) {
+    final s = n.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Profile header (unchanged)
+// ─────────────────────────────────────────────────────────────────────────
 
 class _ProfileHeader extends ConsumerStatefulWidget {
   const _ProfileHeader({required this.auth, this.onSignInTap});
@@ -115,7 +352,6 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
 
   Future<void> _forceSync() async {
     if (_syncState == _SyncState.syncing) return;
-
     setState(() => _syncState = _SyncState.syncing);
 
     try {
@@ -125,19 +361,16 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
       );
       if (!mounted) return;
       setState(() => _syncState = _SyncState.success);
-
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) setState(() => _syncState = _SyncState.idle);
     } catch (e) {
       debugPrint('Force sync failed: $e');
       if (!mounted) return;
       setState(() => _syncState = _SyncState.error);
-
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) setState(() => _syncState = _SyncState.idle);
     }
   }
-
 
   String _statusLabel(AppStrings strings) {
     switch (_syncState) {
@@ -161,11 +394,9 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
     }
   }
 
-  Future<void> _showEditNameSheet(BuildContext context) async {
+  Future<void> _showEditNameSheet() async {
     final strings = AppStrings.of(context);
-    final controller = TextEditingController(
-      text: widget.auth.displayName,
-    );
+    final controller = TextEditingController(text: widget.auth.displayName);
     final accent = AppColors.accent(context);
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
@@ -280,38 +511,24 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
 
     try {
       await AuthService.instance.updateDisplayName(newName);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(strings.profileUpdated),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      if (!mounted) return;
+      StatusFlash.success(context, strings.profileUpdated);
     } catch (e) {
       debugPrint('Update name failed: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(strings.profileSomethingWrong),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      if (!mounted) return;
+      StatusFlash.fail(context, strings.profileSomethingWrong);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    final auth = widget.auth;
+    final auth = ref.watch(authServiceProvider);
+
     final card = AppColors.surface(context);
+    final accent = AppColors.accent(context);
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
-    final accent = AppColors.accent(context);
-
-    // Debug: log the state so you can see why things might not render.
-    debugPrint('🔵 [_ProfileHeader] isGuest=${auth.isGuest} isSignedIn=${auth.isSignedIn} displayName=${auth.displayName}');
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -321,7 +538,6 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
       ),
       child: Row(
         children: [
-          // ── Avatar ──
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -351,13 +567,12 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
                 )
                     : null,
               ),
-              // ── Pencil edit badge (only when signed in) ──
               if (!auth.isGuest)
                 Positioned(
                   right: -2,
                   bottom: -2,
                   child: GestureDetector(
-                    onTap: () => _showEditNameSheet(context),
+                    onTap: _showEditNameSheet,
                     child: Container(
                       width: 24,
                       height: 24,
@@ -380,8 +595,6 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
             ],
           ),
           const SizedBox(width: 16),
-
-          // ── Name + provider ──
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,13 +618,12 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
               ],
             ),
           ),
-
-          // ── Right side: guest → save-to-cloud pill / signed-in → vertical button + status ──
           if (auth.isGuest && widget.onSignInTap != null)
             GestureDetector(
               onTap: widget.onSignInTap,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
@@ -419,7 +631,8 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.cloud_upload_outlined, size: 16, color: accent),
+                    Icon(Icons.cloud_upload_outlined,
+                        size: 16, color: accent),
                     const SizedBox(width: 4),
                     Text(
                       strings.profileSaveToCloud,
@@ -434,16 +647,14 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
               ),
             )
           else if (!auth.isGuest)
-          // Fixed-width wrapper — locks the layout so the button never shifts
-          // when the status text changes length.
             SizedBox(
               width: 78,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── Sync button ──
                   GestureDetector(
-                    onTap: _syncState == _SyncState.syncing ? null : _forceSync,
+                    onTap:
+                    _syncState == _SyncState.syncing ? null : _forceSync,
                     child: SizedBox(
                       width: 44,
                       height: 44,
@@ -452,13 +663,16 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
                         children: [
                           Container(
                             decoration: BoxDecoration(
-                              color: _statusColor(accent).withValues(alpha: 0.15),
+                              color: _statusColor(accent)
+                                  .withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
                           ),
                           AnimatedOpacity(
                             duration: const Duration(milliseconds: 200),
-                            opacity: _syncState == _SyncState.syncing ? 0.0 : 1.0,
+                            opacity: _syncState == _SyncState.syncing
+                                ? 0.0
+                                : 1.0,
                             child: Icon(
                               _syncState == _SyncState.success
                                   ? Icons.check_rounded
@@ -471,7 +685,9 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
                           ),
                           AnimatedOpacity(
                             duration: const Duration(milliseconds: 200),
-                            opacity: _syncState == _SyncState.syncing ? 1.0 : 0.0,
+                            opacity: _syncState == _SyncState.syncing
+                                ? 1.0
+                                : 0.0,
                             child: SizedBox(
                               width: 22,
                               height: 22,
@@ -486,8 +702,6 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
                     ),
                   ),
                   const SizedBox(height: 4),
-
-                  // ── Status text ──
                   Text(
                     _statusLabel(strings),
                     maxLines: 1,
@@ -510,7 +724,7 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Guest upgrade card
+// Guest upgrade card (unchanged)
 // ─────────────────────────────────────────────────────────────────────────
 
 class _GuestUpgradeCard extends ConsumerStatefulWidget {
@@ -523,40 +737,6 @@ class _GuestUpgradeCard extends ConsumerStatefulWidget {
 
 class _GuestUpgradeCardState extends ConsumerState<_GuestUpgradeCard> {
   final bool _busy = false;
-
-  // Future<void> _run(Future<void> Function() task) async {
-  //   if (_busy) return;
-  //   setState(() => _busy = true);
-  //   try {
-  //     await task();
-  //     await mergeCloudAndLocal(
-  //       ref.read(progressRepositoryProvider),
-  //       ref.read(coinsRepositoryProvider),
-  //     );
-  //     if (mounted) {
-  //       widget.onSuccess?.call();
-  //       final strings = AppStrings.of(context);
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(
-  //           content: Text(strings.profileSignInSuccess),
-  //           duration: const Duration(seconds: 2),
-  //         ),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       final strings = AppStrings.of(context);
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(
-  //           content: Text(strings.profileSignInFailed('$e')),
-  //           duration: const Duration(seconds: 3),
-  //         ),
-  //       );
-  //     }
-  //   } finally {
-  //     if (mounted) setState(() => _busy = false);
-  //   }
-  // }
 
   Future<void> _showEmailSheet() async {
     await showModalBottomSheet<void>(
@@ -581,14 +761,16 @@ class _GuestUpgradeCardState extends ConsumerState<_GuestUpgradeCard> {
     final accent = AppColors.accent(context);
 
     final keyboard = MediaQuery.of(context).viewInsets.bottom;
-    final maxSheetHeight = MediaQuery.of(context).size.height - keyboard - 40;
+    final maxSheetHeight =
+        MediaQuery.of(context).size.height - keyboard - 40;
 
     return Padding(
       padding: EdgeInsets.only(bottom: keyboard),
       child: Container(
         decoration: BoxDecoration(
           color: card,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius:
+          const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         constraints: BoxConstraints(maxHeight: maxSheetHeight),
         child: SingleChildScrollView(
@@ -623,7 +805,6 @@ class _GuestUpgradeCardState extends ConsumerState<_GuestUpgradeCard> {
                 ),
               ),
               const SizedBox(height: 24),
-
               _AuthOptionButton(
                 label: strings.profileContinueWithEmail,
                 icon: Icons.email_outlined,
@@ -631,8 +812,6 @@ class _GuestUpgradeCardState extends ConsumerState<_GuestUpgradeCard> {
                 accent: accent,
                 onTap: _busy ? null : _showEmailSheet,
               ),
-              const SizedBox(height: 10),
-
               if (_busy) ...[
                 const SizedBox(height: 14),
                 const Center(
@@ -652,7 +831,7 @@ class _GuestUpgradeCardState extends ConsumerState<_GuestUpgradeCard> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Signed in card
+// Signed in card — now rendered at the bottom of the screen
 // ─────────────────────────────────────────────────────────────────────────
 
 class _SignedInCard extends ConsumerStatefulWidget {
@@ -728,9 +907,7 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
     } catch (e) {
       if (mounted) {
         final s = AppStrings.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.profileSignOutFailed('$e'))),
-        );
+        StatusFlash.fail(context, s.profileSignOutFailed('$e'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -786,9 +963,7 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
     } catch (e) {
       if (mounted) {
         final s = AppStrings.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.profileDeleteFailed('$e'))),
-        );
+        StatusFlash.fail(context, s.profileDeleteFailed('$e'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -813,7 +988,8 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
@@ -838,7 +1014,8 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
                       const SizedBox(height: 2),
                       Text(
                         widget.auth.email ?? widget.auth.providerLabel,
-                        style: TextStyle(fontSize: 12, color: textSecondary),
+                        style: TextStyle(
+                            fontSize: 12, color: textSecondary),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -880,7 +1057,8 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFFFF5252),
               padding: const EdgeInsets.symmetric(vertical: 14),
-              side: const BorderSide(color: Color(0xFFFF5252), width: 1.3),
+              side: const BorderSide(
+                  color: Color(0xFFFF5252), width: 1.3),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -913,7 +1091,7 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Auth option button
+// Auth option button (unchanged)
 // ─────────────────────────────────────────────────────────────────────────
 
 class _AuthOptionButton extends StatelessWidget {
@@ -923,14 +1101,12 @@ class _AuthOptionButton extends StatelessWidget {
     required this.filled,
     required this.accent,
     required this.onTap,
-    // this.textPrimary,
   });
 
   final String label;
   final IconData icon;
   final bool filled;
   final Color accent;
-  // final Color? textPrimary;
   final VoidCallback? onTap;
 
   @override
@@ -990,7 +1166,7 @@ class _AuthOptionButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Stats row
+// Stats row (unchanged)
 // ─────────────────────────────────────────────────────────────────────────
 
 class _StatsRow extends StatelessWidget {
@@ -1105,7 +1281,7 @@ class _StatTile extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Email auth sheet
+// Email auth sheet (unchanged)
 // ─────────────────────────────────────────────────────────────────────────
 
 class _EmailAuthSheet extends ConsumerStatefulWidget {
@@ -1124,7 +1300,7 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
   final _name = TextEditingController();
   bool _busy = false;
   String? _error;
-  bool _emailExistsPrompt = false; // ← styling flag, replaces `.contains(...)`
+  bool _emailExistsPrompt = false;
   bool _obscurePassword = true;
 
   _EmailMode _mode = _EmailMode.signUp;
@@ -1138,22 +1314,18 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
   }
 
   String? _validatePassword(AppStrings strings, String password) {
-    if (password.length < 8) {
-      return strings.profilePasswordMinLength;
-    }
+    if (password.length < 8) return strings.profilePasswordMinLength;
     return null;
   }
 
   int _passwordStrength(String p) {
     if (p.isEmpty) return 0;
     if (p.length < 8) return 1;
-
     int score = 0;
     if (p.length >= 12) score++;
     if (RegExp(r'[A-Za-z]').hasMatch(p)) score++;
     if (RegExp(r'[0-9]').hasMatch(p)) score++;
     if (RegExp(r'[^A-Za-z0-9]').hasMatch(p)) score++;
-
     if (p.length >= 8 && score <= 2) return 2;
     if (score == 3) return 3;
     if (score == 4) return 4;
@@ -1166,14 +1338,12 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
     const digits = '23456789';
     const symbols = '!@#\$%^&*-_=+';
     final rng = Random.secure();
-
     final chars = <String>[
       lower[rng.nextInt(lower.length)],
       upper[rng.nextInt(upper.length)],
       digits[rng.nextInt(digits.length)],
       symbols[rng.nextInt(symbols.length)],
     ];
-
     const all = '$lower$upper$digits$symbols';
     for (int i = chars.length; i < 12; i++) {
       chars.add(all[rng.nextInt(all.length)]);
@@ -1204,7 +1374,8 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
         msg.contains('bad_request')) {
       return strings.profileErrorPassword;
     }
-    if (type.contains('user_invalid_email') || msg.contains('invalid email')) {
+    if (type.contains('user_invalid_email') ||
+        msg.contains('invalid email')) {
       return strings.profileErrorInvalidEmail;
     }
     if (code == 401 || msg.contains('unauthorized')) {
@@ -1213,9 +1384,7 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
     if (code == 429 || msg.contains('rate limit')) {
       return strings.profileErrorRateLimit;
     }
-    if (code >= 500) {
-      return strings.profileErrorServerBusy;
-    }
+    if (code >= 500) return strings.profileErrorServerBusy;
     return _mode == _EmailMode.signUp
         ? strings.profileErrorSignUpGeneric
         : strings.profileErrorSignInGeneric;
@@ -1224,7 +1393,6 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
   Future<void> _submit() async {
     AudioHapticHelper.playClick();
     final strings = AppStrings.of(context);
-
     final email = _email.text.trim();
     final password = _password.text;
     final name = _name.text.trim();
@@ -1243,7 +1411,6 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
       });
       return;
     }
-
     if (_mode == _EmailMode.signUp) {
       final passwordProblem = _validatePassword(strings, password);
       if (passwordProblem != null) {
@@ -1274,21 +1441,17 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
           password: password,
         );
       }
-
       await mergeCloudAndLocal(
         ref.read(progressRepositoryProvider),
         ref.read(coinsRepositoryProvider),
       );
       if (mounted) widget.onSuccess();
     } on AppwriteException catch (e) {
-      debugPrint('🔴 [Sheet] AppwriteException: ${e.code} ${e.type} ${e.message}');
-
       final type = (e.type ?? '').toLowerCase();
       final msg = (e.message ?? '').toLowerCase();
       final emailExists = type.contains('user_email_already_exists') ||
           msg.contains('already exists') ||
           msg.contains('already registered');
-
       if (emailExists && _mode == _EmailMode.signUp) {
         if (mounted) {
           setState(() {
@@ -1307,7 +1470,6 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
         }
       }
     } catch (e) {
-      debugPrint('🔴 [Sheet] unexpected: $e');
       if (mounted) {
         setState(() {
           _error = strings.profileSomethingWrong;
@@ -1328,8 +1490,8 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
     final accent = AppColors.accent(context);
 
     final keyboard = MediaQuery.of(context).viewInsets.bottom;
-    final maxSheetHeight = MediaQuery.of(context).size.height - keyboard - 40;
-
+    final maxSheetHeight =
+        MediaQuery.of(context).size.height - keyboard - 40;
     final isSignUp = _mode == _EmailMode.signUp;
 
     return Padding(
@@ -1337,7 +1499,8 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: card,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius:
+          const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         constraints: BoxConstraints(maxHeight: maxSheetHeight),
         child: SingleChildScrollView(
@@ -1355,26 +1518,17 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: _modeButton(
-                        strings.profileTabSignIn,
-                        _EmailMode.signIn,
-                        accent,
-                        textSecondary,
-                      ),
+                      child: _modeButton(strings.profileTabSignIn,
+                          _EmailMode.signIn, accent, textSecondary),
                     ),
                     Expanded(
-                      child: _modeButton(
-                        strings.profileTabCreateAccount,
-                        _EmailMode.signUp,
-                        accent,
-                        textSecondary,
-                      ),
+                      child: _modeButton(strings.profileTabCreateAccount,
+                          _EmailMode.signUp, accent, textSecondary),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-
               Text(
                 isSignUp
                     ? strings.profileCreateAccountTitle
@@ -1393,7 +1547,6 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
                 style: TextStyle(fontSize: 13, color: textSecondary),
               ),
               const SizedBox(height: 20),
-
               if (isSignUp) ...[
                 _Field(
                   controller: _name,
@@ -1427,18 +1580,16 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
                       ),
                       onPressed: () {
                         AudioHapticHelper.playClick();
-                        setState(() => _obscurePassword = !_obscurePassword);
+                        setState(
+                                () => _obscurePassword = !_obscurePassword);
                       },
                       tooltip: _obscurePassword
                           ? strings.profileShowPassword
                           : strings.profileHidePassword,
                     ),
                     IconButton(
-                      icon: Icon(
-                        Icons.casino_outlined,
-                        size: 18,
-                        color: accent,
-                      ),
+                      icon: Icon(Icons.casino_outlined,
+                          size: 18, color: accent),
                       onPressed: () {
                         AudioHapticHelper.playClick();
                         setState(() {
@@ -1451,7 +1602,6 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
                   ],
                 ),
               ),
-
               if (isSignUp && _password.text.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 _PasswordStrengthBar(
@@ -1459,12 +1609,11 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
                   strings: strings,
                 ),
               ],
-
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: _emailExistsPrompt
                         ? accent.withValues(alpha: 0.1)
@@ -1473,7 +1622,8 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
                     border: Border.all(
                       color: _emailExistsPrompt
                           ? accent.withValues(alpha: 0.4)
-                          : const Color(0xFFFF5252).withValues(alpha: 0.4),
+                          : const Color(0xFFFF5252)
+                          .withValues(alpha: 0.4),
                     ),
                   ),
                   child: Row(
@@ -1505,7 +1655,6 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
                   ),
                 ),
               ],
-
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _busy ? null : _submit,
@@ -1537,7 +1686,6 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 14),
               Center(
                 child: TextButton(
@@ -1572,12 +1720,8 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
     );
   }
 
-  Widget _modeButton(
-      String label,
-      _EmailMode mode,
-      Color accent,
-      Color textSecondary,
-      ) {
+  Widget _modeButton(String label, _EmailMode mode, Color accent,
+      Color textSecondary) {
     final selected = _mode == mode;
     return GestureDetector(
       onTap: _busy
@@ -1645,7 +1789,8 @@ class _Field extends StatelessWidget {
         hintStyle: TextStyle(color: textSecondary, fontSize: 13),
         prefixIcon: Icon(icon, color: textSecondary, size: 20),
         suffixIcon: trailing,
-        suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+        suffixIconConstraints:
+        const BoxConstraints(minWidth: 0, minHeight: 0),
         filled: true,
         fillColor: accent.withValues(alpha: 0.06),
         border: OutlineInputBorder(
@@ -1685,8 +1830,9 @@ class _PasswordStrengthBar extends StatelessWidget {
               duration: const Duration(milliseconds: 180),
               height: 4,
               decoration: BoxDecoration(
-                color:
-                i < strength ? color : color.withValues(alpha: 0.15),
+                color: i < strength
+                    ? color
+                    : color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1708,4 +1854,144 @@ class _PasswordStrengthBar extends StatelessWidget {
       ],
     );
   }
+}
+
+Widget _buildGuestLockedCard(
+    BuildContext context, {
+      required Color card,
+      required Color textPrimary,
+      required Color textSecondary,
+      VoidCallback? onSignInTap,
+    }) {
+  final muted = textSecondary.withValues(alpha: 0.55);
+
+  final body = Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: card,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: textSecondary.withValues(alpha: 0.15),
+        width: 1,
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: textSecondary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.lock_rounded, color: muted, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'LC',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: muted,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Leaderboard locked',
+                    style: TextStyle(fontSize: 11, color: muted),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.visibility_off_rounded, color: muted, size: 22),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Divider(color: textSecondary.withValues(alpha: 0.12)),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Icon(Icons.cloud_off_rounded, color: muted, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Sign in to unlock the Leaderboard',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: textPrimary.withValues(alpha: 0.55),
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _lockedRow('Weekly', textSecondary),
+        const SizedBox(height: 10),
+        _lockedRow('Monthly', textSecondary),
+        const SizedBox(height: 10),
+        _lockedRow('All-Time', textSecondary),
+      ],
+    ),
+  );
+
+  if (onSignInTap == null) return body;
+  return GestureDetector(
+    onTap: onSignInTap,
+    behavior: HitTestBehavior.opaque,
+    child: body,
+  );
+}
+
+Widget _lockedRow(String label, Color textSecondary) {
+  final muted = textSecondary.withValues(alpha: 0.4);
+  return Row(
+    children: [
+      SizedBox(
+        width: 88,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: muted,
+          ),
+        ),
+      ),
+      Expanded(
+        child: Text(
+          '—',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            color: muted,
+          ),
+        ),
+      ),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: muted.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          '—',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            color: muted,
+          ),
+        ),
+      ),
+    ],
+  );
 }

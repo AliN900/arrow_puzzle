@@ -79,10 +79,11 @@ enum MaskShape {
   tree,
   house,
   crown,
+  silhouette,
 }
 
 class LevelModel {
-  static const int currentVersion = 5;
+  static const int currentVersion = 6;
 
   final int levelNumber;
   final int gridSize;

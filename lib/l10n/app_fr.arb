@@ -89,8 +89,8 @@
   "pauseResume": "Reprendre",
   "pauseRestart": "Recommencer",
   "pauseMainMenu": "Menu principal",
-  "itemBombName": "Bombe",
-  "itemBombDesc": "Détruit un rocher",
+  "itemBombName": "Mine",
+  "itemBombDesc": "Retire une mine du plateau",
   "itemHintName": "Indice",
   "itemHintDesc": "Révèle la prochaine flèche résoluble",
   "itemUndoName": "Annuler",
@@ -504,5 +504,21 @@
   "copyLink": "Copier le lien",
   "linkCopied": "Lien copié",
   "settingsShareFriends": "Partager avec des amis",
-  "settingsSharingSoon": "Bientôt disponible"
+  "settingsSharingSoon": "Bientôt disponible",
+  "blitzTimeLeftLabel": "TEMPS RESTANT",
+  "levelSelectButton": "Niveaux",
+  "levelDetailsTitle": "Niveau {level}",
+  "@levelDetailsTitle": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+  "levelDetailsCompleted": "Terminé",
+  "levelDetailsNotPlayed": "Pas encore joué",
+  "levelDetailsGrid": "Grille",
+  "levelDetailsTimed": "Chronométré",
+  "levelDetailsMines": "Mines",
+  "levelDetailsMoves": "Coups",
+  "levelDetailsStart": "Démarrer",
+  "zenModeLabel": "RELAX",
+  "zenModeTitle": "Mode Zen",
+  "zenModeSubtitle": "Pas de cœurs, pas de minuteur. Juste des puzzles."
 }

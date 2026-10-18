@@ -89,8 +89,8 @@
   "pauseResume": "Lanjutkan",
   "pauseRestart": "Ulangi",
   "pauseMainMenu": "Menu Utama",
-  "itemBombName": "Bom",
-  "itemBombDesc": "Hancurkan satu batu",
+  "itemBombName": "Ranjau",
+  "itemBombDesc": "Hapus satu ranjau dari papan",
   "itemHintName": "Petunjuk",
   "itemHintDesc": "Tampilkan panah berikutnya yang bisa diselesaikan",
   "itemUndoName": "Batalkan",
@@ -506,5 +506,21 @@
   "copyLink": "Salin Tautan",
   "linkCopied": "Tautan disalin",
   "settingsShareFriends": "Bagikan ke teman",
-  "settingsSharingSoon": "Segera hadir"
+  "settingsSharingSoon": "Segera hadir",
+  "blitzTimeLeftLabel": "SISA WAKTU",
+  "levelSelectButton": "Level",
+  "levelDetailsTitle": "Level {level}",
+  "@levelDetailsTitle": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+  "levelDetailsCompleted": "Selesai",
+  "levelDetailsNotPlayed": "Belum dimainkan",
+  "levelDetailsGrid": "Grid",
+  "levelDetailsTimed": "Berwaktu",
+  "levelDetailsMines": "Ranjau",
+  "levelDetailsMoves": "Langkah",
+  "levelDetailsStart": "Mulai",
+  "zenModeLabel": "SANTAI",
+  "zenModeTitle": "Mode Zen",
+  "zenModeSubtitle": "Tanpa nyawa, tanpa waktu. Hanya puzzle."
 }

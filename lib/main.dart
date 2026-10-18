@@ -25,6 +25,7 @@ import 'package:arrow_puzzle/screens/onboarding/privacy_consent_screen.dart';
 import 'package:arrow_puzzle/services/auth_service.dart';
 import 'package:arrow_puzzle/services/cloud_sync_service.dart';
 import 'package:arrow_puzzle/services/huawei_iap_service.dart';
+import 'package:arrow_puzzle/services/leaderboard_service.dart';
 import 'package:arrow_puzzle/services/store_detector.dart';
 import 'package:arrow_puzzle/unity_rewarded_ad.dart';
 import 'package:flutter/foundation.dart';
@@ -39,6 +40,7 @@ import 'core/app_colors.dart';
 import 'core/audio_haptic_helper.dart';
 import 'core/sfx_player.dart';
 import 'data/repositories/coins_repository.dart';
+import 'data/repositories/leaderboard_repository.dart';
 import 'data/repositories/progress_repository.dart';
 import 'data/repositories/level_repository.dart';
 import 'l10n/app_localizations.dart';
@@ -140,7 +142,9 @@ Future<void> mergeCloudAndLocal(
     ProgressRepository progress,
     CoinsRepository coins,
     ) async {
-  final userId = AuthService.instance.userId;
+  final auth = AuthService.instance;
+  final userId = auth.userId;
+  if (auth.isGuest) return;
   if (userId == null) {
     debugPrint('☁️ merge skipped: no userId');
     return;
@@ -182,6 +186,30 @@ Future<void> mergeCloudAndLocal(
     }
   } catch (e, st) {
     debugPrint('🔴 merge error: $e\n$st');
+  }
+
+  // Retry any pending public-leaderboard push.
+  if (progress.lbDirty) {
+    try {
+      await LeaderboardRepository.instance.pushCurrentUser(
+        level: progress.currentLevel,
+        totalStars: progress.totalStars,
+        trophies: progress.unlockedTrophies.length,
+        weeklyScore: progress.lbWeeklyScore,
+        monthlyScore: progress.lbMonthlyScore,
+        allTimeScore: progress.lbAllTimeScore,
+        weeklyPeriodStart: progress.lbWeeklyPeriodStart ??
+            LeaderboardService.currentWeekStartUtc(),
+        monthlyPeriodStart: progress.lbMonthlyPeriodStart ??
+            LeaderboardService.currentMonthStartUtc(),
+        weeklyReachedAt: progress.lbWeeklyReachedAt,
+        monthlyReachedAt: progress.lbMonthlyReachedAt,
+      );
+      await progress.markLbClean();
+      debugPrint('☁️ pending LB push flushed');
+    } catch (e) {
+      debugPrint('☁️ Startup LB push failed, will retry: $e');
+    }
   }
 }
 
@@ -249,7 +277,7 @@ void main() async {
     try {
       UnityAds.init(
         gameId: '800386220',
-        testMode: kDebugMode,
+        testMode: true,
         onComplete: () {
           debugPrint('Unity Ads initialized');
           UnityRewardedAd.preload();
@@ -432,10 +460,14 @@ class _ArrowPuzzleState extends ConsumerState<ArrowPuzzle>
       // a strip where the (hidden) status bar would be.
       builder: (context, child) {
         final mq = MediaQuery.of(context);
+        // Fixed top inset that mimics the (now hidden) status bar. Keeps
+        // content from touching the very top of the screen while still
+        // staying in full-screen immersive mode.
+        const double kTopSafeMargin = 28.0;
         return MediaQuery(
           data: mq.copyWith(
-            padding: mq.padding.copyWith(top: 0),
-            viewPadding: mq.viewPadding.copyWith(top: 0),
+            padding: mq.padding.copyWith(top: kTopSafeMargin),
+            viewPadding: mq.viewPadding.copyWith(top: kTopSafeMargin),
           ),
           child: child!,
         );

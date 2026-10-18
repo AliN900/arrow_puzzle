@@ -2,21 +2,25 @@ import 'package:flutter/material.dart';
 
 enum StatusFlashKind { success, error }
 
+/// Floating success / fail indicator.
+///
+/// Renders only a large ✓ or ✗ icon in a coloured ring, anchored above
+/// the game item bar (bottom-start). The optional [message] parameter is
+/// accepted for API compatibility but intentionally not rendered.
 class StatusFlash {
   StatusFlash._();
 
   static OverlayEntry? _current;
 
   static void success(BuildContext context, [String? message]) {
-    _show(context, StatusFlashKind.success, message);
+    _show(context, StatusFlashKind.success);
   }
 
   static void fail(BuildContext context, [String? message]) {
-    _show(context, StatusFlashKind.error, message);
+    _show(context, StatusFlashKind.error);
   }
 
-  static void _show(
-      BuildContext context, StatusFlashKind kind, String? message) {
+  static void _show(BuildContext context, StatusFlashKind kind) {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) return;
 
@@ -32,7 +36,6 @@ class StatusFlash {
       builder: (_) => _StatusFlashOverlay(
         icon: icon,
         color: color,
-        message: message,
         onDone: () {
           _current?.remove();
           _current = null;
@@ -47,13 +50,11 @@ class StatusFlash {
 class _StatusFlashOverlay extends StatefulWidget {
   final IconData icon;
   final Color color;
-  final String? message;
   final VoidCallback onDone;
 
   const _StatusFlashOverlay({
     required this.icon,
     required this.color,
-    required this.message,
     required this.onDone,
   });
 
@@ -64,14 +65,50 @@ class _StatusFlashOverlay extends StatefulWidget {
 class _StatusFlashOverlayState extends State<_StatusFlashOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
+
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1200),
     );
+
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.5, end: 1.0).chain(
+          CurveTween(curve: Curves.easeOutBack),
+        ),
+        weight: 20,
+      ),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 65),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.9).chain(
+          CurveTween(curve: Curves.easeIn),
+        ),
+        weight: 15,
+      ),
+    ]).animate(_ctrl);
+
+    _fade = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.0).chain(
+          CurveTween(curve: Curves.easeOut),
+        ),
+        weight: 10,
+      ),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 75),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.0).chain(
+          CurveTween(curve: Curves.easeIn),
+        ),
+        weight: 15,
+      ),
+    ]).animate(_ctrl);
+
     _ctrl.forward().whenComplete(() {
       if (mounted) widget.onDone();
     });
@@ -85,104 +122,47 @@ class _StatusFlashOverlayState extends State<_StatusFlashOverlay>
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 100,
+    return PositionedDirectional(
+      // ── Anchored to the same edge as GameItemBar ──
+      // GameItemBar is `start: 12, bottom: 12` with a 56-px toggle button.
+      // Flash is 76 px, so `start: 2` centres it over the toggle:
+      //   toggle centre = 12 + 28 = 40
+      //   flash  centre =  2 + 38 = 40  ✓
+      // `bottom: 80` sits it 12 px above the top of the toggle.
+      start: 8,
+      bottom: 150,
       child: IgnorePointer(
-        child: Center(
-          child: AnimatedBuilder(
-            animation: _ctrl,
-            builder: (context, _) {
-              final t = _ctrl.value;
-
-              double opacity;
-              if (t < 0.15) {
-                opacity = t / 0.15;
-              } else if (t < 0.72) {
-                opacity = 1.0;
-              } else {
-                opacity = (1.0 - (t - 0.72) / 0.28).clamp(0.0, 1.0);
-              }
-
-              double scale;
-              if (t < 0.15) {
-                scale = t / 0.15;
-              } else if (t < 0.72) {
-                scale = 1.0;
-              } else {
-                scale = (1.0 - (t - 0.72) / 0.28).clamp(0.0, 1.0);
-              }
-
-              double angle;
-              if (t < 0.10) {
-                angle = -3.7699;
-              } else if (t < 0.45) {
-                final p = (t - 0.10) / 0.35;
-                angle = -3.7699 + p * (3.7699 - 0.7854);
-              } else if (t < 0.60) {
-                final p = (t - 0.45) / 0.15;
-                angle = -0.7854 * (1 - p);
-              } else {
-                angle = 0;
-              }
-
-              return Opacity(
-                opacity: opacity,
-                child: Transform.rotate(
-                  angle: angle,
-                  child: Transform.scale(
-                    scale: scale,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 76,
-                          height: 76,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: widget.color.withValues(alpha: 0.18),
-                            border:
-                            Border.all(color: widget.color, width: 3),
-                            boxShadow: [
-                              BoxShadow(
-                                color: widget.color.withValues(alpha: 0.5),
-                                blurRadius: 24,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Icon(widget.icon,
-                              color: widget.color, size: 48),
-                        ),
-                        if (widget.message != null) ...[
-                          const SizedBox(height: 14),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.75),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              widget.message!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (context, _) {
+            return Opacity(
+              opacity: _fade.value,
+              child: Transform.scale(
+                scale: _scale.value,
+                child: Container(
+                  width: 66,
+                  height: 66,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: widget.color.withValues(alpha: 0.18),
+                    border: Border.all(color: widget.color, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.color.withValues(alpha: 0.5),
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    widget.icon,
+                    color: widget.color,
+                    size: 48,
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

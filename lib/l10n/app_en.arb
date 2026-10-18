@@ -194,8 +194,8 @@
   "pauseResume": "Resume",
   "pauseRestart": "Restart",
   "pauseMainMenu": "Main Menu",
-  "itemBombName": "Bomb",
-  "itemBombDesc": "Destroy one rock",
+  "itemBombName": "Mine",
+  "itemBombDesc": "Clear one mine on the board",
   "itemHintName": "Hint",
   "itemHintDesc": "Reveal the next solvable arrow",
   "itemUndoName": "Undo",
@@ -580,6 +580,21 @@
   "copyLink": "Copy Link",
   "linkCopied": "Link copied",
   "settingsShareFriends": "Share with friends",
-  "settingsSharingSoon": "Sharing coming soon"
-
+  "settingsSharingSoon": "Sharing coming soon",
+  "blitzTimeLeftLabel": "TIME LEFT",
+  "levelSelectButton": "Levels",
+  "levelDetailsTitle": "Level {level}",
+  "@levelDetailsTitle": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+  "levelDetailsCompleted": "Completed",
+  "levelDetailsNotPlayed": "Not played yet",
+  "levelDetailsGrid": "Grid",
+  "levelDetailsTimed": "Timed",
+  "levelDetailsMines": "Mines",
+  "levelDetailsMoves": "Moves",
+  "levelDetailsStart": "Start",
+  "zenModeLabel": "RELAX",
+  "zenModeTitle": "Zen Mode",
+  "zenModeSubtitle": "No hearts, no timers. Just puzzles."
 }

@@ -13,6 +13,7 @@ import '../../../main.dart';
 import '../../../unity_rewarded_ad.dart';
 import '../../../widgets/coin_icon.dart';
 import '../../../widgets/pop_dialog.dart';
+import '../../../widgets/status_flash.dart';
 import 'game_dialog_button.dart';
 
 class LevelCompleteDialog extends ConsumerStatefulWidget {
@@ -66,12 +67,7 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
       onFailed: () {
         if (!mounted) return;
         setState(() => _isWatchingAd = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(strings.adNotAvailable),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        StatusFlash.fail(context, strings.adNotAvailable);
       },
       onDismissed: () {
         if (!mounted) return;

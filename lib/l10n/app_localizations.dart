@@ -1029,13 +1029,13 @@ abstract class AppStrings {
   /// No description provided for @itemBombName.
   ///
   /// In en, this message translates to:
-  /// **'Bomb'**
+  /// **'Mine'**
   String get itemBombName;
 
   /// No description provided for @itemBombDesc.
   ///
   /// In en, this message translates to:
-  /// **'Destroy one rock'**
+  /// **'Clear one mine on the board'**
   String get itemBombDesc;
 
   /// No description provided for @itemHintName.
@@ -3119,6 +3119,84 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Sharing coming soon'**
   String get settingsSharingSoon;
+
+  /// No description provided for @blitzTimeLeftLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'TIME LEFT'**
+  String get blitzTimeLeftLabel;
+
+  /// No description provided for @levelSelectButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Levels'**
+  String get levelSelectButton;
+
+  /// No description provided for @levelDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Level {level}'**
+  String levelDetailsTitle(int level);
+
+  /// No description provided for @levelDetailsCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get levelDetailsCompleted;
+
+  /// No description provided for @levelDetailsNotPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not played yet'**
+  String get levelDetailsNotPlayed;
+
+  /// No description provided for @levelDetailsGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get levelDetailsGrid;
+
+  /// No description provided for @levelDetailsTimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed'**
+  String get levelDetailsTimed;
+
+  /// No description provided for @levelDetailsMines.
+  ///
+  /// In en, this message translates to:
+  /// **'Mines'**
+  String get levelDetailsMines;
+
+  /// No description provided for @levelDetailsMoves.
+  ///
+  /// In en, this message translates to:
+  /// **'Moves'**
+  String get levelDetailsMoves;
+
+  /// No description provided for @levelDetailsStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get levelDetailsStart;
+
+  /// No description provided for @zenModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'RELAX'**
+  String get zenModeLabel;
+
+  /// No description provided for @zenModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Zen Mode'**
+  String get zenModeTitle;
+
+  /// No description provided for @zenModeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No hearts, no timers. Just puzzles.'**
+  String get zenModeSubtitle;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

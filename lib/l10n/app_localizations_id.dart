@@ -532,10 +532,10 @@ class AppStringsId extends AppStrings {
   String get pauseMainMenu => 'Menu Utama';
 
   @override
-  String get itemBombName => 'Bom';
+  String get itemBombName => 'Ranjau';
 
   @override
-  String get itemBombDesc => 'Hancurkan satu batu';
+  String get itemBombDesc => 'Hapus satu ranjau dari papan';
 
   @override
   String get itemHintName => 'Petunjuk';
@@ -1708,4 +1708,45 @@ class AppStringsId extends AppStrings {
 
   @override
   String get settingsSharingSoon => 'Segera hadir';
+
+  @override
+  String get blitzTimeLeftLabel => 'SISA WAKTU';
+
+  @override
+  String get levelSelectButton => 'Level';
+
+  @override
+  String levelDetailsTitle(int level) {
+    return 'Level $level';
+  }
+
+  @override
+  String get levelDetailsCompleted => 'Selesai';
+
+  @override
+  String get levelDetailsNotPlayed => 'Belum dimainkan';
+
+  @override
+  String get levelDetailsGrid => 'Grid';
+
+  @override
+  String get levelDetailsTimed => 'Berwaktu';
+
+  @override
+  String get levelDetailsMines => 'Ranjau';
+
+  @override
+  String get levelDetailsMoves => 'Langkah';
+
+  @override
+  String get levelDetailsStart => 'Mulai';
+
+  @override
+  String get zenModeLabel => 'SANTAI';
+
+  @override
+  String get zenModeTitle => 'Mode Zen';
+
+  @override
+  String get zenModeSubtitle => 'Tanpa nyawa, tanpa waktu. Hanya puzzle.';
 }

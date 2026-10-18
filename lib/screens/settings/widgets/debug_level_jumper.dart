@@ -8,6 +8,7 @@ import '../../../core/board_themes.dart';
 import '../../../core/game_mode.dart';
 import '../../../core/items.dart';
 import '../../../data/models/level_result.dart';
+import '../../../dev/seed_leaderboard.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../main.dart';
 import '../../../unity_rewarded_ad.dart';
@@ -450,6 +451,89 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
               },
             ),
             const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
+            Text(
+              'LEADERBOARD TEST',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+                color: Colors.purpleAccent,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final progress = ValueNotifier<int>(0);
+                final total = 100;
+
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => Center(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 16),
+                            ValueListenableBuilder<int>(
+                              valueListenable: progress,
+                              builder: (_, v, _) => Text(
+                                'Seeding fake players...\n$v / $total',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Throttled to ~1 row/sec.',
+                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+
+                final count = await LeaderboardSeeder.instance.seed(
+                  count: total,
+                  onProgress: (n) => progress.value = n,
+                );
+
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Seeded $count / $total fake players')),
+                );
+              },
+              icon: const Icon(Icons.group_add_rounded),
+              label: const Text('Seed 100 Fake Players'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purpleAccent,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final count = await LeaderboardSeeder.instance.clear();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Removed $count fake players')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.delete_sweep_rounded),
+              label: const Text('Clear Fake Players'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+            ),
             _btn(
               label: '🎁 Grant All Items ×5',
               icon: Icons.inventory_2_rounded,
@@ -468,6 +552,14 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
               },
             ),
             const SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: () async {
+                final coinsRepo = ref.read(coinsRepositoryProvider);
+                await coinsRepo.resetLcAttempts();   // you may need to add this method
+              },
+              child: const Text('Reset LC attempts'),
+            ),
 
             // ── DANGER ZONE ──
             _sectionLabel('DANGER ZONE'),

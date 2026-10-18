@@ -77,8 +77,8 @@
   "pauseResume": "जारी रखें",
   "pauseRestart": "पुनः आरंभ",
   "pauseMainMenu": "मुख्य मेनू",
-  "itemBombName": "बम",
-  "itemBombDesc": "एक चट्टान नष्ट करें",
+  "itemBombName": "बारूद",
+  "itemBombDesc": "बोर्ड से एक बारूद हटाएँ",
   "itemHintName": "संकेत",
   "itemHintDesc": "अगला हल किए जा सकने वाला तीर दिखाएं",
   "itemUndoName": "पूर्ववत करें",
@@ -504,5 +504,21 @@
   "copyLink": "लिंक कॉपी करें",
   "linkCopied": "लिंक कॉपी हो गया",
   "settingsShareFriends": "दोस्तों के साथ साझा करें",
-  "settingsSharingSoon": "जल्द आ रहा है"
+  "settingsSharingSoon": "जल्द आ रहा है",
+  "blitzTimeLeftLabel": "शेष समय",
+  "levelSelectButton": "स्तर",
+  "levelDetailsTitle": "स्तर {level}",
+  "@levelDetailsTitle": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+  "levelDetailsCompleted": "पूरा हुआ",
+  "levelDetailsNotPlayed": "अभी तक नहीं खेला",
+  "levelDetailsGrid": "ग्रिड",
+  "levelDetailsTimed": "समयबद्ध",
+  "levelDetailsMines": "बारूद",
+  "levelDetailsMoves": "चालें",
+  "levelDetailsStart": "शुरू करें",
+  "zenModeLabel": "शांत",
+  "zenModeTitle": "ज़ेन मोड",
+  "zenModeSubtitle": "कोई दिल नहीं, कोई टाइमर नहीं। बस पहेलियाँ।"
 }

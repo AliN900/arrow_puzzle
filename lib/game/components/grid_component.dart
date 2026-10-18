@@ -365,80 +365,103 @@ class GridComponent extends PositionComponent with TapCallbacks {
 
 
   void _drawRock(Canvas canvas, Offset center, double cs, ThemeColors themeColors) {
-    final size = cs * 0.82;
-    final halfSize = size / 2;
+    final bodyRadius = cs * 0.30;        // ball radius
+    final spikeLength = cs * 0.11;       // spike sticks out this far
 
-    // Shadow underneath
+    // ── Soft outer glow — reads as "targetable" on any board ──
+    canvas.drawCircle(
+      center,
+      bodyRadius + spikeLength + cs * 0.10,
+      Paint()
+        ..color = themeColors.arrowColor.withValues(alpha: 0.18)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+
+    // ── Ground shadow (depth) ──
     canvas.drawOval(
       Rect.fromCenter(
         center: center + Offset(0, cs * 0.16),
-        width: size * 0.85,
-        height: size * 0.3,
+        width: cs * 0.70,
+        height: cs * 0.20,
       ),
       Paint()
         ..color = Colors.black.withValues(alpha: 0.45)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
 
-    // Hexagonal rock body
-    final path = Path();
-    const points = 6;
-    for (int i = 0; i < points; i++) {
-      final angle = (i / points) * 2 * math.pi - math.pi / 2;
-      final px = center.dx + math.cos(angle) * halfSize;
-      final py = center.dy + math.sin(angle) * halfSize;
-      if (i == 0) {
-        path.moveTo(px, py);
-      } else {
-        path.lineTo(px, py);
-      }
+    // ── Spikes (8 around the perimeter) ──
+    const spikeCount = 8;
+    final spikePaint = Paint()
+      ..color = themeColors.arrowColor.withValues(alpha: 0.95)
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < spikeCount; i++) {
+      final angle = (i / spikeCount) * 2 * math.pi - math.pi / 2;
+
+      // Base of the spike sits on the ball's surface, tip sticks out.
+      final baseCX = center.dx + math.cos(angle) * bodyRadius * 0.95;
+      final baseCY = center.dy + math.sin(angle) * bodyRadius * 0.95;
+      final tipX   = center.dx + math.cos(angle) * (bodyRadius + spikeLength);
+      final tipY   = center.dy + math.sin(angle) * (bodyRadius + spikeLength);
+
+      // Perpendicular half-width for the spike triangle base.
+      final perpX = math.cos(angle + math.pi / 2) * cs * 0.055;
+      final perpY = math.sin(angle + math.pi / 2) * cs * 0.055;
+
+      final spike = Path()
+        ..moveTo(tipX, tipY)
+        ..lineTo(baseCX + perpX, baseCY + perpY)
+        ..lineTo(baseCX - perpX, baseCY - perpY)
+        ..close();
+
+      canvas.drawPath(spike, spikePaint);
     }
-    path.close();
 
-    // Fill with a subtle gradient (light from top-left)
-    canvas.drawPath(
-      path,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF9A9A9A), Color(0xFF4A4A4A)],
-        ).createShader(Rect.fromCircle(center: center, radius: halfSize)),
-    );
-
-    // Dark outline
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = const Color(0xFF1F1F1F)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = cs * 0.06
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    // Crack lines
-    final crackPaint = Paint()
-      ..color = const Color(0xFF1F1F1F).withValues(alpha: 0.7)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = cs * 0.045
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawLine(
-      center + Offset(-halfSize * 0.5, -halfSize * 0.15),
-      center + Offset(0, halfSize * 0.15),
-      crackPaint,
-    );
-    canvas.drawLine(
-      center + Offset(0, halfSize * 0.15),
-      center + Offset(halfSize * 0.35, halfSize * 0.45),
-      crackPaint,
-    );
-
-    // Top-left highlight dot
+    // ── Ball body ──
+    // Radial gradient so light appears to come from the top-left.
+    final bodyRect = Rect.fromCircle(center: center, radius: bodyRadius);
     canvas.drawCircle(
-      center + Offset(-halfSize * 0.35, -halfSize * 0.4),
-      cs * 0.06,
-      Paint()..color = Colors.white.withValues(alpha: 0.35),
+      center,
+      bodyRadius,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.4, -0.4),
+          radius: 0.9,
+          colors: const [
+            Color(0xFF6E6E6E),   // bright spot
+            Color(0xFF2E2E2E),   // mid
+            Color(0xFF121212),   // deep shadow edge
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(bodyRect),
+    );
+
+    // ── Rim outline — same colour family as arrows, always visible ──
+    canvas.drawCircle(
+      center,
+      bodyRadius,
+      Paint()
+        ..color = themeColors.arrowColor.withValues(alpha: 0.85)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = cs * 0.045,
+    );
+
+    // ── Specular highlight (small bright dot, top-left) ──
+    canvas.drawCircle(
+      center + Offset(-bodyRadius * 0.38, -bodyRadius * 0.42),
+      bodyRadius * 0.22,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.55)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+    );
+
+    // ── Secondary soft highlight (adds roundness) ──
+    canvas.drawCircle(
+      center + Offset(-bodyRadius * 0.30, -bodyRadius * 0.35),
+      bodyRadius * 0.42,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.10)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
   }
 

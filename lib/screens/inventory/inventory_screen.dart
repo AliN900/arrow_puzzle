@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../widgets/coin_icon.dart';
 import '../../widgets/pop_dialog.dart';
+import '../../widgets/status_flash.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
@@ -410,11 +411,7 @@ class _BoardsGrid extends ConsumerWidget {
                   } else if (price != null) {
                     _buyBoard(context, ref, board);
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(strings.inventoryReachLevel(colors.unlockLevel)),
-                      ),
-                    );
+                    StatusFlash.fail(context, strings.inventoryReachLevel(colors.unlockLevel));
                   }
                 },
                 child: Container(
@@ -588,12 +585,7 @@ class _ItemsGrid extends ConsumerWidget {
 
     if (coinsRepo.coins < price) {
       final missing = price - coinsRepo.coins;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(strings.inventoryNeedMoreCoins(missing)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      StatusFlash.fail(context, strings.inventoryNeedMoreCoins(missing));
       return;
     }
 
@@ -953,15 +945,7 @@ Future<bool?> _showConfirmDialog(
 
 void _showNotEnough(BuildContext context, int price, int balance) {
   final strings = AppStrings.of(context);
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        strings.inventoryNeedMoreCoins(price - balance),
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      duration: const Duration(seconds: 2),
-    ),
-  );
+  StatusFlash.fail(context, strings.inventoryNeedMoreCoins(price - balance));
 }
 
 class _BoardPatternPainter extends CustomPainter {

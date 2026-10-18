@@ -13,9 +13,9 @@ class PrivacyConsentScreen extends ConsumerWidget {
   const PrivacyConsentScreen({super.key, required this.onAccepted});
 
   static const String _ppUrl =
-      'https://alin900.github.io/arrow-puzzle/privacy.html';
+      'https://ahbdev.dev/arrow-puzzle/privacy.html';
   static const String _termsUrl =
-      'https://alin900.github.io/arrow-puzzle/terms.html';
+      'https://ahbdev.dev/arrow-puzzle/terms.html';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -531,10 +531,10 @@ class AppStringsHi extends AppStrings {
   String get pauseMainMenu => 'मुख्य मेनू';
 
   @override
-  String get itemBombName => 'बम';
+  String get itemBombName => 'बारूद';
 
   @override
-  String get itemBombDesc => 'एक चट्टान नष्ट करें';
+  String get itemBombDesc => 'बोर्ड से एक बारूद हटाएँ';
 
   @override
   String get itemHintName => 'संकेत';
@@ -1709,4 +1709,45 @@ class AppStringsHi extends AppStrings {
 
   @override
   String get settingsSharingSoon => 'जल्द आ रहा है';
+
+  @override
+  String get blitzTimeLeftLabel => 'शेष समय';
+
+  @override
+  String get levelSelectButton => 'स्तर';
+
+  @override
+  String levelDetailsTitle(int level) {
+    return 'स्तर $level';
+  }
+
+  @override
+  String get levelDetailsCompleted => 'पूरा हुआ';
+
+  @override
+  String get levelDetailsNotPlayed => 'अभी तक नहीं खेला';
+
+  @override
+  String get levelDetailsGrid => 'ग्रिड';
+
+  @override
+  String get levelDetailsTimed => 'समयबद्ध';
+
+  @override
+  String get levelDetailsMines => 'बारूद';
+
+  @override
+  String get levelDetailsMoves => 'चालें';
+
+  @override
+  String get levelDetailsStart => 'शुरू करें';
+
+  @override
+  String get zenModeLabel => 'शांत';
+
+  @override
+  String get zenModeTitle => 'ज़ेन मोड';
+
+  @override
+  String get zenModeSubtitle => 'कोई दिल नहीं, कोई टाइमर नहीं। बस पहेलियाँ।';
 }

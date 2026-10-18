@@ -3,7 +3,7 @@ import '../models/arrow.dart';
 import '../models/level.dart';
 
 class LevelSolver {
-  static const int maxStates = 5000;
+  static const int maxStates = 10000;
 
   static List<String>? solve(LevelModel level, [int maxStatesLimit = maxStates]) {
     final gridSize = level.gridSize;
@@ -17,24 +17,11 @@ class LevelSolver {
     final activeOrphans = List<bool>.filled(totalCells, false);
     final exitVisited = Uint32List(totalCells);
 
-    // Rock cells that are still alive (destroyed rocks are removed by their bomb arrow)
+    // Mines currently alive. Slash arrows remove entries from here on
+    // exit; backtracking restores them.
     final rockCells = <int>{};
-    final rocksById = <String, RockModel>{};
     for (final rock in level.rocks) {
       rockCells.add(rock.row * gridSize + rock.col);
-      rocksById[rock.id] = rock;
-    }
-
-    // Precompute target-rock cell per bomb arrow (or -1 if not a bomb)
-    final targetRockCellByArrow = <int, int>{};
-    for (int i = 0; i < arrows.length; i++) {
-      final a = arrows[i];
-      if (a.type == ArrowType.bomb && a.targetRockId != null) {
-        final rock = rocksById[a.targetRockId];
-        if (rock != null) {
-          targetRockCellByArrow[i] = rock.row * gridSize + rock.col;
-        }
-      }
     }
 
     for (int i = 0; i < arrows.length; i++) {
@@ -61,28 +48,39 @@ class LevelSolver {
       dotHash ^= od.key.hashCode;
     }
 
-    final visited = <String>{};
+    // ── CHANGE THIS ──
+    // final visited = <String>{};
+    final visited = <int>{};
+
     final path = <String>[];
     int statesVisited = 0;
     int exitToken = 0;
 
-    void undoGreedy(List<int> greedyList) {
-      for (int k = greedyList.length - 1; k >= 0; k--) {
-        final idx = greedyList[k];
+    // Track what the greedy pass cleared so we can undo it cleanly.
+    final greedyCleared = <int>[];
+    final greedyMines = <List<int>>[];
+
+    void undoGreedy() {
+      for (int k = greedyCleared.length - 1; k >= 0; k--) {
+        final idx = greedyCleared[k];
         path.removeLast();
         for (final pt in arrows[idx].path) {
           board[pt[0] * gridSize + pt[1]] = idx + 1;
         }
         arrowHash ^= arrows[idx].id.hashCode;
         activeArrows[idx] = true;
+        for (final mineCell in greedyMines[k]) {
+          rockCells.add(mineCell);
+        }
       }
+      greedyCleared.clear();
+      greedyMines.clear();
     }
 
     bool dfs(int remainingCount) {
       if (remainingCount == 0) return true;
       if (statesVisited > maxStatesLimit) return false;
 
-      final greedyCleared = <int>[];
       bool progress = true;
       while (progress) {
         progress = false;
@@ -93,7 +91,7 @@ class LevelSolver {
             exitVisited.fillRange(0, exitVisited.length, 0);
             exitToken = 1;
           }
-          final consumed = _simulateExit(
+          final result = _simulateExit(
             i,
             gridSize,
             board,
@@ -103,9 +101,11 @@ class LevelSolver {
             exitVisited,
             exitToken,
             rockCells,
-            targetRockCellByArrow,
           );
-          if (consumed == null) continue;
+          if (result == null) continue;
+
+          final consumed = result.consumed;
+          final minesHit = result.minesHit;
 
           bool consumesRedirector = false;
           for (final idx in consumed) {
@@ -130,8 +130,13 @@ class LevelSolver {
                 dotHash ^= odKey.hashCode;
               }
             }
+            // Slash arrow cleared every mine on its exit path.
+            for (final mineCell in minesHit) {
+              rockCells.remove(mineCell);
+            }
             path.add(id);
             greedyCleared.add(i);
+            greedyMines.add(minesHit);
             progress = true;
           }
         }
@@ -139,9 +144,12 @@ class LevelSolver {
 
       if (path.length == arrows.length) return true;
 
-      final hash = '$arrowHash|$dotHash';
+      // ── CHANGE THIS ──
+      // final hash = '$arrowHash|$dotHash';
+      // Use a combined integer hash instead of a string
+      final hash = (arrowHash * 31) ^ dotHash;
       if (visited.contains(hash)) {
-        undoGreedy(greedyCleared);
+        undoGreedy();
         return false;
       }
       visited.add(hash);
@@ -155,7 +163,7 @@ class LevelSolver {
           exitVisited.fillRange(0, exitVisited.length, 0);
           exitToken = 1;
         }
-        final consumed = _simulateExit(
+        final result = _simulateExit(
           i,
           gridSize,
           board,
@@ -165,9 +173,11 @@ class LevelSolver {
           exitVisited,
           exitToken,
           rockCells,
-          targetRockCellByArrow,
         );
-        if (consumed == null) continue;
+        if (result == null) continue;
+
+        final consumed = result.consumed;
+        final minesHit = result.minesHit;
 
         activeArrows[i] = false;
         final id = arrows[i].id;
@@ -187,11 +197,22 @@ class LevelSolver {
           }
         }
 
+        // Slash arrow clears its mines for this branch.
+        for (final mineCell in minesHit) {
+          rockCells.remove(mineCell);
+        }
+
         path.add(id);
 
         if (dfs(arrows.length - path.length)) return true;
 
         path.removeLast();
+
+        // Restore mines this branch cleared.
+        for (final mineCell in minesHit) {
+          rockCells.add(mineCell);
+        }
+
         for (final idx in deactivated) {
           activeOrphans[idx] = true;
           final odKey = '${idx ~/ gridSize},${idx % gridSize}';
@@ -204,7 +225,7 @@ class LevelSolver {
         activeArrows[i] = true;
       }
 
-      undoGreedy(greedyCleared);
+      undoGreedy();
       return false;
     }
 
@@ -212,7 +233,7 @@ class LevelSolver {
     return null;
   }
 
-  static List<int>? _simulateExit(
+  static ({List<int> consumed, List<int> minesHit})? _simulateExit(
       int arrowIdx,
       int gridSize,
       Uint16List board,
@@ -222,50 +243,50 @@ class LevelSolver {
       Uint32List exitVisited,
       int token,
       Set<int> rockCells,
-      Map<int, int> targetRockCellByArrow,
       ) {
     final arrow = arrows[arrowIdx];
+    final isSlash = arrow.type == ArrowType.slash;
     ArrowDirection currentDir = arrow.direction;
     final head = arrow.path[0];
     var d = currentDir.delta;
     int nr = head[0] + d[0];
     int nc = head[1] + d[1];
     final consumed = <int>[];
-
-    final targetRockCell = targetRockCellByArrow[arrowIdx];
+    final minesHit = <int>[];
 
     while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
       final idx = nr * gridSize + nc;
 
-      // Bomb arrow reaching its target rock -> success
-      if (targetRockCell != null && idx == targetRockCell) {
-        return consumed;
-      }
-
-      // Any other rock blocks the arrow
+      // Mine on the path.
       if (rockCells.contains(idx)) {
-        return null;
-      }
-
-      if (exitVisited[idx] == token) return null;
-      exitVisited[idx] = token;
-
-      if (activeOrphans[idx]) {
-        consumed.add(idx);
-        final typeVal = orphanTypes[idx];
-        if (typeVal == 0) {
-          currentDir = ArrowDirection.up;
-        } else if (typeVal == 1) {
-          currentDir = ArrowDirection.down;
-        } else if (typeVal == 2) {
-          currentDir = ArrowDirection.left;
-        } else if (typeVal == 3) {
-          currentDir = ArrowDirection.right;
+        if (isSlash) {
+          // Slash arrows slice through every mine on the path.
+          minesHit.add(idx);
+        } else {
+          // Normal arrows are blocked.
+          return null;
         }
       } else {
-        final val = board[idx];
-        if (val != 0 && val != arrowIdx + 1) {
-          return null;
+        if (exitVisited[idx] == token) return null;
+        exitVisited[idx] = token;
+
+        if (activeOrphans[idx]) {
+          consumed.add(idx);
+          final typeVal = orphanTypes[idx];
+          if (typeVal == 0) {
+            currentDir = ArrowDirection.up;
+          } else if (typeVal == 1) {
+            currentDir = ArrowDirection.down;
+          } else if (typeVal == 2) {
+            currentDir = ArrowDirection.left;
+          } else if (typeVal == 3) {
+            currentDir = ArrowDirection.right;
+          }
+        } else {
+          final val = board[idx];
+          if (val != 0 && val != arrowIdx + 1) {
+            return null;
+          }
         }
       }
 
@@ -273,6 +294,7 @@ class LevelSolver {
       nr += d[0];
       nc += d[1];
     }
-    return consumed;
+
+    return (consumed: consumed, minesHit: minesHit);
   }
 }

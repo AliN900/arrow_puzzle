@@ -532,10 +532,10 @@ class AppStringsPt extends AppStrings {
   String get pauseMainMenu => 'Menu principal';
 
   @override
-  String get itemBombName => 'Bomba';
+  String get itemBombName => 'Mina';
 
   @override
-  String get itemBombDesc => 'Destrua uma rocha';
+  String get itemBombDesc => 'Remova uma mina do tabuleiro';
 
   @override
   String get itemHintName => 'Dica';
@@ -1710,4 +1710,45 @@ class AppStringsPt extends AppStrings {
 
   @override
   String get settingsSharingSoon => 'Em breve';
+
+  @override
+  String get blitzTimeLeftLabel => 'TEMPO RESTANTE';
+
+  @override
+  String get levelSelectButton => 'Níveis';
+
+  @override
+  String levelDetailsTitle(int level) {
+    return 'Nível $level';
+  }
+
+  @override
+  String get levelDetailsCompleted => 'Concluído';
+
+  @override
+  String get levelDetailsNotPlayed => 'Ainda não jogado';
+
+  @override
+  String get levelDetailsGrid => 'Grade';
+
+  @override
+  String get levelDetailsTimed => 'Cronometrado';
+
+  @override
+  String get levelDetailsMines => 'Minas';
+
+  @override
+  String get levelDetailsMoves => 'Movimentos';
+
+  @override
+  String get levelDetailsStart => 'Começar';
+
+  @override
+  String get zenModeLabel => 'RELAXAR';
+
+  @override
+  String get zenModeTitle => 'Modo Zen';
+
+  @override
+  String get zenModeSubtitle => 'Sem vidas, sem tempo. Só puzzles.';
 }

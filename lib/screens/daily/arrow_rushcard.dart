@@ -4,9 +4,11 @@ import 'package:arrow_puzzle/l10n/app_localizations.dart';
 
 import '../../core/audio_haptic_helper.dart';
 import '../../core/game_mode.dart';
+import '../../core/leader_coins.dart';
 import '../../core/rush_difficulty.dart';
 import '../../data/repositories/progress_repository.dart';
 import '../../main.dart';
+import '../../widgets/attempts_stamp.dart';
 import '../game/game_screen.dart';
 
 String _tierLabel(AppStrings strings, RushDifficulty d) {
@@ -41,9 +43,9 @@ class ArrowRushCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context);
+    final coinsRepo = ref.watch(coinsRepositoryProvider);
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(20),
@@ -52,123 +54,141 @@ class ArrowRushCard extends ConsumerWidget {
           width: 1.5,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          // Header row
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.bolt_rounded,
-                  color: Colors.amber,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header row ──
+                Row(
                   children: [
-                    Text(
-                      strings.arrowRushTitle,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: textPrimary,
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.bolt_rounded,
+                        color: Colors.amber,
+                        size: 26,
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        strings.arrowRushTitle,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ),
+                    // Space for the attempts stamp so the title
+                    // doesn't run under it.
+                    const SizedBox(width: 46),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
+                const SizedBox(height: 14),
 
-          // Tier chips
-          Row(
-            children: [
-              for (int i = 0; i < RushDifficulty.values.length; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
-                Expanded(
-                  child: _TierChip(
-                    difficulty: RushDifficulty.values[i],
-                    label: _tierLabel(strings, RushDifficulty.values[i]),
-                    unlocked: progress
-                        .isRushDifficultyUnlocked(RushDifficulty.values[i]),
-                    selected: selected == RushDifficulty.values[i],
-                    accent: accent,
-                    textPrimary: textPrimary,
-                    textSecondary: textSecondary,
-                    strings: strings,
-                    onTap: () async {
+                // ── Tier chips row ──
+                Row(
+                  children: [
+                    for (int i = 0; i < RushDifficulty.values.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 6),
+                      Expanded(
+                        child: _TierChip(
+                          difficulty: RushDifficulty.values[i],
+                          label: _tierLabel(
+                              strings, RushDifficulty.values[i]),
+                          unlocked: progress.isRushDifficultyUnlocked(
+                              RushDifficulty.values[i]),
+                          selected:
+                          selected == RushDifficulty.values[i],
+                          accent: accent,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          strings: strings,
+                          onTap: () async {
+                            AudioHapticHelper.playClick();
+                            final d = RushDifficulty.values[i];
+                            if (!progress.isRushDifficultyUnlocked(d)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    strings.reachLevelToUnlock(
+                                      d.unlockLevel,
+                                      _tierLabel(strings, d),
+                                    ),
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                              return;
+                            }
+                            await ref
+                                .read(progressRepositoryProvider)
+                                .setRushDifficulty(d);
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // ── Start button ──
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
                       AudioHapticHelper.playClick();
-                      final d = RushDifficulty.values[i];
-                      if (!progress.isRushDifficultyUnlocked(d)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              strings.reachLevelToUnlock(
-                                d.unlockLevel,
-                                _tierLabel(strings, d),
-                              ),
-                            ),
-                            duration: const Duration(seconds: 2),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GameScreen(
+                            level: 1,
+                            gameMode: GameMode.endlessRush,
+                            rushDifficulty: progress.rushDifficulty,
                           ),
-                        );
-                        return;
-                      }
-                      await ref
-                          .read(progressRepositoryProvider)
-                          .setRushDifficulty(d);
+                        ),
+                      );
                     },
+                    icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                    label: Text(
+                      strings.startTier(
+                          _tierLabel(strings, selected)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
                   ),
                 ),
               ],
-            ],
+            ),
           ),
-          const SizedBox(height: 14),
 
-          // Start button — launches with the persisted selection
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                AudioHapticHelper.playClick();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GameScreen(
-                      level: 1,
-                      gameMode: GameMode.endlessRush,
-                      rushDifficulty: progress.rushDifficulty,
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.play_arrow_rounded, size: 22),
-              label: Text(
-                strings.startTier(_tierLabel(strings, selected)),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
+          // ── Attempts stamp (top-end: right in LTR, left in RTL) ──
+          PositionedDirectional(
+            top: 12,
+            end: 12,
+            child: AttemptsStamp(
+              remaining: coinsRepo
+                  .lcAttemptsRemaining(LeaderCoins.modeArrowRush),
             ),
           ),
         ],
@@ -227,7 +247,9 @@ class _TierChip extends StatelessWidget {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: showSelected ? color : color.withValues(alpha: 0.35),
+            color: showSelected
+                ? color
+                : color.withValues(alpha: 0.35),
             width: showSelected ? 2 : 1.2,
           ),
         ),
@@ -264,7 +286,9 @@ class _TierChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
-                color: unlocked ? Colors.transparent : textSecondary,
+                color: unlocked
+                    ? Colors.transparent
+                    : textSecondary,
               ),
             ),
           ],

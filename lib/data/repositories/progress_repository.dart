@@ -41,6 +41,8 @@ class ProgressRepository extends ChangeNotifier {
   bool _privacyAccepted = false;
 
   DateTime? _lastSettingsModified;
+
+
   // ── Leaderboard ──
   bool _leaderboardOptIn = true;
   int _lbWeeklyScore = 0;
@@ -85,6 +87,18 @@ class ProgressRepository extends ChangeNotifier {
   DateTime? get lbWeeklyReachedAt => _lbWeeklyReachedAt;
   DateTime? get lbMonthlyReachedAt => _lbMonthlyReachedAt;
 
+  bool get isLeaderboardUnlocked =>
+      isTrophyUnlocked('leaderboard_legend');
+
+  /// Progress toward the unlock, 0.0–1.0. Returns 1.0 once unlocked.
+  double get leaderboardUnlockProgress {
+    if (isLeaderboardUnlocked) return 1.0;
+    const target = 1000;
+    return (_lbAllTimeScore / target).clamp(0.0, 1.0);
+  }
+
+  int get leaderboardUnlockTarget => 1000;
+
   int get totalStars =>
       _levelResults.values.fold(0, (sum, r) => sum + r.stars);
 
@@ -113,6 +127,46 @@ class ProgressRepository extends ChangeNotifier {
     final repo = ProgressRepository._();
     await repo._init();
     return repo;
+  }
+
+  bool _lbDirty = false;
+  bool get lbDirty => _lbDirty;
+
+  Future<void> addLbPoints(int points) async {
+    if (points <= 0) return;
+    _rolloverLbPeriodsIfNeeded();
+    final now = DateTime.now().toUtc();
+    _lbWeeklyScore      += points;
+    _lbMonthlyScore     += points;
+    _lbAllTimeScore     += points;
+    _lbWeeklyReachedAt   = now;
+    _lbMonthlyReachedAt  = now;
+    _lbDirty = true;
+
+    _checkLcTrophies();
+
+    await _save();
+    notifyListeners();
+  }
+
+  /// Syncs LC-gated trophies against the current all-time LC. Mutates the
+  /// unlocked set; caller is responsible for _save() + notifyListeners().
+  void _checkLcTrophies() {
+    for (final trophy in TrophyConstants.allTrophies) {
+      if (trophy.requiredLc == null) continue;
+      if (_unlockedTrophies.contains(trophy.id)) continue;
+      if (_lbAllTimeScore >= trophy.requiredLc!) {
+        _unlockedTrophies.add(trophy.id);
+        debugPrint('🏆 Unlocked LC trophy: ${trophy.title} '
+            '(${trophy.requiredLc} LC)');
+      }
+    }
+  }
+
+  Future<void> markLbClean() async {
+    if (!_lbDirty) return;
+    _lbDirty = false;
+    await _save();
   }
 
   Future<void> _init() async {
@@ -214,9 +268,20 @@ class ProgressRepository extends ChangeNotifier {
 
     // ── Leaderboard ──
     _leaderboardOptIn = _box.get('leaderboardOptIn', defaultValue: true);
+
+// One-time migration: force opt-in to true for all existing users who
+// still have the old default saved. Runs once per install. After the
+// first launch, the stored value is respected normally.
+    if (_box.get('leaderboardOptInMigrated_v1') != true) {
+      _leaderboardOptIn = true;
+      await _box.put('leaderboardOptIn', true);
+      await _box.put('leaderboardOptInMigrated_v1', true);
+      debugPrint('🏆 LC migration: opted in');
+    }
     _lbWeeklyScore = _box.get('lbWeeklyScore', defaultValue: 0);
     _lbMonthlyScore = _box.get('lbMonthlyScore', defaultValue: 0);
     _lbAllTimeScore = _box.get('lbAllTimeScore', defaultValue: 0);
+    _lbDirty = _box.get('lbDirty', defaultValue: false);
 
     final settingsModStr = _box.get('lastSettingsModified') as String?;
     _lastSettingsModified = settingsModStr != null
@@ -302,6 +367,7 @@ class ProgressRepository extends ChangeNotifier {
 
 
       'leaderboardOptIn': _leaderboardOptIn,
+      'lbDirty': _lbDirty,                                          // ← ADD
       'lbWeeklyScore': _lbWeeklyScore,
       'lbMonthlyScore': _lbMonthlyScore,
       'lbAllTimeScore': _lbAllTimeScore,
@@ -334,12 +400,24 @@ class ProgressRepository extends ChangeNotifier {
   Future<void> _syncTrophiesWithProgress() async {
     bool hasNewUnlock = false;
     for (final trophy in TrophyConstants.allTrophies) {
-      final isEarned = _highestUnlockedLevel > trophy.unlockLevel ||
-          isLevelCompleted(trophy.unlockLevel) ||
-          _currentLevel > trophy.unlockLevel;
-      if (isEarned && !_unlockedTrophies.contains(trophy.id)) {
+      if (_unlockedTrophies.contains(trophy.id)) continue;
+
+      final bool isEarned;
+      if (trophy.requiredLc != null) {
+        isEarned = _lbAllTimeScore >= trophy.requiredLc!;
+      } else {
+        isEarned = _highestUnlockedLevel > trophy.unlockLevel ||
+            isLevelCompleted(trophy.unlockLevel) ||
+            _currentLevel > trophy.unlockLevel;
+      }
+
+      if (isEarned) {
         _unlockedTrophies.add(trophy.id);
         hasNewUnlock = true;
+        if (trophy.requiredLc != null) {
+          debugPrint('🏆 LC migration: unlocked ${trophy.title} '
+              '($_lbAllTimeScore LC)');
+        }
       }
     }
     if (hasNewUnlock) {
@@ -376,7 +454,9 @@ class ProgressRepository extends ChangeNotifier {
 
   Future<void> checkAndUnlockTrophies(int completedLevel) async {
     for (final trophy in TrophyConstants.allTrophies) {
-      if (completedLevel >= trophy.unlockLevel && !_unlockedTrophies.contains(trophy.id)) {
+      if (trophy.requiredLc != null) continue;
+      if (completedLevel >= trophy.unlockLevel &&
+          !_unlockedTrophies.contains(trophy.id)) {
         _unlockedTrophies.add(trophy.id);
         debugPrint('🏆 Unlocked Trophy: ${trophy.title}');
       }
@@ -640,23 +720,6 @@ class ProgressRepository extends ChangeNotifier {
         .subtract(Duration(days: daysSinceMonday));
   }
 
-  /// Call after a first-clear. Rolls periods if needed, adds points to all
-  /// three buckets, and stamps reached-at.
-  Future<void> addLbPoints(int points) async {
-    if (points <= 0) return;
-    _rolloverLbPeriodsIfNeeded();
-
-    final now = DateTime.now().toUtc();
-
-    _lbWeeklyScore += points;
-    _lbMonthlyScore += points;
-    _lbAllTimeScore += points;
-    _lbWeeklyReachedAt = now;
-    _lbMonthlyReachedAt = now;
-
-    await _save();
-    notifyListeners();
-  }
 
   Map<String, dynamic> exportState() {
     return {
@@ -779,7 +842,11 @@ class ProgressRepository extends ChangeNotifier {
     final lb = data['lb'] as Map<String, dynamic>? ?? const {};
 
     final remoteOptIn = lb['optIn'] as bool?;
-    if (remoteOptIn != null && remoteOptIn != _leaderboardOptIn) {
+    final migrationDone =
+        _box.get('leaderboardOptInMigrated_v1') == true;
+    if (remoteOptIn != null &&
+        remoteOptIn != _leaderboardOptIn &&
+        migrationDone) {
       _leaderboardOptIn = remoteOptIn;
       changed = true;
     }
@@ -829,6 +896,15 @@ class ProgressRepository extends ChangeNotifier {
     if (remoteAllTimeScore > _lbAllTimeScore) {
       _lbAllTimeScore = remoteAllTimeScore;
       changed = true;
+    }
+
+    // If, after merging, local is still ahead of the cloud on any bucket,
+// flag the LB dirty so the next sync (or app start) pushes local up.
+    if (_lbWeeklyScore  > remoteWeeklyScore  ||
+        _lbMonthlyScore > remoteMonthlyScore ||
+        _lbAllTimeScore > remoteAllTimeScore) {
+      _lbDirty = true;
+      changed  = true;
     }
 
     if (changed) {

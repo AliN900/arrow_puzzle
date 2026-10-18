@@ -3,6 +3,7 @@ import 'package:hive/hive.dart';
 
 import '../../core/daily_rewards.dart';
 import '../../core/items.dart';
+import '../../core/leader_coins.dart';
 
 class CoinsRepository extends ChangeNotifier {
   late Box _box;
@@ -19,6 +20,10 @@ class CoinsRepository extends ChangeNotifier {
   String? _lastWeekItemType;
   int _lastWeekItemCount = 0;
   DateTime? _lastPopupShownDate;
+
+  // ── LeaderCoin daily attempts ──
+  final Map<String, int> _dailyLcAttempts = {};
+  String? _lastLcAttemptsDay;
 
 // Item inventory
   final Map<String, int> _items = {};
@@ -211,6 +216,14 @@ class CoinsRepository extends ChangeNotifier {
       _lastPopupShownDate = DateTime.tryParse(lastPopupStr);
     }
 
+    _lastLcAttemptsDay = _box.get('lcAttemptsDay') as String?;
+    final lcAttemptsMap =
+    _box.get('lcAttempts', defaultValue: <String, int>{});
+    _dailyLcAttempts.clear();
+    (lcAttemptsMap as Map).forEach((k, v) {
+      _dailyLcAttempts[k.toString()] = (v as num).toInt();
+    });
+
     _items.clear();
     final itemsMap = _box.get('items', defaultValue: <String, int>{});
     (itemsMap as Map).forEach((k, v) {
@@ -232,6 +245,9 @@ class CoinsRepository extends ChangeNotifier {
       'lastWeekItemCount': _lastWeekItemCount,
       'items': _items,
       'lastPopupShownDate': _lastPopupShownDate?.toIso8601String(),
+
+      'lcAttemptsDay': _lastLcAttemptsDay,
+      'lcAttempts': _dailyLcAttempts,
     });
   }
 
@@ -285,6 +301,50 @@ class CoinsRepository extends ChangeNotifier {
       notifyListeners();
     }
     return changed;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+// LeaderCoin attempts
+// ─────────────────────────────────────────────────────────────────
+
+  /// Attempts remaining today for the given LC mode. Range 0-10.
+  int lcAttemptsRemaining(String mode) {
+    _maybeResetLcAttempts();
+    return (_dailyLcAttempts[mode] ?? LeaderCoins.attemptsPerDay)
+        .clamp(0, LeaderCoins.attemptsPerDay);
+  }
+
+  /// True if the player can still earn LC from a new run of [mode] today.
+  bool canEarnLc(String mode) => lcAttemptsRemaining(mode) > 0;
+
+  /// Consume one attempt. Call at run start, before the game begins.
+  Future<void> consumeLcAttempt(String mode) async {
+    _maybeResetLcAttempts();
+    final current = _dailyLcAttempts[mode] ?? LeaderCoins.attemptsPerDay;
+    if (current <= 0) return;
+    _dailyLcAttempts[mode] = current - 1;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> resetLcAttempts() async {
+    final keys = _box.keys.where((k) => k.toString().startsWith('lcAttempts_')).toList();
+    for (final k in keys) {
+      await _box.delete(k);
+    }
+    notifyListeners();
+    debugPrint('🏆 LC attempts reset');
+  }
+
+  void _maybeResetLcAttempts() {
+    final now = DateTime.now().toUtc();
+    final today = '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    if (_lastLcAttemptsDay == today) return;
+    _lastLcAttemptsDay = today;
+    _dailyLcAttempts.clear();
+    _save(); // fire-and-forget, only fires once per day
   }
 
   /// Add [count] of [item] to the player's inventory.

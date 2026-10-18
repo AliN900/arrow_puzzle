@@ -1,7 +1,7 @@
 name: arrow_puzzle
 description: "Arrow Puzzle: Tap Maze Escape — a clean, modern grid-based puzzle game built with Flutter."
 publish_to: 'none'
-version: 1.1.0+3
+version: 1.1.1+9
 
 environment:
   sdk: ^3.12.2

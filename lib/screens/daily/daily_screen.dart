@@ -5,7 +5,10 @@ import 'package:arrow_puzzle/l10n/app_localizations.dart';
 import '../../core/app_colors.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../core/game_mode.dart';
+import '../../core/leader_coins.dart';
 import '../../main.dart';
+import '../../widgets/attempts_stamp.dart';
+import '../../widgets/status_flash.dart';
 import '../game/game_screen.dart';
 import '../profile/profile_screen.dart';
 import 'arrow_rushcard.dart';
@@ -17,6 +20,7 @@ class DailyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context);
     final progress = ref.watch(progressRepositoryProvider);
+    final coinsRepo = ref.watch(coinsRepositoryProvider);
     final bg = AppColors.background(context);
     final card = AppColors.surface(context);
     final textPrimary = AppColors.textPrimary(context);
@@ -142,6 +146,8 @@ class DailyScreen extends ConsumerWidget {
                 icon: Icons.local_fire_department_rounded,
                 color: const Color(0xFF00BCD4),
                 isComingSoon: false,
+                attemptsRemaining: coinsRepo
+                    .lcAttemptsRemaining(LeaderCoins.modeBlitz),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -166,6 +172,8 @@ class DailyScreen extends ConsumerWidget {
                 icon: Icons.hourglass_bottom_rounded,
                 color: const Color(0xFFFF5722),
                 isComingSoon: false,
+                attemptsRemaining: coinsRepo
+                    .lcAttemptsRemaining(LeaderCoins.modeTimeBlitz),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -191,12 +199,7 @@ class DailyScreen extends ConsumerWidget {
                 color: Colors.redAccent,
                 isComingSoon: true,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(strings.mineArrowsComingSoonSnack),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                  StatusFlash.fail(context, strings.mineArrowsComingSoonSnack);
                 },
               ),
             ],
@@ -215,6 +218,7 @@ class DailyScreen extends ConsumerWidget {
     required IconData icon,
     required Color color,
     required bool isComingSoon,
+    int attemptsRemaining = LeaderCoins.attemptsPerDay,
     required VoidCallback onTap,
   }) {
     final card = AppColors.surface(context);
@@ -230,7 +234,6 @@ class DailyScreen extends ConsumerWidget {
       child: Opacity(
         opacity: isComingSoon ? 0.6 : 1.0,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
           decoration: BoxDecoration(
             color: card,
             borderRadius: BorderRadius.circular(20),
@@ -239,75 +242,89 @@ class DailyScreen extends ConsumerWidget {
               width: 1.5,
             ),
           ),
-          child: Row(
+          child: Stack(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: effectiveColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: effectiveColor, size: 26),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Padding(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                child: Row(
                   children: [
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: textPrimary,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: badgeColor.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            badgeText,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: badgeColor,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: effectiveColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(icon, color: effectiveColor, size: 26),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: textSecondary,
-                        height: 1.3,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: textPrimary,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: badgeColor.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  badgeText,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: badgeColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                                fontSize: 12, color: textSecondary, height: 1.3),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    if (isComingSoon) ...[
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.lock_clock_rounded,
+                        color: effectiveColor,
+                        size: 26,
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Icon(
-                isComingSoon
-                    ? Icons.lock_clock_rounded
-                    : Icons.play_arrow_rounded,
-                color: effectiveColor,
-                size: 26,
-              ),
+              if (!isComingSoon)
+                PositionedDirectional(
+                  top: 5,
+                  end: 10,
+                  child: AttemptsStamp(remaining: attemptsRemaining),
+                ),
             ],
           ),
         ),

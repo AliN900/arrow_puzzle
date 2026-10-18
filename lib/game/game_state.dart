@@ -282,18 +282,22 @@ class GameState extends ChangeNotifier {
     for (final k in exitInfo.consumed) {
       _orphanDots.remove(k);
     }
+
+    // Slash arrows clear every mine on their exit path.
+    if (exitInfo.rocksToDestroy.isNotEmpty) {
+      final toRemove = exitInfo.rocksToDestroy.toSet();
+      _rocks.removeWhere((r) => toRemove.contains(r.id));
+    }
+
     notifyListeners();
 
     return TapResult.exited;
   }
 
+  /// No longer used — slash arrows destroy mines inside [tapArrow].
+  @Deprecated('Slash arrows handle mine clearing in tapArrow.')
   void removeRockOnImpact(String arrowId) {
-    final idx = _arrows.indexWhere((a) => a.id == arrowId);
-    if (idx == -1) return;
-    final arrow = _arrows[idx];
-    if (arrow.targetRockId == null) return;
-    _rocks.removeWhere((r) => r.id == arrow.targetRockId);
-    notifyListeners();
+    // Intentionally empty.
   }
 
   TapResult _handleBlocked(int index, ArrowModel arrow, String arrowId) {
@@ -354,10 +358,10 @@ class GameState extends ChangeNotifier {
     int nr = head[0] + d[0];
     int nc = head[1] + d[1];
     final consumed = <String>[];
+    final rocksToDestroy = <String>[];
     final visited = <String>{};
 
-    final isBomb =
-        arrow.type == ArrowType.bomb && arrow.targetRockId != null;
+    final isSlash = arrow.type == ArrowType.slash;
 
     while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
       final key = '$nr,$nc';
@@ -371,53 +375,55 @@ class GameState extends ChangeNotifier {
           break;
         }
       }
-      if (hitRock != null) {
-        if (isBomb && hitRock.id == arrow.targetRockId) {
-          return _ExitInfo(false, consumed, hitRock.id);
-        }
-        return const _ExitInfo(true);
-      }
 
-      if (orphanDots.containsKey(key)) {
-        consumed.add(key);
-        final dotType = orphanDots[key]!;
-        switch (dotType) {
-          case OrphanDotType.up:
-            currentDir = ArrowDirection.up;
-            break;
-          case OrphanDotType.down:
-            currentDir = ArrowDirection.down;
-            break;
-          case OrphanDotType.left:
-            currentDir = ArrowDirection.left;
-            break;
-          case OrphanDotType.right:
-            currentDir = ArrowDirection.right;
-            break;
-          case OrphanDotType.neutral:
-            break;
+      if (hitRock != null) {
+        // Slash arrows pass through mines; normal arrows are blocked.
+        if (isSlash) {
+          rocksToDestroy.add(hitRock.id);
+        } else {
+          return const _ExitInfo(true);
         }
       } else {
-        bool hit = false;
-        for (final other in arrows) {
-          if (other.id == arrow.id) continue;
-          if (other.state == ArrowState.sliding) continue;
-          for (final pt in other.path) {
-            if (pt[0] == nr && pt[1] == nc) {
-              hit = true;
+        if (orphanDots.containsKey(key)) {
+          consumed.add(key);
+          switch (orphanDots[key]!) {
+            case OrphanDotType.up:
+              currentDir = ArrowDirection.up;
               break;
-            }
+            case OrphanDotType.down:
+              currentDir = ArrowDirection.down;
+              break;
+            case OrphanDotType.left:
+              currentDir = ArrowDirection.left;
+              break;
+            case OrphanDotType.right:
+              currentDir = ArrowDirection.right;
+              break;
+            case OrphanDotType.neutral:
+              break;
           }
-          if (hit) break;
+        } else {
+          bool hit = false;
+          for (final other in arrows) {
+            if (other.id == arrow.id) continue;
+            if (other.state == ArrowState.sliding) continue;
+            for (final pt in other.path) {
+              if (pt[0] == nr && pt[1] == nc) {
+                hit = true;
+                break;
+              }
+            }
+            if (hit) break;
+          }
+          if (hit) return const _ExitInfo(true);
         }
-        if (hit) return const _ExitInfo(true);
       }
 
       d = currentDir.delta;
       nr += d[0];
       nc += d[1];
     }
-    return _ExitInfo(false, consumed);
+    return _ExitInfo(false, consumed, rocksToDestroy);
   }
 
   Map<String, MinesweeperCell> minesweeperCells = {};
@@ -732,6 +738,13 @@ enum TapResult { exited, blocked, ignored }
 class _ExitInfo {
   final bool blocked;
   final List<String> consumed;
-  final String? rockToDestroy;
-  const _ExitInfo(this.blocked, [this.consumed = const [], this.rockToDestroy]);
+  /// Mines this arrow will destroy on its way out. Non-empty only for
+  /// slash arrows.
+  final List<String> rocksToDestroy;
+
+  const _ExitInfo(
+      this.blocked, [
+        this.consumed = const [],
+        this.rocksToDestroy = const [],
+      ]);
 }

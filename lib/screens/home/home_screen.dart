@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:arrow_puzzle/l10n/app_localizations.dart';
 
@@ -6,16 +8,17 @@ import '../../core/app_colors.dart';
 import '../../core/app_themes.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../core/board_themes.dart';
-import '../../core/game_mode.dart';
 import '../../core/items.dart';
 import '../../data/models/trophy.dart';
-import '../../data/repositories/leaderboard_repository.dart';
+import '../../dev/test_mine_level.dart';
 import '../../main.dart';
 import '../../widgets/coin_pill.dart';
+import '../../widgets/custom_pop_dialog.dart';
 import '../../widgets/daily_reward_popup.dart';
+import '../../widgets/home_hero_card.dart';
 import '../../widgets/zen_mode.dart';
 import '../game/game_screen.dart';
-import '../leaderboard/leaderboard_screen.dart';
+import '../level_select/level_select_screen.dart';
 import '../profile/profile_screen.dart';
 import '../trophies/trophies_screen.dart';
 
@@ -27,7 +30,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  bool _isNavigating = false;
+  static const _exitChannel = MethodChannel('ahb.dev.arrow_puzzle/exit');
 
   @override
   void initState() {
@@ -66,6 +69,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // Exit flow
+  // ─────────────────────────────────────────────────────────────────
+
+  Future<void> _handleExit() async {
+    AudioHapticHelper.playClick();
+
+    final strings = AppStrings.of(context);
+    final accent = AppColors.accent(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => CustomPopDialog(
+        title: strings.dialogExitTitle,
+        message: strings.dialogExitMessage,
+        icon: Icon(
+          Icons.exit_to_app_rounded,
+          color: accent,
+          size: 34,
+        ),
+        confirmText: strings.buttonExit,
+        onConfirm: () {},
+        onCancel: () {},
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    try {
+      await _exitChannel.invokeMethod('killApp');
+    } on MissingPluginException catch (e) {
+      debugPrint('🔴 [exit] channel missing: $e');
+      if (mounted) await SystemNavigator.pop();
+    } on PlatformException catch (e) {
+      debugPrint('🔴 [exit] platform error: $e');
+      if (mounted) await SystemNavigator.pop();
+    } catch (e) {
+      debugPrint('🔴 [exit] unknown: $e');
+      if (mounted) await SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -74,7 +121,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final auth = ref.watch(authServiceProvider);
 
     final bgColor = AppColors.background(context);
-    final cardColor = AppColors.surface(context);
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
     final accent = AppColors.accent(context);
@@ -143,7 +189,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       AudioHapticHelper.playClick();
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const ProfileScreen()),
                       );
                     },
                     child: Container(
@@ -152,17 +199,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       decoration: BoxDecoration(
                         color: accent,
                         shape: BoxShape.circle,
-                        image: auth.avatarUrl != null && auth.avatarUrl!.isNotEmpty
+                        image: auth.avatarUrl != null &&
+                            auth.avatarUrl!.isNotEmpty
                             ? DecorationImage(
                           image: NetworkImage(auth.avatarUrl!),
                           fit: BoxFit.cover,
                         )
                             : null,
                       ),
-                      child: auth.avatarUrl == null || auth.avatarUrl!.isEmpty
+                      child: auth.avatarUrl == null ||
+                          auth.avatarUrl!.isEmpty
                           ? Center(
                         child: Text(
-                          auth.isGuest ? 'P' : auth.avatarInitial,
+                          auth.isGuest
+                              ? 'P'
+                              : auth.avatarInitial,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -179,7 +230,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          auth.isGuest ? strings.homePlayer : auth.displayName,
+                          auth.isGuest
+                              ? strings.homePlayer
+                              : auth.displayName,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -188,7 +241,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          strings.homeLevelStars(currentLevel, starsEarned),
+                          strings.homeLevelStars(
+                              currentLevel, starsEarned),
                           style: TextStyle(
                             fontSize: 13,
                             color: textSecondary,
@@ -203,92 +257,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
               const SizedBox(height: 24),
 
-              // --- Continue Level Card ---
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.cardShadow(context),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+              // --- Continue card → opens Level Select ---
+              HomeHeroCard(
+                label: strings.homeContinueLabel,
+                title: strings.homeLevelNumber(currentLevel),
+                icon: Icons.play_arrow_rounded,
+                iconColor: accent,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LevelSelectScreen(),
                     ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      strings.homeContinueLabel,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: textSecondary,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      strings.homeLevelNumber(currentLevel),
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isNavigating
-                            ? null
-                            : () async {
-                          AudioHapticHelper.playClick();
-                          if (!mounted) return;
-                          setState(() => _isNavigating = true);
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => GameScreen(
-                                level: currentLevel,
-                                gameMode: GameMode.classic,
-                              ),
-                            ),
-                          );
-                          if (mounted) {
-                            setState(() => _isNavigating = false);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accent,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.play_arrow_rounded, size: 28),
-                            const SizedBox(width: 8),
-                            Text(
-                              strings.homeContinue,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
 
               const SizedBox(height: 16),
@@ -296,6 +278,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const ZenModeCard(),
 
               const SizedBox(height: 16),
+
+              if (kDebugMode) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _debugMineButton(context, 250)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _debugMineButton(context, 400)),
+                  ],
+                ),
+              ],
 
               // --- 2x2 Grid Section ---
               Row(
@@ -318,33 +311,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Consumer(
-                      builder: (context, ref, _) {
-                        final ranksAsync = ref.watch(myRanksProvider);
-                        final rankText = ranksAsync.maybeWhen(
-                          data: (r) {
-                            final w = r.weekly == null ? '—' : 'W ${r.weekly}';
-                            final m = r.monthly == null ? '—' : 'M ${r.monthly}';
-                            final a = r.allTime == null ? '—' : 'A ${r.allTime}';
-                            return '$w   $m   $a';
-                          },
-                          orElse: () => strings.homeComingSoon,
-                        );
-                        return _buildGridCard(
-                          context: context,
-                          title: strings.homeLeaderboard,
-                          subtitle: rankText,
-                          icon: Icons.leaderboard_rounded,
-                          iconColor: coinYellow,
-                          badgeColor: trophyRed,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
-                            );
-                          },
-                        );
-                      },
+                    child: _buildGridCard(
+                      context: context,
+                      title: strings.homeLeaderboard,
+                      subtitle: progress.isLeaderboardUnlocked
+                          ? '${_formatLc(progress.lbAllTimeScore)} LC'
+                          : '${_formatLc(progress.lbAllTimeScore)} / '
+                          '${_formatLc(progress.leaderboardUnlockTarget)} LC',
+                      icon: progress.isLeaderboardUnlocked
+                          ? Icons.leaderboard_rounded
+                          : Icons.lock_rounded,
+                      iconColor: coinYellow,
+                      badgeColor: trophyRed,
+                      progress: progress.isLeaderboardUnlocked
+                          ? null
+                          : progress.leaderboardUnlockProgress,
+                      onTap: () {},
                     ),
                   ),
                 ],
@@ -370,8 +352,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: _buildGridCard(
                       context: context,
                       title: strings.homeTrophies,
-                      subtitle:
-                      strings.homeTrophiesCount(unlockedTrophies, totalTrophies),
+                      subtitle: strings.homeTrophiesCount(
+                          unlockedTrophies, totalTrophies),
                       icon: Icons.emoji_events_rounded,
                       iconColor: trophyRed,
                       badgeColor: trophyRed,
@@ -387,9 +369,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ],
               ),
+
+              const SizedBox(height: 24),
+
+              // ── Exit button ──
+              _buildExitButton(context, strings),
+
               const SizedBox(height: 30),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExitButton(BuildContext context, AppStrings strings) {
+    const redTop = Color(0xFFE53935);
+    const redBottom = Color(0xFFB71C1C);
+
+    return GestureDetector(
+      onTap: _handleExit,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [redTop, redBottom],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: redTop.withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.power_settings_new_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              strings.buttonExit,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -404,6 +441,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required Color badgeColor,
     required VoidCallback onTap,
     bool hasBadge = false,
+    double? progress,
   }) {
     final cardColor = AppColors.surface(context);
     final textPrimary = AppColors.textPrimary(context);
@@ -414,7 +452,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         AudioHapticHelper.playClick();
         onTap();
       },
+      behavior: HitTestBehavior.opaque,
       child: Container(
+        // ── Fixed height so all four tiles are identical ──
+        height: 132,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: cardColor,
@@ -430,6 +471,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Icon row ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -445,21 +487,99 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+
+            // Pushes text to the bottom edge — guarantees identical
+            // text baselines across all four tiles.
+            const Spacer(),
+
+            // ── Title ──
             Text(
               title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: textPrimary,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
+
+            // ── Optional progress bar ──
+            if (progress != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: progress.clamp(0.0, 1.0),
+                  minHeight: 4,
+                  backgroundColor: iconColor.withValues(alpha: 0.15),
+                  valueColor: AlwaysStoppedAnimation(iconColor),
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
+
+            // ── Subtitle ──
             Text(
               subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 color: textSecondary,
+                height: 1.3,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Thousands separator for LC values (240 → "240", 1234 → "1,234").
+  String _formatLc(int n) {
+    final s = n.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
+
+
+  Widget _debugMineButton(BuildContext context, int levelNumber) {
+    return GestureDetector(
+      onTap: () {
+        AudioHapticHelper.playClick();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GameScreen(
+              level: levelNumber,
+              prebuiltLevel: TestMineLevel.create(levelNumber: levelNumber),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE53935),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.science_rounded,
+                color: Colors.white, size: 14),
+            const SizedBox(width: 6),
+            Text(
+              'TEST L$levelNumber',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ],
