@@ -18,6 +18,7 @@ import '../../core/game_mode.dart';
 import '../../core/items.dart';
 import '../../core/leader_coins.dart';
 import '../../core/rush_difficulty.dart';
+import '../../data/level_generator/solver.dart';
 import '../../data/models/arrow.dart';
 import '../../data/models/level.dart';
 import '../../data/models/level_result.dart';
@@ -1770,6 +1771,53 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
+  Future<void> _debugSolveLevel() async {
+    if (!mounted || _showingComplete || _showingGameOver) return;
+
+    final gs = _gameState;
+    if (gs == null) return;
+
+    AudioHapticHelper.playClick();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Calculating solution...')),
+    );
+
+    // Run the solver on the current board
+    final solution = LevelSolver.solve(gs.level, 200000);
+
+    if (solution == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFFF5252),
+          content: Text('❌ UNSOLVABLE! The level is deadlocked.'),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    // Visually clear the arrows one by one
+    for (final arrowId in solution) {
+      if (!mounted) return;
+
+      final arrowIndex = gs.arrows.indexWhere((a) => a.id == arrowId);
+      if (arrowIndex == -1) continue;
+
+      // Remove the arrow from the game state (GridComponent will animate it out)
+      gs.arrows.removeAt(arrowIndex);
+      gs.refresh();
+
+      // Small delay so you can see them disappear
+      await Future.delayed(const Duration(milliseconds: 30));
+    }
+
+    // Trigger the win condition
+    _onLevelComplete();
+  }
+
 
   void _debugWinLevel() {
     if (!mounted) return;
@@ -1969,11 +2017,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
     // Progress from 0.0 (level 1) to 1.0 (level 500+).
     final progress = (levelNum / 500.0).clamp(0.0, 1.0);
 
-    // Base buffer: 18s at low levels → 8s at high levels.
-    final baseSeconds = 18.0 - progress * 10.0;
+    // ── THE FIX ──
+    // Base buffer: 12s at low levels → 6s at high levels (was 18→8).
+    final baseSeconds = 12.0 - progress * 6.0;
 
-    // Per-arrow budget: 3.5s at low levels → 2.0s at high levels.
-    final perArrow = 3.5 - progress * 1.5;
+    // Per-arrow budget: 2.2s at low levels → 1.3s at high levels (was 3.5→2.0).
+    final perArrow = 2.2 - progress * 0.9;
 
     return (baseSeconds + perArrow * totalArrows).round();
   }
@@ -2303,8 +2352,56 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               ),
                             ),
 
-                          // ── DEBUG: WIN button (bottom-right) ──
-                          if (kDebugMode)
+                          // ── DEBUG: SOLVE & WIN buttons (bottom-right) ──
+                          if (kDebugMode) ...[
+                            // NEW: SOLVE Button (Auto-clears using LevelSolver)
+                            PositionedDirectional(
+                              end: 12,
+                              bottom: 52, // Placed above the WIN button
+                              child: GestureDetector(
+                                onTap: _debugSolveLevel,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF00C853) // Green
+                                        .withValues(alpha: 0.85),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                        color: Colors.white, width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.25),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle_outline_rounded,
+                                          color: Colors.white, size: 14),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        'SOLVE',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Existing WIN Button
                             PositionedDirectional(
                               end: 12,
                               bottom: 12,
@@ -2350,6 +2447,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                 ),
                               ),
                             ),
+                          ],
 
                           // ── Leaving arrow counter (top-left) ──
                           if (_gameState?.hasActiveLeavingArrow == true)

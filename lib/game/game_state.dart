@@ -550,8 +550,8 @@ class GameState extends ChangeNotifier {
   /// theoretical minimum. 1 for early levels, 2 for later ones.
   int _bufferForDifficulty() {
     final lvl = _currentLevel.levelNumber;
-    if (lvl <= 100) return 1;
-    return 2;
+    if (lvl <= 100) return 2; // Early levels get 2 forgiving extra taps
+    return 2;                 // High levels stay strict at exactly 2 extra taps
   }
 
   /// How many *other* arrows need to clear before [targetArrowId] becomes
@@ -631,7 +631,8 @@ class GameState extends ChangeNotifier {
     allCandidates.shuffle();
 
     final buffer = _bufferForDifficulty();
-    const hardCap = 20;
+    // ── THE FIX: Lower the hardCap so the limit is never crazy high ──
+    const hardCap = 15; // Was 20. Now max required is 13 (13 + 2 = 15).
 
     // A candidate is only fair if its required clears fit within the limit.
     //   limit = required + buffer

@@ -63,24 +63,24 @@ class LevelGenerator {
   }) {
     final baseSeed = seed ?? (levelNumber * 103 + 51 + (complexPaths ? 99991 : 0));
 
+    int? veryLongMinOv;
+    int? longMinOv;
+    int? veryLongMaxOv;
+
+    if (avgLengthOverride != null) {
+      veryLongMinOv = avgLengthOverride + 1;
+      longMinOv = avgLengthOverride;
+      veryLongMaxOv = 25;
+    }
+
     for (int attempt = 0; attempt < 20; attempt++) {
-      final actualSeed = baseSeed + (attempt * 1337); // Shift seed on retry
+      final actualSeed = baseSeed + (attempt * 1337);
       final rng = Random(actualSeed);
 
       const type = LevelType.normal;
       var params = _paramsFor(
         levelNumber, type, gridSize, mask, complexPaths: complexPaths,
       );
-
-      int? veryLongMinOv;
-      int? longMinOv;
-      int? veryLongMaxOv;
-
-      if (avgLengthOverride != null) {
-        veryLongMinOv = avgLengthOverride + 1;
-        longMinOv = avgLengthOverride;
-        veryLongMaxOv = 25;
-      }
 
       final level = _generateReverse(
         levelNumber: levelNumber,
@@ -96,32 +96,39 @@ class LevelGenerator {
         veryLongMaxOv: veryLongMaxOv,
       );
 
-      // ── THE FIX: Verify the ENTIRE level before returning it ──
-      if (LevelSolver.solve(level, 80000) != null) {
+      // ── THE FIX: Use LevelSolver with a massive limit ──
+      if (LevelSolver.solve(level, 200000) != null) {
         debugPrint('✅ Solvable level $levelNumber generated on attempt $attempt');
         return level;
       }
 
-      debugPrint('❌ Attempt $attempt failed to generate solvable level $levelNumber. Retrying...');
+      debugPrint('❌ Attempt $attempt failed (unclearable). Retrying...');
     }
 
     debugPrint('⚠️ FATAL: Could not generate solvable level $levelNumber after 20 attempts.');
-    // Fallback: Return a very simple 1-arrow level so the game doesn't crash
-    final mid = gridSize ~/ 2;
-    return LevelModel(
+
+    // Fallback: Return the last generated level (without orphans) to prevent crashing
+    final fallbackLevel = _generateReverse(
       levelNumber: levelNumber,
       gridSize: gridSize,
-      arrows: [
-        ArrowModel(
-          id: 'fallback_0',
-          row: mid,
-          col: mid,
-          direction: ArrowDirection.right,
-          path: [[mid, mid], [mid, max(0, mid - 1)]],
-        )
-      ],
-      maskShape: maskShape,
       mask: mask,
+      params: _paramsFor(levelNumber, LevelType.normal, gridSize, mask),
+      type: LevelType.normal,
+      rng: Random(baseSeed),
+      maskShape: maskShape,
+      veryLongMinOv: veryLongMinOv,
+      longMinOv: longMinOv,
+      veryLongMaxOv: veryLongMaxOv,
+    );
+
+    return LevelModel(
+      levelNumber: fallbackLevel.levelNumber,
+      gridSize: fallbackLevel.gridSize,
+      arrows: fallbackLevel.arrows,
+      rocks: fallbackLevel.rocks,
+      maskShape: fallbackLevel.maskShape,
+      mask: fallbackLevel.mask,
+      orphanDots: const [],
     );
   }
 
@@ -354,10 +361,10 @@ class LevelGenerator {
           exitDir: cand.dir,
           maskPacked: maskPacked,
           occupiedPacked: occupiedPacked,
-          targetLen: 3,
+          targetLen: 2 + rng.nextInt(4), // Random length 2-5
           rng: rng,
           gridSize: gridSize,
-          tangleFactor: 0.0,
+          tangleFactor: 0.85, // Force it to snake into gaps
           complexPaths: complexPaths,
         );
 
@@ -1561,14 +1568,12 @@ class LevelGenerator {
         final r = int.parse(parts[0]), c = int.parse(parts[1]);
         final ptPacked = r * 1000 + c;
 
-        // Find ANY arrow whose tail is adjacent to this orphan cell
         for (int i = 0; i < arrows.length; i++) {
           final arrow = arrows[i];
           final tail = arrow.path.last;
 
+          // ONLY extend the tail. Safe and prevents U-turns.
           if ((tail[0] - r).abs() + (tail[1] - c).abs() == 1) {
-
-            // Just attach it, no matter what.
             final newPath = List<List<int>>.from(arrow.path)..add([r, c]);
             arrows[i] = arrow.copyWith(path: newPath);
             occupied.add(cellKey);

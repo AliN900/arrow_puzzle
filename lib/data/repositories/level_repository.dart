@@ -379,12 +379,6 @@ class LevelRepository {
     );
   }
 
-  /// Arrow length logic: starts at 5 (Level 20) -> drops to 3 (Level 200+)
-  static int _artAvgLengthForLevel(int levelNumber) {
-    final t = ((levelNumber - 20) / 180).clamp(0.0, 1.0);
-    return (5 - (t * 2)).round().clamp(3, 5);
-  }
-
   /// Nearest-neighbour scale of a mask to fit a [dstSize]×[dstSize] grid,
   /// preserving aspect ratio and centering the result.
   static Set<String> _scaleMask(
