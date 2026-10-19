@@ -71,3 +71,5 @@ android/app/google-services.json
 .env.*
 lib/core/secrets.dart
 lib/core/api_keys.dart
+# Store Assets
+/store_assets/
