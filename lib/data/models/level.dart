@@ -60,6 +60,9 @@ class RockModel {
 
 enum MaskShape {
   square,
+  rectangleHorizontal,
+  rectangleVertical,
+  pyramid,
   circle,
   heart,
   star,
@@ -83,7 +86,7 @@ enum MaskShape {
 }
 
 class LevelModel {
-  static const int currentVersion = 6;
+  static const int currentVersion = 7;
 
   final int levelNumber;
   final int gridSize;

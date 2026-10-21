@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:arrow_puzzle/screens/game/widgets/game_dialog_button.dart';
 import 'package:arrow_puzzle/screens/game/widgets/leaving_arrow_counter.dart';
 import 'package:arrow_puzzle/screens/game/widgets/telegraph_overlay.dart';
@@ -17,12 +18,16 @@ import '../../core/audio_haptic_helper.dart';
 import '../../core/game_mode.dart';
 import '../../core/items.dart';
 import '../../core/leader_coins.dart';
+import '../../core/music_player.dart';
 import '../../core/rush_difficulty.dart';
+import '../../data/level_generator/level_generator.dart';
+import '../../data/level_generator/mask_generator.dart';
 import '../../data/level_generator/solver.dart';
 import '../../data/models/arrow.dart';
 import '../../data/models/level.dart';
 import '../../data/models/level_result.dart';
 import '../../data/repositories/leaderboard_repository.dart';
+import '../../data/repositories/level_repository.dart';
 import '../../data/repositories/progress_repository.dart';
 import '../../game/arrow_puzzle_game.dart';
 import '../../game/game_state.dart';
@@ -76,6 +81,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int? _loadedLevelNum;
   bool _isLoadingLevel = false;
   bool _isPaused = false;
+  Size _viewportSize = Size.zero;
 
   Timer? _levelTimer;
   int _timeRemaining = 0;
@@ -89,6 +95,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int _timeBlitzScore = 0;
   bool _timeBlitzStarted = false;
   int _lastTimeBlitzArrowCount = -1;
+  int _missesThisLevel = 0;
 
 // ── Timer pulse animation state (up to 3 visible simultaneously) ──
   final List<_TimerPulse> _timerPulses = [];
@@ -102,6 +109,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   DateTime? _runStartTime;
   int _runFailedTaps = 0;
   int _runTotalItemsUsed = 0;
+  bool _isInteracting = false;
 
   // ── Blitz mode state ──
   int _blitzStage = 0;              // 0-indexed
@@ -213,17 +221,28 @@ class _GameScreenState extends ConsumerState<GameScreen>
   static int _blitzStageCountForLevel(int playerLevel) =>
       ((playerLevel ~/ 100 + 1) * 5).clamp(5, 40);
 
-  /// Campaign level played on a given stage. Climbs linearly from 1 up to
-  /// the player's current level across the whole run.
-  static int _blitzLevelForStage({
-    required int stageIndex,
-    required int stageCount,
-    required int playerLevel,
-  }) {
-    if (stageIndex <= 0) return 1;
-    final denom = stageCount > 1 ? stageCount - 1 : 1;
-    return (1 + (playerLevel - 1) * stageIndex / denom).round();
+
+  /// Which geometric shape to use for a given Blitz stage.
+  ///
+  /// Rotates through 8 shapes so every stage feels a bit different while
+  /// staying easy to read at a glance. The run seed shifts the phase, so
+  /// two different runs start on different shapes — keeps the mode fresh.
+  static MaskShape _blitzShapeForStage(int stage, int runSeed) {
+    // First 3 stages always square — teaches the mode on a known board.
+    if (stage < 3) return MaskShape.square;
+    // Then rotate through the interesting shapes.
+    const shapes = <MaskShape>[
+      MaskShape.pyramid,
+      MaskShape.rectangleHorizontal,
+      MaskShape.diamond,
+      MaskShape.rectangleVertical,
+      MaskShape.hexagon,
+      MaskShape.circle,
+      MaskShape.star,
+    ];
+    return shapes[(stage - 3 + runSeed.abs()) % shapes.length];
   }
+
 
   /// Time limit for a stage. Ramps from 35s down to 18s across the run —
   /// gentler than a linear 30→9, and the floor is 18s so late stages are
@@ -258,15 +277,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
   }
 
   /// Time Blitz: scales faster since it's the survival mode.
-  ///   Stage 0-4  → 0
-  ///   Stage 5-9  → 1
-  ///   Stage 10-14 → 2
-  ///   Stage 15-19 → 3
-  ///   Stage 20-24 → 4
-  ///   Stage 25+   → 5 (cap)
-  int _leavingArrowsForStage(int stage) {
-    if (stage < 5) return 0;
-    return (stage ~/ 5).clamp(1, 5);
+  int _leavingArrowsForStage(int stage, int playerLevel) {
+    // Player Level 20 -> 1 arrow. Level 400+ -> 10 arrows.
+    final levelCount = ((playerLevel - 20) / 38.0).clamp(0, 10).round();
+    // Every 2 stages adds an extra arrow.
+    final stageCount = (stage ~/ 2).clamp(0, 10);
+
+    return (levelCount + stageCount).clamp(1, 20);
   }
 
 
@@ -316,6 +333,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   @override
   void initState() {
     super.initState();
+    _transformationController.addListener(_onTransformChanged);
     WidgetsBinding.instance.addObserver(this);
     if (widget.gameMode == GameMode.blitz ||
         widget.gameMode == GameMode.timeBlitz) {
@@ -338,6 +356,52 @@ class _GameScreenState extends ConsumerState<GameScreen>
   }
 
 
+  void _onTransformChanged() {
+    if (_isInteracting) return;
+    if (_fitAnimController.isAnimating) return;
+
+    _clampBoardPosition();
+  }
+
+  void _clampBoardPosition() {
+    if (_viewportSize == Size.zero) return;
+    if (_fitAnimController.isAnimating) return;
+    if (_isInteracting) return;
+
+    final matrix = _transformationController.value;
+    final scale = matrix.getMaxScaleOnAxis();
+    final contentW = _contentSize * scale;
+    final contentH = _contentSize * scale;
+
+    final tx = matrix.getTranslation().x;
+    final ty = matrix.getTranslation().y;
+
+    // ── LENIENT BOUNDS ──
+    // Only require 30% overlap between board and viewport.
+    // The board can be panned up to 70% off-screen before it snaps back.
+    const double overlapRatio = 0.5;
+
+    final double minOverlapX = overlapRatio * math.min(contentW, _viewportSize.width);
+    final double minOverlapY = overlapRatio * math.min(contentH, _viewportSize.height);
+
+    // Board's right edge must be at least minOverlapX from screen's left (0)
+    // Board's left edge must be at most viewportWidth - minOverlapX
+    final double minTx = minOverlapX - contentW;
+    final double maxTx = _viewportSize.width - minOverlapX;
+
+    final double minTy = minOverlapY - contentH;
+    final double maxTy = _viewportSize.height - minOverlapY;
+
+    final double clampedTx = tx.clamp(minTx, maxTx);
+    final double clampedTy = ty.clamp(minTy, maxTy);
+
+    if (clampedTx != tx || clampedTy != ty) {
+      _transformationController.value = matrix.clone()
+        ..setTranslationRaw(clampedTx, clampedTy, 0.0);
+    }
+  }
+
+
 
   Future<void> _loadLevelAsync(int levelNum) async {
     if (widget.prebuiltLevel != null) {
@@ -346,32 +410,65 @@ class _GameScreenState extends ConsumerState<GameScreen>
       if (mounted) setState(() => _isLoadingLevel = false);
       return;
     }
-    // ── Blitz ──
+
+
+
+    // ── Blitz & Time Blitz ──
     if (widget.gameMode == GameMode.blitz ||
         widget.gameMode == GameMode.timeBlitz) {
       final progress = ref.read(progressRepositoryProvider);
       final playerLevel = progress.currentLevel;
+      final stageIndex = _blitzStage;
+      _blitzStageCount = _blitzStageCountForLevel(playerLevel);
 
-      final stageCount = _blitzStageCountForLevel(playerLevel);
-      // Blitz caps at final stage; Time Blitz is endless.
-      final stageIndex = widget.gameMode == GameMode.blitz
-          ? _blitzStage.clamp(0, stageCount - 1)
-          : _blitzStage;
-      final targetLevel = _blitzLevelForStage(
-        stageIndex: stageIndex,
-        stageCount: stageCount,
-        playerLevel: playerLevel,
-      );
+      // 1. DYNAMIC STAGE MULTIPLIER (5 to 22)
+      final double t = ((playerLevel - 50) / 350.0).clamp(0.0, 1.0);
+      final int stageMultiplier = (5 + (t * 17)).round();
 
-      _blitzStageCount = stageCount;
+      // 2. CALCULATE TARGET LEVEL (Used for difficulty generation)
+      final targetLevel = (playerLevel + (stageIndex * stageMultiplier)).clamp(1, 800);
 
-      final levelRepo = ref.read(levelRepositoryProvider);
+      // 3. DYNAMIC BOARD SIZE (Scales smoothly from 14x14 up to 24x24)
+      final double levelScale = ((playerLevel - 20) / 380.0).clamp(0.0, 1.0);
+      final int baseSize = (14 + (levelScale * 10)).round();
+      final gridSize = (baseSize + (stageIndex * 0.5)).round();
 
-      _level = await levelRepo.getBlitzLevelAsync(
-        targetLevel,
-        seed: _blitzRunSeed + _blitzStage * 997,
-      );
+      final shape = _blitzShapeForStage(stageIndex, _blitzRunSeed);
+      final stageSeed = _blitzRunSeed + stageIndex * 997;
+
+      LevelModel? generated;
+      try {
+        generated = await compute(generateBlitzLevelIsolate, {
+          'levelNumber': targetLevel, // <── Pass target difficulty
+          'gridSize': gridSize,
+          'shapeName': shape.name,
+          'seed': stageSeed,
+        });
+      } catch (e) {
+        debugPrint('❌ Blitz isolate failed: $e');
+      }
       if (!mounted) return;
+
+      if (generated == null || generated.gridSize != gridSize) {
+        debugPrint('⚠️ Blitz fell back to local square generation');
+        _level = LevelGenerator.generateFromMask(
+          levelNumber: targetLevel, // <── Pass target difficulty
+          mask: MaskGenerator.shapeByName(
+            'square',
+            gridSize,
+            Random(stageSeed),
+          ),
+          gridSize: gridSize,
+          maskShape: MaskShape.square,
+          seed: stageSeed,
+        );
+      } else {
+        _level = generated;
+      }
+
+      // ── THE FIX: OVERRIDE THE DISPLAY NUMBER ──
+      // The board is generated with the high difficulty, but we display the stage number.
+      _level = _level.copyWith(levelNumber: stageIndex + 1);
 
       _initGame();
       if (mounted) setState(() => _isLoadingLevel = false);
@@ -749,6 +846,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final levelMaxLives = progress.getMaxLivesForLevel(effectiveLevel);
     _lives = isLifeFree ? 999 : levelMaxLives;
 
+    // ── THE FIX: Cap arrow speed in Zen mode ──
+    // Zen mode should be relaxing. Max out at "Normal" (1) regardless of settings.
+    final int effectiveArrowSpeed = widget.gameMode == GameMode.zen
+        ? math.min(progress.arrowSpeed, 1)
+        : progress.arrowSpeed;
 
     if (widget.gameMode == GameMode.blitz && _blitzStage == 0) {
       _blitzRunStartHearts = _lives;
@@ -783,9 +885,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
 
 
-    _rocksBeforeBomb = 0;
-    _gameState?.removeListener(_onGameStateChanged);
-
     _gameState = GameState(
       level: _level,
       initialLives: _lives,
@@ -793,18 +892,18 @@ class _GameScreenState extends ConsumerState<GameScreen>
       heartRemover: progress.heartRemover,
       boardTheme: progress.selectedBoard,
       assistMode: progress.assistMode,
-      arrowSpeed: progress.arrowSpeed,
-        rushSpeedMultiplier: widget.gameMode == GameMode.endlessRush
-            ? _rushSpeedMultiplierForLevel(
-          _kDebugRushLevel > 0
-              ? _kDebugRushLevel
-              : progress.currentLevel,
-          widget.rushDifficulty,
-        )
-            : 1.0,
+      // ── Use the capped speed here ──
+      arrowSpeed: effectiveArrowSpeed,
+      rushSpeedMultiplier: widget.gameMode == GameMode.endlessRush
+          ? _rushSpeedMultiplierForLevel(
+        _kDebugRushLevel > 0
+            ? _kDebugRushLevel
+            : progress.currentLevel,
+        widget.rushDifficulty,
+      )
+          : 1.0,
       onLevelComplete: _onLevelComplete,
       onGameOver: _onGameOver,
-      // Time Blitz still wants the callback — blocked taps cost time.
       onLifeLost: (isLifeFree && widget.gameMode != GameMode.timeBlitz)
           ? () {}
           : _onLifeLost,
@@ -821,7 +920,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _gameState!.seedLeavingArrows(count: count);
       }
     } else if (widget.gameMode == GameMode.timeBlitz) {
-      final count = _leavingArrowsForStage(_blitzStage);
+      // ── Passes playerLevel so it scales to 20 arrows ──
+      final count = _leavingArrowsForStage(_blitzStage, progress.currentLevel);
       if (count > 0) {
         _gameState!.seedLeavingArrows(count: count);
       }
@@ -836,6 +936,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
       onLifeLost: isLifeFree ? () {} : _onLifeLost,
     );
 
+    // ── Switch Music based on GameMode ──
+    if (widget.gameMode == GameMode.endlessRush ||
+        widget.gameMode == GameMode.blitz ||
+        widget.gameMode == GameMode.timeBlitz) {
+      MusicPlayer.instance.play(MusicPlayer.trackRush);
+    } else {
+      MusicPlayer.instance.play(MusicPlayer.trackClassic);
+    }
+
     _resetTimerForLevel();
 
     // Brief heads-up when a timed Classic level starts.
@@ -844,7 +953,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('⏱ TIMED LEVEL · ${_totalTime}s'),
+            content: Text(AppStrings.of(context).gameTimedLevel(_totalTime.toString())),
             duration: const Duration(seconds: 2),
             backgroundColor: Colors.orangeAccent.shade700,
           ),
@@ -864,6 +973,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _startLevelTimer();
     }
 
+
+    // ── ADD THIS ──
+    // Reset the Time Blitz miss counter on every new level
+    if (widget.gameMode == GameMode.timeBlitz) {
+      _missesThisLevel = 0;
+    }
+
     // New game ⇒ new board ⇒ reset zoom fit next frame.
     _lastFitKey = null;
     _lastSeenArrowCount = -1;
@@ -875,6 +991,42 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _startEndlessRush();
     }
   }
+
+
+  void _centerOnLeavingArrow() {
+    final gs = _gameState;
+    if (gs == null || gs.activeLeavingArrowId == null) return;
+
+    // Safely find the arrow
+    final idx = gs.arrows.indexWhere((a) => a.id == gs.activeLeavingArrowId);
+    if (idx == -1) return;
+    final arrow = gs.arrows[idx];
+
+    // Get the head of the leaving arrow
+    final head = arrow.path[0];
+    final cs = _cellPx;
+    final px = (head[1] + 0.5) * cs;
+    final py = (head[0] + 0.5) * cs;
+
+    // ── FIX: Keep the CURRENT zoom level ──
+    final matrix = _transformationController.value;
+    final scale = matrix.getMaxScaleOnAxis(); // Reads current zoom
+
+    // Calculate the translation required to center that point on screen
+    final targetTx = _viewportSize.width / 2 - px * scale;
+    final targetTy = _viewportSize.height / 2 - py * scale;
+
+    final target = Matrix4.identity()
+      ..translateByDouble(targetTx, targetTy, 0.0, 1.0)
+      ..scaleByDouble(scale, scale, scale, 1.0);
+
+    // Animate to the target
+    _fitAnimController.stop();
+    _fromFitMatrix = _transformationController.value;
+    _toFitMatrix = target;
+    _fitAnimController.forward(from: 0);
+  }
+
 
   void _onGameStateChanged() {
     if (!mounted) return;
@@ -1098,10 +1250,28 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _runFailedTaps++;
 
     if (widget.gameMode == GameMode.timeBlitz) {
-      final penalty = _timePenaltyForStage();
-      final newTime = (_timeRemaining - penalty).clamp(0, 999);
+      _missesThisLevel++; // Increment the miss counter
+
+      final progress = ref.read(progressRepositoryProvider);
+      final playerLevel = progress.currentLevel;
+
+      // 1. Base penalty from the stage (e.g., 3s to 20s)
+      final basePenalty = _timePenaltyForStage();
+
+      // 2. Level scaling multiplier (Level 1 = +1s, Level 100 = +2s, Level 200 = +3s, etc.)
+      final int levelScaling = 1 + (playerLevel ~/ 100);
+
+      // 3. Escalation: Each subsequent miss adds more time based on level scaling
+      // Miss 1: base. Miss 2: base + (1 * scaling). Miss 3: base + (2 * scaling).
+      final rawPenalty = basePenalty + ((_missesThisLevel - 1) * levelScaling);
+
+      // 4. THE LIMIT: Max penalty is strictly 30 seconds
+      final finalPenalty = rawPenalty.clamp(3, 30);
+
+      final newTime = (_timeRemaining - finalPenalty).clamp(0, 999);
       setState(() => _timeRemaining = newTime);
-      _showTimerPulse(-penalty);
+      _showTimerPulse(-finalPenalty);
+
       if (newTime <= 0) {
         _levelTimer?.cancel();
         _onTimeOut();
@@ -1191,7 +1361,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       });
     } else if (widget.gameMode == GameMode.zen) {
       Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _goToNextLevelInPlace();
+        if (mounted) _showZenResultDialog();
       });
     } else if (widget.gameMode == GameMode.endlessRush) {
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -1214,13 +1384,104 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
+
+  Future<void> _showZenResultDialog() async {
+    if (!mounted) return;
+
+    // Calculate time played for this session
+    final durationSec = _runStartTime != null
+        ? DateTime.now().difference(_runStartTime!).inSeconds
+        : 0;
+    final minutes = durationSec ~/ 60;
+    final seconds = durationSec % 60;
+    final timeStr = '$minutes:${seconds.toString().padLeft(2, '0')}';
+
+    final strings = AppStrings.of(context);
+    final accent = AppColors.accent(context);
+    const surface = Color(0xFF1E1E1E);
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: PopDialog(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: accent.withValues(alpha: 0.35), width: 2.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.self_improvement_rounded, color: accent, size: 52),
+                const SizedBox(height: 12),
+                Text(
+                  strings.zenModeTitle, // "Zen Mode"
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text('TIME PLAYED', style: TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 2)),
+                      const SizedBox(height: 8),
+                      Text(timeStr, style: TextStyle(color: accent, fontSize: 44, fontWeight: FontWeight.w900)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // ── NEXT BUTTON ──
+                GameDialogButton(
+                  label: strings.levelCompleteNextLevel, // "Next Level"
+                  icon: Icons.skip_next_rounded,
+                  textColor: Colors.white,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _goToNextLevelInPlace();
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // ── HOME BUTTON ──
+                GameDialogButton(
+                  label: strings.homeButton,
+                  icon: Icons.home_rounded,
+                  textColor: Colors.white,
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.popUntil(context, (r) => r.isFirst);
+                    ref.read(currentTabProvider.notifier).state = 0;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleBlitzStageComplete() async {
     if (!mounted) return;
+
+    // ── FIX: Freeze the time immediately before doing any math ──
+    _levelTimer?.cancel();
+    final frozenTime = _timeRemaining;
 
     // Score: base × progression multiplier + time bonus.
     final multiplier = 1.0 + (_blitzStage * 0.15);
     final base = (1000 * multiplier).round();
-    final timeBonus = _timeRemaining * 25;
+    final timeBonus = frozenTime * 25; // Use frozen time here
+
     _blitzScore += base + timeBonus;
 
     // Last stage cleared → done.
@@ -1779,7 +2040,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     AudioHapticHelper.playClick();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Calculating solution...')),
+      SnackBar(content: Text(AppStrings.of(context).gameSolverCalculating)),
     );
 
     // Run the solver on the current board
@@ -1788,9 +2049,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     if (solution == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           backgroundColor: Color(0xFFFF5252),
-          content: Text('❌ UNSOLVABLE! The level is deadlocked.'),
+          content: Text(AppStrings.of(context).gameSolverUnsolvable),
         ),
       );
       return;
@@ -1980,6 +2241,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   @override
   void dispose() {
+    _transformationController.removeListener(_onTransformChanged);
+    MusicPlayer.instance.play(MusicPlayer.trackMenu);
     _transformationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _levelTimer?.cancel();
@@ -2215,6 +2478,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                 constraints.maxWidth,
                                 constraints.maxHeight,
                               );
+                              _viewportSize = viewportSize;
                               final contentSize = _contentSize;
 
                               final paddedW =
@@ -2261,16 +2525,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                   children: [
                                     RepaintBoundary(
                                       child: InteractiveViewer(
-                                        transformationController:
-                                        _transformationController,
+                                        transformationController: _transformationController,
                                         constrained: false,
                                         minScale: minScale,
                                         maxScale: maxScale,
-                                        boundaryMargin:
-                                        EdgeInsets.all(contentSize * 0.5),
+                                        boundaryMargin: EdgeInsets.all(contentSize),
                                         clipBehavior: Clip.hardEdge,
-                                        onInteractionStart: (_) =>
-                                            _fitAnimController.stop(),
+                                        onInteractionStart: (_) {
+                                          _fitAnimController.stop();
+                                          _isInteracting = true;
+                                        },
+                                        onInteractionEnd: (_) {
+                                          _isInteracting = false;
+                                        },
                                         child: SizedBox(
                                           width: contentSize,
                                           height: contentSize,
@@ -2459,6 +2726,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                 count: _gameState!.leavingArrowTapCount,
                                 max: _gameState!.leavingArrowTapLimit,
                                 color: const Color(0xFFFF9800),
+                                onTap: _centerOnLeavingArrow,
                               ),
                             ),
                         ],

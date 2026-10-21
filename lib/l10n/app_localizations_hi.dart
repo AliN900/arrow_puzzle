@@ -12,48 +12,7 @@ class AppStringsHi extends AppStrings {
   String get appName => 'Arrow Puzzle';
 
   @override
-  String get menuHome => 'होम';
-
-  @override
-  String get menuDaily => 'दैनिक';
-
-  @override
-  String get menuInventory => 'इन्वेंटरी';
-
-  @override
-  String get menuSettings => 'सेटिंग्स';
-
-  @override
-  String get menuProfile => 'प्रोफ़ाइल';
-
-  @override
-  String get menuTrophies => 'ट्रॉफ़ियाँ';
-
-  @override
-  String get menuLeaderboard => 'लीडरबोर्ड';
-
-  @override
-  String get menuContinue => 'जारी रखें';
-
-  @override
-  String menuLevel(int level) {
-    return 'स्तर $level';
-  }
-
-  @override
-  String get buttonPlay => 'खेलें';
-
-  @override
   String get buttonCancel => 'रद्द करें';
-
-  @override
-  String get buttonConfirm => 'पुष्टि करें';
-
-  @override
-  String get buttonBuy => 'खरीदें';
-
-  @override
-  String get buttonRestart => 'पुनः आरंभ करें';
 
   @override
   String get buttonResume => 'फिर से शुरू करें';
@@ -62,69 +21,10 @@ class AppStringsHi extends AppStrings {
   String get buttonExit => 'बाहर निकलें';
 
   @override
-  String get buttonClose => 'बंद करें';
-
-  @override
-  String get buttonNext => 'अगला स्तर';
-
-  @override
-  String get buttonSignIn => 'साइन इन';
-
-  @override
-  String get buttonSignUp => 'खाता बनाएं';
-
-  @override
-  String get buttonSignOut => 'साइन आउट';
-
-  @override
-  String get buttonDeleteAccount => 'खाता हटाएं';
-
-  @override
-  String get buttonClaim => 'मुफ्त में प्राप्त करें';
-
-  @override
-  String get buttonWatchAd => 'विज्ञापन देखें';
-
-  @override
-  String get buttonAccept => 'स्वीकार करें और जारी रखें';
-
-  @override
-  String get buttonShare => 'दोस्तों के साथ साझा करें';
-
-  @override
-  String get buttonStartBlitz => 'ब्लिट्ज़ शुरू करें';
-
-  @override
-  String buttonStartRush(String tier) {
-    return '$tier शुरू करें';
-  }
-
-  @override
   String get gameModeClassic => 'क्लासिक';
 
   @override
-  String get gameModeZen => 'ज़ेन मोड';
-
-  @override
   String get gameModeTimeAttack => 'समय हमला';
-
-  @override
-  String get gameModeArrowRush => 'एरो रश';
-
-  @override
-  String get gameModeBlitz => 'ब्लिट्ज़';
-
-  @override
-  String get gameModeMineArrows => 'माइन एरो';
-
-  @override
-  String get difficultyEasy => 'आसान';
-
-  @override
-  String get difficultyHard => 'कठिन';
-
-  @override
-  String get difficultyImpossible => 'असंभव';
 
   @override
   String get settingsTitle => 'सेटिंग्स';
@@ -134,12 +34,6 @@ class AppStringsHi extends AppStrings {
 
   @override
   String get settingsDarkMode => 'डार्क मोड';
-
-  @override
-  String get settingsAccentColor => 'एक्सेंट रंग';
-
-  @override
-  String get settingsAudioHaptics => 'ऑडियो और कंपन';
 
   @override
   String get settingsSoundEffects => 'ध्वनि प्रभाव';
@@ -157,66 +51,10 @@ class AppStringsHi extends AppStrings {
   String get settingsAbout => 'परिचय';
 
   @override
-  String get settingsPrivacy => 'गोपनीयता नीति';
-
-  @override
-  String get settingsTerms => 'नियम और शर्तें';
-
-  @override
-  String get settingsLanguage => 'भाषा';
-
-  @override
-  String settingsVersion(String version) {
-    return 'संस्करण $version';
-  }
-
-  @override
-  String get settingsSharingComingSoon => 'साझा करना जल्द आ रहा है';
-
-  @override
-  String get consentTitle => 'Arrow Puzzle में आपका स्वागत है';
-
-  @override
-  String get consentSubtitle =>
-      'शुरू करने से पहले, कृपया हमारी शर्तें देखें और स्वीकार करें।';
-
-  @override
-  String get consentLocalProgress =>
-      'आपकी प्रगति आपके डिवाइस पर स्थानीय रूप से सहेजी जाती है।';
-
-  @override
-  String get consentCloudSync =>
-      'वैकल्पिक खाते प्रगति को क्लाउड पर सिंक करते हैं।';
-
-  @override
-  String get consentAds => 'गेम मुफ़्त रखने के लिए विज्ञापन दिखाता है।';
-
-  @override
-  String get consentAgreement =>
-      'ऊपर टैप करके आप हमारी नियम और शर्तें स्वीकार करते हैं।';
-
-  @override
   String get dialogExitTitle => 'गेम से बाहर निकलें?';
 
   @override
   String get dialogExitMessage => 'क्या आप वाकई छोड़ना चाहते हैं?';
-
-  @override
-  String get dialogSignOutTitle => 'साइन आउट करें?';
-
-  @override
-  String get dialogSignOutMessage =>
-      'आपका क्लाउड सेव बना रहता है। यह डिवाइस स्तर 1 से नए अतिथि खाते पर रीसेट होगा।';
-
-  @override
-  String get dialogDeleteTitle => 'खाता हटाएं?';
-
-  @override
-  String get dialogDeleteMessage =>
-      'यह आपका क्लाउड सेव और खाता स्थायी रूप से हटा देगा। इसे वापस नहीं लाया जा सकता।';
-
-  @override
-  String get profileGuest => 'अतिथि के रूप में खेल रहे हैं';
 
   @override
   String get profileSaveToCloud => 'क्लाउड में सहेजें';
@@ -228,96 +66,10 @@ class AppStringsHi extends AppStrings {
   String get profileSignedIn => 'साइन इन है';
 
   @override
-  String get profileStatsLevel => 'स्तर';
-
-  @override
-  String get profileStatsStars => 'सितारे';
-
-  @override
-  String get profileStatsTrophies => 'ट्रॉफ़ियाँ';
-
-  @override
   String get dailyRewardsTitle => 'दैनिक इनाम';
 
   @override
-  String dailyRewardsDay(int day, int max) {
-    return '$max में से दिन $day';
-  }
-
-  @override
-  String get dailyRewardsComeBack => 'कल फिर आएं';
-
-  @override
-  String get dailyRewardsClaimed => 'आज प्राप्त किया!';
-
-  @override
-  String get levelComplete => 'स्तर पूर्ण!';
-
-  @override
-  String get levelFailed => 'जीवन समाप्त!';
-
-  @override
-  String get levelTimeUp => 'समय समाप्त!';
-
-  @override
-  String get gameOverRestart => 'स्तर पुनः आरंभ करें';
-
-  @override
-  String get gameOverHome => 'होम';
-
-  @override
   String get blitzTitle => 'ब्लिट्ज़';
-
-  @override
-  String get blitzStage => 'चरण';
-
-  @override
-  String get blitzComplete => 'ब्लिट्ज़ पूर्ण!';
-
-  @override
-  String get blitzOver => 'ब्लिट्ज़ समाप्त';
-
-  @override
-  String get blitzFinalScore => 'अंतिम स्कोर';
-
-  @override
-  String blitzSurvivedAll(int count) {
-    return 'आपने सभी $count चरण पूरे किए।';
-  }
-
-  @override
-  String blitzClearedOf(int cleared, int total) {
-    return '$total में से $cleared चरण पूरे किए।';
-  }
-
-  @override
-  String get commonComingSoon => 'जल्द आ रहा है';
-
-  @override
-  String get commonLoading => 'लोड हो रहा है...';
-
-  @override
-  String get commonError => 'कुछ गलत हो गया। कृपया पुन: प्रयास करें।';
-
-  @override
-  String get commonRetry => 'पुन: प्रयास करें';
-
-  @override
-  String get dailyRewardsClaimFree => 'मुफ्त में प्राप्त करें';
-
-  @override
-  String get dailyRewardsWatchAd => 'विज्ञापन देखें';
-
-  @override
-  String get dailyRewardsSnackClaimed => 'प्राप्त किया!';
-
-  @override
-  String get dailyRewardsClaimedToday => 'आज प्राप्त किया!';
-
-  @override
-  String dailyRewardsNextIn(String time) {
-    return 'अगला इनाम $time में';
-  }
 
   @override
   String get unlockTitle => 'बधाई हो!';
@@ -517,6 +269,87 @@ class AppStringsHi extends AppStrings {
 
   @override
   String get levelCompleteDoubleCoins => 'सिक्के दोगुने करें';
+
+  @override
+  String get settingsAboutCredits => 'खेल और क्रेडिट के बारे में';
+
+  @override
+  String get aboutTitle => 'के बारे में और क्रेडिट';
+
+  @override
+  String aboutVersion(String version) {
+    return 'संस्करण $version';
+  }
+
+  @override
+  String get aboutDeveloper => 'अली हुसैन (ahb.Dev) द्वारा डिज़ाइन और विकसित';
+
+  @override
+  String get aboutOriginalConcept =>
+      'मूल खेल अवधारणा: sidhant947 द्वारा ArrowEscape';
+
+  @override
+  String get aboutVisitWebsite => 'ahb.Dev वेबसाइट पर जाएँ';
+
+  @override
+  String get aboutMusicTitle => 'संगीत (OpenGameArt)';
+
+  @override
+  String get aboutUnderwaterTheme => 'पानी के नीचे का विषय';
+
+  @override
+  String get aboutCallerTheme => 'मुख्य मेनू विषय';
+
+  @override
+  String get aboutGrooveTheme => 'Rushmode की ग्रूव';
+
+  @override
+  String get aboutMusicSource =>
+      'सभी संगीत ट्रैक OpenGameArt.org से लिए गए हैं।';
+
+  @override
+  String get aboutIconsTitle => 'आइकन (SVG Repo)';
+
+  @override
+  String get aboutIconsCredit1 =>
+      'पक्षी, हीरा, चश्मा, मछली, व्हेल, फूल, रॉकेट, चाबी, सितारा';
+
+  @override
+  String get aboutIconsCredit2 => 'तितली, कछुआ';
+
+  @override
+  String get aboutIconsCredit3 => 'ताज, घर, पेड़';
+
+  @override
+  String get aboutIconsCredit4 => 'दिल';
+
+  @override
+  String get aboutIconsAuthors =>
+      'Noah Jacobus, Konstantin Filatov, Solar Icons, Dazzle UI, pixelbazaar, & Iconhub द्वारा';
+
+  @override
+  String get aboutVisitSvgRepo => 'SVGRepo.com पर जाएँ';
+
+  @override
+  String get aboutOpenSourceTitle => 'ओपन सोर्स';
+
+  @override
+  String get aboutOpenSourceBody =>
+      'यह गेम अद्भुत ओपन-सोर्स तकनीकों का उपयोग करके बनाया गया है:';
+
+  @override
+  String get aboutCopyright => '© 2026 ahb.Dev. सर्वाधिकार सुरक्षित।';
+
+  @override
+  String gameTimedLevel(String seconds) {
+    return 'समयबद्ध स्तर · ${seconds}s';
+  }
+
+  @override
+  String get gameSolverCalculating => 'समाधान की गणना...';
+
+  @override
+  String get gameSolverUnsolvable => '❌ असुलझा हुआ! स्तर अवरुद्ध है।';
 
   @override
   String get pauseTitle => 'रुका हुआ';
@@ -1012,18 +845,7 @@ class AppStringsHi extends AppStrings {
   String get nothingToUndo => 'पूर्ववत करने के लिए कुछ नहीं';
 
   @override
-  String get blitzCompleteTitle => 'ब्लिट्ज़ पूरा!';
-
-  @override
-  String get blitzOverTitle => 'ब्लिट्ज़ समाप्त';
-
-  @override
   String get blitzSplashStage => 'चरण';
-
-  @override
-  String blitzPoints(int score) {
-    return '$score अंक';
-  }
 
   @override
   String get arrowSpeedEscapeSpeed => 'बचने की गति';
@@ -1104,12 +926,6 @@ class AppStringsHi extends AppStrings {
   String get leaderboardTabAllTime => 'सर्वकालिक';
 
   @override
-  String get leaderboardYourRank => 'आपकी रैंक';
-
-  @override
-  String get leaderboardNotRanked => 'अभी रैंक नहीं';
-
-  @override
   String get leaderboardSignInToRank =>
       'लीडरबोर्ड पर दिखने के लिए साइन इन करें';
 
@@ -1117,29 +933,10 @@ class AppStringsHi extends AppStrings {
   String get leaderboardEmptyState => 'अभी कोई स्कोर नहीं';
 
   @override
-  String get leaderboardScore => 'स्कोर';
-
-  @override
   String get leaderboardLevel => 'स्तर';
 
   @override
   String get leaderboardStars => 'सितारे';
-
-  @override
-  String get leaderboardTrophies => 'ट्रॉफियाँ';
-
-  @override
-  String get leaderboardYou => 'आप';
-
-  @override
-  String get leaderboardRankPrefix => '#';
-
-  @override
-  String get leaderboardOptInTitle => 'लीडरबोर्ड पर दिखाएँ';
-
-  @override
-  String get leaderboardOptInSubtitle =>
-      'अन्य खिलाड़ियों को आपकी रैंक दिखने दें';
 
   @override
   String get inventoryTitle => 'इन्वेंटरी';
@@ -1175,24 +972,6 @@ class AppStringsHi extends AppStrings {
   }
 
   @override
-  String inventoryBuyItemTitle(String item) {
-    return '$item खरीदें?';
-  }
-
-  @override
-  String inventoryUnlockTitle(String title) {
-    return '$title अनलॉक करें?';
-  }
-
-  @override
-  String inventoryCoinsPrice(int count) {
-    return '$count सिक्के';
-  }
-
-  @override
-  String get inventoryBuy => 'खरीदें';
-
-  @override
   String get rushDifficultyEasy => 'आसान';
 
   @override
@@ -1206,14 +985,6 @@ class AppStringsHi extends AppStrings {
 
   @override
   String get profilePlayingAsGuest => 'अतिथि के रूप में खेल रहे हैं';
-
-  @override
-  String get profileSignInSuccess => 'साइन इन — प्रगति सिंक हो गई';
-
-  @override
-  String profileSignInFailed(String error) {
-    return 'साइन इन विफल: $error';
-  }
 
   @override
   String get profileSaveYourProgress => 'अपनी प्रगति सहेजें';
@@ -1409,9 +1180,6 @@ class AppStringsHi extends AppStrings {
   }
 
   @override
-  String get homeContinue => 'जारी रखें';
-
-  @override
   String get homeDaily => 'दैनिक';
 
   @override
@@ -1422,9 +1190,6 @@ class AppStringsHi extends AppStrings {
 
   @override
   String get homeLeaderboard => 'लीडरबोर्ड';
-
-  @override
-  String get homeComingSoon => 'जल्द आ रहा है';
 
   @override
   String get homeInventory => 'इन्वेंटरी';
@@ -1662,9 +1427,6 @@ class AppStringsHi extends AppStrings {
   String get multiplayerJoinMatch => 'जॉइन';
 
   @override
-  String get zenCardSubtitle => 'समय नहीं। सीमा नहीं। बस हल करें।';
-
-  @override
   String get profileSyncing => 'सिंक हो रहा है...';
 
   @override
@@ -1676,15 +1438,6 @@ class AppStringsHi extends AppStrings {
   @override
   String get timeBlitzDesc =>
       'समय पाने के लिए तीर टैप करें। अवरुद्ध टैप समय घटाते हैं। जितना हो सके टिके रहें।';
-
-  @override
-  String get timeBlitzOverTitle => 'टाइम ब्लिट्ज़ खत्म';
-
-  @override
-  String get timeBlitzScoreLabel => 'तीर साफ़ किए';
-
-  @override
-  String get timeBlitzLevelsLabel => 'पहुंचे स्तर';
 
   @override
   String get profileEditName => 'नाम संपादित करें';
@@ -1708,9 +1461,6 @@ class AppStringsHi extends AppStrings {
   String get settingsShareFriends => 'दोस्तों के साथ साझा करें';
 
   @override
-  String get settingsSharingSoon => 'जल्द आ रहा है';
-
-  @override
   String get blitzTimeLeftLabel => 'शेष समय';
 
   @override
@@ -1726,18 +1476,6 @@ class AppStringsHi extends AppStrings {
 
   @override
   String get levelDetailsNotPlayed => 'अभी तक नहीं खेला';
-
-  @override
-  String get levelDetailsGrid => 'ग्रिड';
-
-  @override
-  String get levelDetailsTimed => 'समयबद्ध';
-
-  @override
-  String get levelDetailsMines => 'बारूद';
-
-  @override
-  String get levelDetailsMoves => 'चालें';
 
   @override
   String get levelDetailsStart => 'शुरू करें';

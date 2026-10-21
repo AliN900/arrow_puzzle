@@ -1,129 +1,40 @@
-﻿{
+{
   "@@locale": "en",
-
   "appName": "Arrow Puzzle",
-  "@appName": { "description": "Application name" },
-
-  "menuHome": "Home",
-  "menuDaily": "Daily",
-  "menuInventory": "Inventory",
-  "menuSettings": "Settings",
-  "menuProfile": "Profile",
-  "menuTrophies": "Trophies",
-  "menuLeaderboard": "Leaderboard",
-  "menuContinue": "Continue",
-  "menuLevel": "Level {level}",
-  "@menuLevel": { "placeholders": { "level": { "type": "int" } } },
-
-  "buttonPlay": "Play",
+  "@appName": {
+    "description": "Application name"
+  },
   "buttonCancel": "Cancel",
-  "buttonConfirm": "Confirm",
-  "buttonBuy": "Buy",
-  "buttonRestart": "Restart",
   "buttonResume": "Resume",
   "buttonExit": "Exit",
-  "buttonClose": "Close",
-  "buttonNext": "Next Level",
-  "buttonSignIn": "Sign In",
-  "buttonSignUp": "Create Account",
-  "buttonSignOut": "Sign out",
-  "buttonDeleteAccount": "Delete Account",
-  "buttonClaim": "Claim for free",
-  "buttonWatchAd": "Watch ad",
-  "buttonAccept": "Accept & Continue",
-  "buttonShare": "Share with friends",
-  "buttonStartBlitz": "Start Blitz",
-  "buttonStartRush": "Start {tier}",
-  "@buttonStartRush": { "placeholders": { "tier": { "type": "String" } } },
-
   "gameModeClassic": "Classic",
-  "gameModeZen": "Zen Mode",
   "gameModeTimeAttack": "Time Attack",
-  "gameModeArrowRush": "Arrow Rush",
-  "gameModeBlitz": "Blitz",
-  "gameModeMineArrows": "Mine Arrows",
-
-  "difficultyEasy": "Easy",
-  "difficultyHard": "Hard",
-  "difficultyImpossible": "Impossible",
-
   "settingsTitle": "Settings",
   "settingsAppearance": "APPEARANCE",
   "settingsDarkMode": "Dark Mode",
-  "settingsAccentColor": "Accent Color",
-  "settingsAudioHaptics": "AUDIO & HAPTICS",
   "settingsSoundEffects": "Sound effects",
   "settingsMusic": "Music",
   "settingsVibration": "Vibration",
   "settingsArrowSpeed": "ARROW SPEED",
   "settingsAbout": "ABOUT",
-  "settingsPrivacy": "Privacy Policy",
-  "settingsTerms": "Terms & Conditions",
-  "settingsLanguage": "Language",
-  "settingsVersion": "Version {version}",
-  "@settingsVersion": { "placeholders": { "version": { "type": "String" } } },
-  "settingsSharingComingSoon": "Sharing coming soon",
-
-  "consentTitle": "Welcome to Arrow Puzzle",
-  "consentSubtitle": "Before we begin, please review and accept our terms.",
-  "consentLocalProgress": "Your progress is saved locally on your device.",
-  "consentCloudSync": "Optional accounts sync progress to the cloud.",
-  "consentAds": "The game shows ads to keep it free.",
-  "consentAgreement": "By tapping above you agree to our Terms & Conditions.",
-
   "dialogExitTitle": "Exit Game?",
   "dialogExitMessage": "Are you sure you want to leave?",
-  "dialogSignOutTitle": "Sign out?",
-  "dialogSignOutMessage": "Your cloud save stays. This device will reset to a fresh guest account and start from level 1.",
-  "dialogDeleteTitle": "Delete Account?",
-  "dialogDeleteMessage": "This will permanently delete your cloud save and account. This action cannot be undone.",
-
-  "profileGuest": "Playing as guest",
   "profileSaveToCloud": "Save to Cloud",
   "profileSynced": "Synced",
   "profileSignedIn": "Signed in",
-  "profileStatsLevel": "Level",
-  "profileStatsStars": "Stars",
-  "profileStatsTrophies": "Trophies",
-
   "dailyRewardsTitle": "DAILY REWARDS",
-  "dailyRewardsDay": "Day {day} of {max}",
-  "@dailyRewardsDay": { "placeholders": { "day": { "type": "int" }, "max": { "type": "int" } } },
-  "dailyRewardsComeBack": "Come back tomorrow",
-  "dailyRewardsClaimed": "Claimed today!",
-
-  "levelComplete": "Level Complete!",
-  "levelFailed": "Out of Lives!",
-  "levelTimeUp": "Out of Time!",
-  "gameOverRestart": "Restart Level",
-  "gameOverHome": "Home",
-
   "blitzTitle": "Blitz",
-  "blitzStage": "STAGE",
-  "blitzComplete": "Blitz Complete!",
-  "blitzOver": "Blitz Over",
-  "blitzFinalScore": "FINAL SCORE",
-  "blitzSurvivedAll": "You survived all {count} stages.",
-  "@blitzSurvivedAll": { "placeholders": { "count": { "type": "int" } } },
-  "blitzClearedOf": "Cleared {cleared} of {total} stages.",
-  "@blitzClearedOf": { "placeholders": { "cleared": { "type": "int" }, "total": { "type": "int" } } },
-
-  "commonComingSoon": "Coming soon",
-  "commonLoading": "Loading...",
-  "commonError": "Something went wrong. Please try again.",
-  "commonRetry": "Retry",
-  "dailyRewardsClaimFree": "Claim for free",
-  "dailyRewardsWatchAd": "Watch ad",
-  "dailyRewardsSnackClaimed": "Claimed!",
-  "dailyRewardsClaimedToday": "Claimed today!",
-  "dailyRewardsNextIn": "Next reward in {time}",
-  "@dailyRewardsNextIn": { "placeholders": { "time": { "type": "String" } } },
-
   "unlockTitle": "Congratulations!",
   "unlockSubtitle": "New board unlocked",
   "unlockAddedToInventory": "Added to your inventory",
   "unlockCoinsEarned": "+{count} COINS",
-  "@unlockCoinsEarned": { "placeholders": { "count": { "type": "int" } } },
+  "@unlockCoinsEarned": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "buttonCheckInventory": "Check Inventory",
   "buttonMainMenu": "Main Menu",
   "dailyChallengesTitle": "Daily Challenges",
@@ -136,60 +47,180 @@
   "mineArrowsSubtitle": "Clear arrows while dodging hidden grid mines!",
   "badgeComingSoon": "COMING SOON",
   "mineArrowsComingSoonSnack": "Mine Arrows challenge is coming soon!",
-
   "dailyRewardsLabel": "DAILY REWARDS",
   "dayOfMax": "Day {day} of {max}",
-  "@dayOfMax": { "placeholders": { "day": {"type":"int"}, "max": {"type":"int"} } },
+  "@dayOfMax": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "comeBackTomorrow": "Come back tomorrow",
   "plusCoins": "+{count} coins",
-  "@plusCoins": { "placeholders": { "count": {"type":"int"} } },
+  "@plusCoins": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "plusItems": "+ {count} 🎁",
-  "@plusItems": { "placeholders": { "count": {"type":"int"} } },
+  "@plusItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "claimForFree": "Claim for free",
   "loadingLabel": "Loading...",
   "watchAdCoins": "Watch ad → +{coins} coins",
-  "@watchAdCoins": { "placeholders": { "coins": {"type":"int"} } },
+  "@watchAdCoins": {
+    "placeholders": {
+      "coins": {
+        "type": "int"
+      }
+    }
+  },
   "notNow": "Not now",
   "claimedToday": "Claimed today!",
   "nextRewardIn": "Next reward in {time}",
-  "@nextRewardIn": { "placeholders": { "time": {"type":"String"} } },
+  "@nextRewardIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "closeLabel": "Close",
   "claimedSnack": "Claimed!",
-
   "arrowRushTitle": "Arrow Rush",
   "reachLevelToUnlock": "Reach level {level} to unlock {tier}",
-  "@reachLevelToUnlock": { "placeholders": { "level": {"type":"int"}, "tier": {"type":"String"} } },
+  "@reachLevelToUnlock": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "tier": {
+        "type": "String"
+      }
+    }
+  },
   "startTier": "Start {tier}",
-  "@startTier": { "placeholders": { "tier": {"type":"String"} } },
+  "@startTier": {
+    "placeholders": {
+      "tier": {
+        "type": "String"
+      }
+    }
+  },
   "lvLabel": "Lv {level}",
-  "@lvLabel": { "placeholders": { "level": {"type":"int"} } },
+  "@lvLabel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "adNotAvailable": "Ad not available, try again later",
   "adBadge": "AD",
   "homeButton": "Home",
-
   "gameOverTimeUp": "Time's Up!",
   "gameOverOutOfTime": "Out of Time!",
   "gameOverOutOfLives": "Out of Lives!",
   "gameOverRewardTime": "+{seconds}s",
-  "@gameOverRewardTime": { "placeholders": { "seconds": {"type":"int"} } },
+  "@gameOverRewardTime": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "gameOverRewardHearts": "{count, plural, =1{+{count} heart} other{+{count} hearts}}",
-  "@gameOverRewardHearts": { "placeholders": { "count": {"type":"int"} } },
+  "@gameOverRewardHearts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "gameOverTimeAttackStats": "Puzzles Cleared: {cleared}\nFinal Level: {level}",
-  "@gameOverTimeAttackStats": { "placeholders": { "cleared": {"type":"int"}, "level": {"type":"int"} } },
+  "@gameOverTimeAttackStats": {
+    "placeholders": {
+      "cleared": {
+        "type": "int"
+      },
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "gameOverWatchAdReward": "Watch ad → {reward}",
-  "@gameOverWatchAdReward": { "placeholders": { "reward": {"type":"String"} } },
+  "@gameOverWatchAdReward": {
+    "placeholders": {
+      "reward": {
+        "type": "String"
+      }
+    }
+  },
   "gameOverStartNewRun": "Start New Run",
   "gameOverRestartLevel": "Restart Level",
-
   "levelCompleteTitle": "Level Complete!",
   "levelCompleteNewTrophy": "NEW TROPHY",
   "levelCompleteRandomItems": "{count, plural, =1{+{count} RANDOM ITEM} other{+{count} RANDOM ITEMS}}",
-  "@levelCompleteRandomItems": { "placeholders": { "count": {"type":"int"} } },
+  "@levelCompleteRandomItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "levelCompleteFinishedGame": "You Finished the Game!",
   "levelCompleteNextLevel": "Next Level",
   "levelCompleteCoinsDoubled": "Coins Doubled!",
   "levelCompleteDoubleCoins": "Double Coins",
-
+  "settingsAboutCredits": "About the Game & Credits",
+  "aboutTitle": "About & Credits",
+  "aboutVersion": "Version {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutDeveloper": "Designed & Developed by Ali Hussein (ahb.Dev)",
+  "aboutOriginalConcept": "Original game concept: ArrowEscape by sidhant947",
+  "aboutVisitWebsite": "Visit ahb.Dev Website",
+  "aboutMusicTitle": "MUSIC (OpenGameArt)",
+  "aboutUnderwaterTheme": "Underwater Theme",
+  "aboutCallerTheme": "Caller / Main Menu Theme",
+  "aboutGrooveTheme": "Groove of Timeatk Rushmode",
+  "aboutMusicSource": "All music tracks are sourced from OpenGameArt.org.",
+  "aboutIconsTitle": "ICONS (SVG Repo)",
+  "aboutIconsCredit1": "Bird, Diamond, Glasses, Fish, Whale, Flower, Rocket, Key, Star",
+  "aboutIconsCredit2": "Butterfly, Turtle",
+  "aboutIconsCredit3": "Crown, House, Tree",
+  "aboutIconsCredit4": "Heart",
+  "aboutIconsAuthors": "By Noah Jacobus, Konstantin Filatov, Solar Icons, Dazzle UI, pixelbazaar, & Iconhub",
+  "aboutVisitSvgRepo": "Visit SVGRepo.com",
+  "aboutOpenSourceTitle": "OPEN SOURCE",
+  "aboutOpenSourceBody": "This game is built using amazing open-source technologies:",
+  "aboutCopyright": "© 2026 ahb.Dev. All rights reserved.",
+  "gameTimedLevel": "TIMED LEVEL · {seconds}s",
+  "@gameTimedLevel": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "gameSolverCalculating": "Calculating solution...",
+  "gameSolverUnsolvable": "❌ UNSOLVABLE! The level is deadlocked.",
   "pauseTitle": "Paused",
   "pauseResume": "Resume",
   "pauseRestart": "Restart",
@@ -204,7 +235,6 @@
   "itemHeartFlaskDesc": "Restore one heart",
   "itemTimeFreezeName": "Time Freeze",
   "itemTimeFreezeDesc": "Add 30 seconds to the timer",
-
   "themeNeon": "Neon",
   "themeClassic": "Classic",
   "themeRetro": "Retro",
@@ -216,7 +246,6 @@
   "themePastel": "Pastel",
   "themeSunset": "Sunset",
   "themeRainbow": "Rainbow",
-
   "boardMinimal": "Minimal",
   "boardNebula": "Nebula",
   "boardBlueprint": "Blueprint",
@@ -237,7 +266,6 @@
   "boardSky": "Sky",
   "boardPearl": "Pearl",
   "boardHoney": "Honey",
-
   "trophyFirstEscapeTitle": "🌟 THE FIRST AWAKENING",
   "trophyFirstEscapeDesc": "Your very first maze escaped! You have unlocked the gateway to the Trophy System. Welcome to AHB.Dev's ultimate puzzle journey!",
   "trophyPointBlankTitle": "Point Blank",
@@ -335,31 +363,42 @@
   "trophyInfiniteHorizonTitle": "Infinite Horizon",
   "trophyInfiniteHorizonDesc": "A monumental placeholder trophy acknowledging that the journey beyond level 500 never ends.",
   "timeBonusAmount": "+{seconds}s",
-  "@timeBonusAmount": { "placeholders": { "seconds": {"type":"int"} } },
+  "@timeBonusAmount": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "heartsAlreadyFull": "Hearts are already full",
   "timeFreezeWait": "Wait {seconds}s more before using Time Freeze",
-  "@timeFreezeWait": { "placeholders": { "seconds": {"type":"int"} } },
+  "@timeFreezeWait": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "tapRockToDestroy": "Tap a rock to destroy it",
   "noSolvableArrowFound": "No solvable arrow found",
   "nothingToUndo": "Nothing to undo",
-  "blitzCompleteTitle": "Blitz Complete!",
-  "blitzOverTitle": "Blitz Over",
   "blitzSplashStage": "STAGE",
-  "blitzPoints": "{score} pts",
-  "@blitzPoints": { "placeholders": { "score": {"type":"int"} } },
-
   "arrowSpeedEscapeSpeed": "Escape speed",
   "arrowSpeedSlow": "Slow",
   "arrowSpeedNormal": "Normal",
   "arrowSpeedFast": "Fast",
-
   "accentColorLabel": "Accent Color",
   "settingsPrivacyPolicy": "Privacy Policy",
   "settingsTermsConditions": "Terms & Conditions",
   "settingsChooseLanguage": "Choose Language",
   "settingsVersionLabel": "Version {version}",
-  "@settingsVersionLabel": { "placeholders": { "version": {"type":"String"} } },
-
+  "@settingsVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "languageSystemDefault": "System default",
   "languageEnglish": "English",
   "languageSpanish": "Spanish",
@@ -368,30 +407,34 @@
   "languageHindi": "Hindi",
   "languageArabic": "Arabic",
   "languageFrench": "French",
-
   "trophiesTitle": "Trophies ({unlocked} / {total})",
-  "@trophiesTitle": { "placeholders": { "unlocked": {"type":"int"}, "total": {"type":"int"} } },
+  "@trophiesTitle": {
+    "placeholders": {
+      "unlocked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "trophiesLevelBadge": "Lvl {level}",
-  "@trophiesLevelBadge": { "placeholders": { "level": {"type":"int"} } },
+  "@trophiesLevelBadge": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "trophiesPerkHeart": "✨ Perk: +1 Permanent Max Heart",
-
   "leaderboardTitle": "Leaderboard",
   "leaderboardTabWeekly": "Weekly",
   "leaderboardTabMonthly": "Monthly",
   "leaderboardTabAllTime": "All-Time",
-  "leaderboardYourRank": "Your Rank",
-  "leaderboardNotRanked": "Not ranked yet",
   "leaderboardSignInToRank": "Sign in to appear on the leaderboard",
   "leaderboardEmptyState": "No scores yet — be the first!",
-  "leaderboardScore": "Score",
   "leaderboardLevel": "Level",
   "leaderboardStars": "Stars",
-  "leaderboardTrophies": "Trophies",
-  "leaderboardYou": "You",
-  "leaderboardRankPrefix": "#",
-  "leaderboardOptInTitle": "Show me on leaderboard",
-  "leaderboardOptInSubtitle": "Let other players see your rank",
-
   "inventoryTitle": "Inventory",
   "inventoryTabArrows": "Arrows",
   "inventoryTabBoards": "Boards",
@@ -399,26 +442,34 @@
   "inventoryEquipped": "Equipped",
   "inventoryTapToEquip": "Tap to equip",
   "inventoryReachLevel": "Reach level {level} to unlock",
-  "@inventoryReachLevel": { "placeholders": { "level": {"type":"int"} } },
+  "@inventoryReachLevel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "inventoryLevelBadge": "Lv {level}",
-  "@inventoryLevelBadge": { "placeholders": { "level": {"type":"int"} } },
+  "@inventoryLevelBadge": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "inventoryNeedMoreCoins": "Need {count} more coins",
-  "@inventoryNeedMoreCoins": { "placeholders": { "count": {"type":"int"} } },
-  "inventoryBuyItemTitle": "Buy {item}?",
-  "@inventoryBuyItemTitle": { "placeholders": { "item": {"type":"String"} } },
-  "inventoryUnlockTitle": "Unlock {title}?",
-  "@inventoryUnlockTitle": { "placeholders": { "title": {"type":"String"} } },
-  "inventoryCoinsPrice": "{count} coins",
-  "@inventoryCoinsPrice": { "placeholders": { "count": {"type":"int"} } },
-  "inventoryBuy": "Buy",
+  "@inventoryNeedMoreCoins": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "rushDifficultyEasy": "Easy",
   "rushDifficultyHard": "Hard",
   "rushDifficultyImpossible": "Impossible",
   "profileTitle": "Profile",
   "profilePlayingAsGuest": "Playing as guest",
-  "profileSignInSuccess": "Signed in — progress synced",
-  "profileSignInFailed": "Sign-in failed: {error}",
-  "@profileSignInFailed": { "placeholders": { "error": {"type":"String"} } },
   "profileSaveYourProgress": "Save your progress",
   "profileGuestBody": "Guest accounts live on this device only. Sign in to back up your level, coins, and trophies.",
   "profileContinueWithEmail": "Continue with Email",
@@ -430,9 +481,21 @@
   "profileDeleteAccountBody": "This will permanently delete your cloud save and account. This action cannot be undone.",
   "profileDelete": "Delete",
   "profileDeleteFailed": "Delete failed: {error}",
-  "@profileDeleteFailed": { "placeholders": { "error": {"type":"String"} } },
+  "@profileDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "profileSignOutFailed": "Sign-out failed: {error}",
-  "@profileSignOutFailed": { "placeholders": { "error": {"type":"String"} } },
+  "@profileSignOutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "profileSignedInBody": "Your progress is backed up to the cloud. Sign in on any device with the same account to continue.",
   "profileDeleteAccount": "Delete Account",
   "profileStatLevel": "Level",
@@ -473,29 +536,67 @@
   "profileSignInButton": "Sign in",
   "profileAlreadyHaveAccount": "Already have an account? Sign in",
   "profileDontHaveAccount": "Don't have an account? Create one",
-
   "homePlayer": "Player",
   "homeLevelStars": "Level {level} · {stars} stars",
-  "@homeLevelStars": { "placeholders": { "level": {"type":"int"}, "stars": {"type":"int"} } },
+  "@homeLevelStars": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "stars": {
+        "type": "int"
+      }
+    }
+  },
   "homeContinueLabel": "CONTINUE",
   "homeLevelNumber": "Level {level}",
-  "@homeLevelNumber": { "placeholders": { "level": {"type":"int"} } },
-  "homeContinue": "Continue",
+  "@homeLevelNumber": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "homeDaily": "Daily",
   "homeDailyReady": "Ready to play",
   "homeDailyClaimed": "Claimed today",
   "homeLeaderboard": "Leaderboard",
-  "homeComingSoon": "Coming soon",
   "homeInventory": "Inventory",
   "homeInventoryAllUnlocked": "All unlocked · {count} items",
-  "@homeInventoryAllUnlocked": { "placeholders": { "count": {"type":"int"} } },
+  "@homeInventoryAllUnlocked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeInventoryBrowse": "Browse your gear",
   "homeInventoryCounts": "{owned}/{total} · {items} items",
-  "@homeInventoryCounts": { "placeholders": { "owned": {"type":"int"}, "total": {"type":"int"}, "items": {"type":"int"} } },
+  "@homeInventoryCounts": {
+    "placeholders": {
+      "owned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "items": {
+        "type": "int"
+      }
+    }
+  },
   "homeTrophies": "Trophies",
   "homeTrophiesCount": "{unlocked} of {total}",
-  "@homeTrophiesCount": { "placeholders": { "unlocked": {"type":"int"}, "total": {"type":"int"} } },
-
+  "@homeTrophiesCount": {
+    "placeholders": {
+      "unlocked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "privacyWelcomeTitle": "Welcome to Arrow Puzzle",
   "privacyWelcomeSubtitle": "Before we begin, please review and accept our terms.",
   "privacyBulletLocal": "Your progress is saved locally on your device.",
@@ -509,20 +610,29 @@
   "bottomNavDaily": "Daily",
   "bottomNavInventory": "Inventory",
   "bottomNavSettings": "Settings",
-
   "gameTopBarScore": "Score: {score}",
-  "@gameTopBarScore": { "placeholders": { "score": {"type":"int"} } },
+  "@gameTopBarScore": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
   "gameTopBarRandom": "Random",
   "gameTopBarLevelNumber": "Lv.{level}",
-  "@gameTopBarLevelNumber": { "placeholders": { "level": {"type":"String"} } },
-
+  "@gameTopBarLevelNumber": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
   "gameModeZenMode": "Zen Mode",
   "howToPlayTitle": "HOW TO PLAY",
   "howToPlayBasics": "THE BASICS",
   "howToPlayBoardElements": "BOARD ELEMENTS",
   "howToPlayGameModes": "GAME MODES",
   "howToPlayProStrategies": "PRO STRATEGIES",
-
   "howToPlayCoreTitle": "Core Objective",
   "howToPlayCoreDesc": "Your goal is to clear the entire puzzle grid by guiding every arrow off the board. When no arrows remain on the board, the level is complete.",
   "howToPlayMovementTitle": "Arrow Movement",
@@ -551,10 +661,15 @@
   "howToPlayTraceDesc": "When an arrow is blocked, find which arrow blocks it, then find what blocks that second arrow. Unlocking the final blocker in the chain frees everything behind it.",
   "howToPlayTapAssistTitle": "Enable Tap Assist",
   "howToPlayTapAssistDesc": "If you play on smaller screens or tend to tap between tight arrow segments, turn on Tap Assist in Settings to automatically map nearby taps to the nearest arrow.",
-
   "multiplayerTitle": "MULTIPLAYER",
   "multiplayerRoomCodeCopied": "Room code {code} copied to clipboard!",
-  "@multiplayerRoomCodeCopied": { "placeholders": { "code": {"type":"String"} } },
+  "@multiplayerRoomCodeCopied": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "multiplayerHostRoom": "HOST ROOM",
   "multiplayerHostBody": "Share this room code with a friend to compete on the exact same puzzle layout!",
   "multiplayerNewCode": "New Code",
@@ -565,14 +680,10 @@
   "multiplayerRoomCodeHint": "e.g. ROOM-849201",
   "multiplayerRoomCodeRequired": "Please enter a room code",
   "multiplayerJoinMatch": "JOIN MATCH",
-  "zenCardSubtitle": "No timer. No limits. Just solve.",
   "profileSyncing": "Syncing...",
   "profileSyncFailed": "Sync failed",
   "gameModeTimeBlitz": "Time Blitz",
   "timeBlitzDesc": "Tap arrows to earn time. Blocked taps cost time. Survive as long as you can.",
-  "timeBlitzOverTitle": "Time Blitz Over",
-  "timeBlitzScoreLabel": "ARROWS CLEARED",
-  "timeBlitzLevelsLabel": "Levels reached",
   "profileEditName": "Edit Name",
   "profileSave": "Save",
   "profileUpdated": "Profile updated",
@@ -580,19 +691,18 @@
   "copyLink": "Copy Link",
   "linkCopied": "Link copied",
   "settingsShareFriends": "Share with friends",
-  "settingsSharingSoon": "Sharing coming soon",
   "blitzTimeLeftLabel": "TIME LEFT",
   "levelSelectButton": "Levels",
   "levelDetailsTitle": "Level {level}",
   "@levelDetailsTitle": {
-    "placeholders": { "level": { "type": "int" } }
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
   },
   "levelDetailsCompleted": "Completed",
   "levelDetailsNotPlayed": "Not played yet",
-  "levelDetailsGrid": "Grid",
-  "levelDetailsTimed": "Timed",
-  "levelDetailsMines": "Mines",
-  "levelDetailsMoves": "Moves",
   "levelDetailsStart": "Start",
   "zenModeLabel": "RELAX",
   "zenModeTitle": "Zen Mode",

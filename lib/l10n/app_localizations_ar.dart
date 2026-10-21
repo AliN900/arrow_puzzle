@@ -12,48 +12,7 @@ class AppStringsAr extends AppStrings {
   String get appName => 'أرو بزل';
 
   @override
-  String get menuHome => 'الرئيسية';
-
-  @override
-  String get menuDaily => 'يومي';
-
-  @override
-  String get menuInventory => 'المخزون';
-
-  @override
-  String get menuSettings => 'الإعدادات';
-
-  @override
-  String get menuProfile => 'الملف الشخصي';
-
-  @override
-  String get menuTrophies => 'الجوائز';
-
-  @override
-  String get menuLeaderboard => 'لوحة الصدارة';
-
-  @override
-  String get menuContinue => 'متابعة';
-
-  @override
-  String menuLevel(int level) {
-    return 'المرحلة $level';
-  }
-
-  @override
-  String get buttonPlay => 'العب';
-
-  @override
   String get buttonCancel => 'إلغاء';
-
-  @override
-  String get buttonConfirm => 'تأكيد';
-
-  @override
-  String get buttonBuy => 'شراء';
-
-  @override
-  String get buttonRestart => 'إعادة';
 
   @override
   String get buttonResume => 'استئناف';
@@ -62,69 +21,10 @@ class AppStringsAr extends AppStrings {
   String get buttonExit => 'خروج';
 
   @override
-  String get buttonClose => 'إغلاق';
-
-  @override
-  String get buttonNext => 'المرحلة التالية';
-
-  @override
-  String get buttonSignIn => 'تسجيل الدخول';
-
-  @override
-  String get buttonSignUp => 'إنشاء حساب';
-
-  @override
-  String get buttonSignOut => 'تسجيل الخروج';
-
-  @override
-  String get buttonDeleteAccount => 'حذف الحساب';
-
-  @override
-  String get buttonClaim => 'احصل مجانًا';
-
-  @override
-  String get buttonWatchAd => 'شاهد الإعلان';
-
-  @override
-  String get buttonAccept => 'أوافق وأتابع';
-
-  @override
-  String get buttonShare => 'شارك مع الأصدقاء';
-
-  @override
-  String get buttonStartBlitz => 'ابدأ Blitz';
-
-  @override
-  String buttonStartRush(String tier) {
-    return 'ابدأ $tier';
-  }
-
-  @override
   String get gameModeClassic => 'كلاسيكي';
 
   @override
-  String get gameModeZen => 'وضع الزن';
-
-  @override
   String get gameModeTimeAttack => 'ضد الوقت';
-
-  @override
-  String get gameModeArrowRush => 'أرو رش';
-
-  @override
-  String get gameModeBlitz => 'بليتز';
-
-  @override
-  String get gameModeMineArrows => 'أسهم ملغمة';
-
-  @override
-  String get difficultyEasy => 'سهل';
-
-  @override
-  String get difficultyHard => 'صعب';
-
-  @override
-  String get difficultyImpossible => 'مستحيل';
 
   @override
   String get settingsTitle => 'الإعدادات';
@@ -134,12 +34,6 @@ class AppStringsAr extends AppStrings {
 
   @override
   String get settingsDarkMode => 'الوضع الداكن';
-
-  @override
-  String get settingsAccentColor => 'لون التمييز';
-
-  @override
-  String get settingsAudioHaptics => 'الصوت والاهتزاز';
 
   @override
   String get settingsSoundEffects => 'المؤثرات الصوتية';
@@ -157,63 +51,10 @@ class AppStringsAr extends AppStrings {
   String get settingsAbout => 'حول';
 
   @override
-  String get settingsPrivacy => 'سياسة الخصوصية';
-
-  @override
-  String get settingsTerms => 'الشروط والأحكام';
-
-  @override
-  String get settingsLanguage => 'اللغة';
-
-  @override
-  String settingsVersion(String version) {
-    return 'الإصدار $version';
-  }
-
-  @override
-  String get settingsSharingComingSoon => 'المشاركة قريبًا';
-
-  @override
-  String get consentTitle => 'مرحبًا بك في أرو بزل';
-
-  @override
-  String get consentSubtitle =>
-      'قبل أن نبدأ، يرجى مراجعة شروطنا والموافقة عليها.';
-
-  @override
-  String get consentLocalProgress => 'يتم حفظ تقدمك محليًا على جهازك.';
-
-  @override
-  String get consentCloudSync => 'الحسابات الاختيارية تزامن التقدم مع السحابة.';
-
-  @override
-  String get consentAds => 'يعرض اللعبة إعلانات ليبقى مجانيًا.';
-
-  @override
-  String get consentAgreement => 'بالضغط أعلاه أنت توافق على شروطنا وأحكامنا.';
-
-  @override
   String get dialogExitTitle => 'هل تريد الخروج من اللعبة؟';
 
   @override
   String get dialogExitMessage => 'هل أنت متأكد من أنك تريد الخروج؟';
-
-  @override
-  String get dialogSignOutTitle => 'هل تريد تسجيل الخروج؟';
-
-  @override
-  String get dialogSignOutMessage =>
-      'يتم الاحتفاظ بحفظك السحابي. سيتم إعادة تعيين هذا الجهاز لحساب ضيف جديد بدءًا من المرحلة 1.';
-
-  @override
-  String get dialogDeleteTitle => 'هل تريد حذف الحساب؟';
-
-  @override
-  String get dialogDeleteMessage =>
-      'سيؤدي هذا إلى حذف حسابك وحفظك السحابي نهائيًا. لا يمكن التراجع عن هذا الإجراء.';
-
-  @override
-  String get profileGuest => 'تلعب كضيف';
 
   @override
   String get profileSaveToCloud => 'احفظ في السحابة';
@@ -225,96 +66,10 @@ class AppStringsAr extends AppStrings {
   String get profileSignedIn => 'مسجّل الدخول';
 
   @override
-  String get profileStatsLevel => 'المرحلة';
-
-  @override
-  String get profileStatsStars => 'النجوم';
-
-  @override
-  String get profileStatsTrophies => 'الجوائز';
-
-  @override
   String get dailyRewardsTitle => 'المكافآت اليومية';
 
   @override
-  String dailyRewardsDay(int day, int max) {
-    return 'اليوم $day من $max';
-  }
-
-  @override
-  String get dailyRewardsComeBack => 'عد غدًا';
-
-  @override
-  String get dailyRewardsClaimed => 'تم الاستلام اليوم!';
-
-  @override
-  String get levelComplete => 'المرحلة مكتملة!';
-
-  @override
-  String get levelFailed => 'نفدت القلوب!';
-
-  @override
-  String get levelTimeUp => 'انتهى الوقت!';
-
-  @override
-  String get gameOverRestart => 'إعادة المرحلة';
-
-  @override
-  String get gameOverHome => 'الرئيسية';
-
-  @override
   String get blitzTitle => 'بليتز';
-
-  @override
-  String get blitzStage => 'المرحلة';
-
-  @override
-  String get blitzComplete => 'بليتز مكتمل!';
-
-  @override
-  String get blitzOver => 'انتهى بليتز';
-
-  @override
-  String get blitzFinalScore => 'النتيجة النهائية';
-
-  @override
-  String blitzSurvivedAll(int count) {
-    return 'لقد نجحت من جميع المراحل الـ $count.';
-  }
-
-  @override
-  String blitzClearedOf(int cleared, int total) {
-    return 'أكملت $cleared من $total مراحل.';
-  }
-
-  @override
-  String get commonComingSoon => 'قريبًا';
-
-  @override
-  String get commonLoading => 'جار التحميل...';
-
-  @override
-  String get commonError => 'حدث خطأ ما. حاول مرة أخرى.';
-
-  @override
-  String get commonRetry => 'إعادة المحاولة';
-
-  @override
-  String get dailyRewardsClaimFree => 'احصل مجانًا';
-
-  @override
-  String get dailyRewardsWatchAd => 'شاهد الإعلان';
-
-  @override
-  String get dailyRewardsSnackClaimed => 'تم الاستلام!';
-
-  @override
-  String get dailyRewardsClaimedToday => 'تم الاستلام اليوم!';
-
-  @override
-  String dailyRewardsNextIn(String time) {
-    return 'المكافأة التالية خلال $time';
-  }
 
   @override
   String get unlockTitle => 'تهانينا!';
@@ -513,6 +268,86 @@ class AppStringsAr extends AppStrings {
 
   @override
   String get levelCompleteDoubleCoins => 'ضاعف العملات';
+
+  @override
+  String get settingsAboutCredits => 'حول اللعبة والحقوق';
+
+  @override
+  String get aboutTitle => 'حول والحقوق';
+
+  @override
+  String aboutVersion(String version) {
+    return 'الإصدار $version';
+  }
+
+  @override
+  String get aboutDeveloper => 'تصميم وتطوير علي حسين (ahb.Dev)';
+
+  @override
+  String get aboutOriginalConcept =>
+      'فكرة اللعبة الأصلية: ArrowEscape بواسطة sidhant947';
+
+  @override
+  String get aboutVisitWebsite => 'زيارة موقع ahb.Dev';
+
+  @override
+  String get aboutMusicTitle => 'الموسيقى (OpenGameArt)';
+
+  @override
+  String get aboutUnderwaterTheme => 'ثيم تحت الماء';
+
+  @override
+  String get aboutCallerTheme => 'ثيم القائمة الرئيسية';
+
+  @override
+  String get aboutGrooveTheme => 'ثيم Rushmode';
+
+  @override
+  String get aboutMusicSource => 'جميع المقطوعات الموسيقية من OpenGameArt.org.';
+
+  @override
+  String get aboutIconsTitle => 'الأيقونات (SVG Repo)';
+
+  @override
+  String get aboutIconsCredit1 =>
+      'طائر، ماس، نظارات، سمكة، حوت، زهرة، صاروخ، مفتاح، نجمة';
+
+  @override
+  String get aboutIconsCredit2 => 'فراشة، سلحفاة';
+
+  @override
+  String get aboutIconsCredit3 => 'تاج، منزل، شجرة';
+
+  @override
+  String get aboutIconsCredit4 => 'قلب';
+
+  @override
+  String get aboutIconsAuthors =>
+      'بواسطة Noah Jacobus, Konstantin Filatov, Solar Icons, Dazzle UI, pixelbazaar, & Iconhub';
+
+  @override
+  String get aboutVisitSvgRepo => 'زيارة SVGRepo.com';
+
+  @override
+  String get aboutOpenSourceTitle => 'مفتوح المصدر';
+
+  @override
+  String get aboutOpenSourceBody =>
+      'تم بناء هذه اللعبة باستخدام تقنيات مفتوحة المصدر رائعة:';
+
+  @override
+  String get aboutCopyright => '© 2026 ahb.Dev. جميع الحقوق محفوظة.';
+
+  @override
+  String gameTimedLevel(String seconds) {
+    return 'مستوى محدد · $seconds ثانية';
+  }
+
+  @override
+  String get gameSolverCalculating => 'جاري حساب الحل...';
+
+  @override
+  String get gameSolverUnsolvable => '❌ غير قابل للحل! المستوى مغلق.';
 
   @override
   String get pauseTitle => 'متوقف مؤقتًا';
@@ -1002,18 +837,7 @@ class AppStringsAr extends AppStrings {
   String get nothingToUndo => 'لا شيء للتراجع عنه';
 
   @override
-  String get blitzCompleteTitle => 'اكتمل بليتز!';
-
-  @override
-  String get blitzOverTitle => 'انتهى بليتز';
-
-  @override
   String get blitzSplashStage => 'المرحلة';
-
-  @override
-  String blitzPoints(int score) {
-    return '$score نقطة';
-  }
 
   @override
   String get arrowSpeedEscapeSpeed => 'سرعة الهروب';
@@ -1094,40 +918,16 @@ class AppStringsAr extends AppStrings {
   String get leaderboardTabAllTime => 'الإجمالي';
 
   @override
-  String get leaderboardYourRank => 'ترتيبك';
-
-  @override
-  String get leaderboardNotRanked => 'غير مصنّف بعد';
-
-  @override
   String get leaderboardSignInToRank => 'سجّل الدخول للظهور في القائمة';
 
   @override
   String get leaderboardEmptyState => 'لا توجد نتائج بعد';
 
   @override
-  String get leaderboardScore => 'النقاط';
-
-  @override
   String get leaderboardLevel => 'المستوى';
 
   @override
   String get leaderboardStars => 'النجوم';
-
-  @override
-  String get leaderboardTrophies => 'الجوائز';
-
-  @override
-  String get leaderboardYou => 'أنت';
-
-  @override
-  String get leaderboardRankPrefix => '#';
-
-  @override
-  String get leaderboardOptInTitle => 'اعرضني في قائمة المتصدرين';
-
-  @override
-  String get leaderboardOptInSubtitle => 'اسمح للاعبين برؤية ترتيبك';
 
   @override
   String get inventoryTitle => 'المخزون';
@@ -1163,24 +963,6 @@ class AppStringsAr extends AppStrings {
   }
 
   @override
-  String inventoryBuyItemTitle(String item) {
-    return 'شراء $item؟';
-  }
-
-  @override
-  String inventoryUnlockTitle(String title) {
-    return 'فتح $title؟';
-  }
-
-  @override
-  String inventoryCoinsPrice(int count) {
-    return '$count عملة';
-  }
-
-  @override
-  String get inventoryBuy => 'شراء';
-
-  @override
   String get rushDifficultyEasy => 'سهل';
 
   @override
@@ -1194,14 +976,6 @@ class AppStringsAr extends AppStrings {
 
   @override
   String get profilePlayingAsGuest => 'اللعب كضيف';
-
-  @override
-  String get profileSignInSuccess => 'تم تسجيل الدخول — تمت مزامنة التقدم';
-
-  @override
-  String profileSignInFailed(String error) {
-    return 'فشل تسجيل الدخول: $error';
-  }
 
   @override
   String get profileSaveYourProgress => 'احفظ تقدمك';
@@ -1395,9 +1169,6 @@ class AppStringsAr extends AppStrings {
   }
 
   @override
-  String get homeContinue => 'متابعة';
-
-  @override
   String get homeDaily => 'يومي';
 
   @override
@@ -1408,9 +1179,6 @@ class AppStringsAr extends AppStrings {
 
   @override
   String get homeLeaderboard => 'المتصدرون';
-
-  @override
-  String get homeComingSoon => 'قريبًا';
 
   @override
   String get homeInventory => 'المخزون';
@@ -1647,9 +1415,6 @@ class AppStringsAr extends AppStrings {
   String get multiplayerJoinMatch => 'انضم';
 
   @override
-  String get zenCardSubtitle => 'بلا وقت. بلا حدود. فقط حلّ.';
-
-  @override
   String get profileSyncing => 'جارٍ المزامنة...';
 
   @override
@@ -1661,15 +1426,6 @@ class AppStringsAr extends AppStrings {
   @override
   String get timeBlitzDesc =>
       'انقر الأسهم لتكسب وقتًا. النقرات المحجوبة تخسر وقتًا. اصمد أطول فترة ممكنة.';
-
-  @override
-  String get timeBlitzOverTitle => 'انتهى بليتز الزمن';
-
-  @override
-  String get timeBlitzScoreLabel => 'الأسهم المُنجزة';
-
-  @override
-  String get timeBlitzLevelsLabel => 'المستويات المُنجزة';
 
   @override
   String get profileEditName => 'تعديل الاسم';
@@ -1693,9 +1449,6 @@ class AppStringsAr extends AppStrings {
   String get settingsShareFriends => 'شارك مع الأصدقاء';
 
   @override
-  String get settingsSharingSoon => 'قريباً';
-
-  @override
   String get blitzTimeLeftLabel => 'الوقت المتبقي';
 
   @override
@@ -1711,18 +1464,6 @@ class AppStringsAr extends AppStrings {
 
   @override
   String get levelDetailsNotPlayed => 'لم تُلعب بعد';
-
-  @override
-  String get levelDetailsGrid => 'الشبكة';
-
-  @override
-  String get levelDetailsTimed => 'مؤقت';
-
-  @override
-  String get levelDetailsMines => 'الألغام';
-
-  @override
-  String get levelDetailsMoves => 'الحركات';
 
   @override
   String get levelDetailsStart => 'ابدأ';

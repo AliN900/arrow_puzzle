@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../core/board_themes.dart';
 import '../data/models/arrow.dart';
@@ -7,6 +9,7 @@ import '../core/constants.dart';
 import '../core/app_themes.dart';
 import '../core/game_mode.dart';
 import '../data/models/minesweeper_cell.dart';
+import 'helpers/leaving_arrow_solver.dart';
 
 class GameState extends ChangeNotifier {
   static const int kAbsoluteMaxGridSize = 15;
@@ -88,6 +91,7 @@ class GameState extends ChangeNotifier {
   List<ArrowModel> get escapedHistory => List.unmodifiable(_escapedHistory);
   String? get hintArrowId => _hintArrowId;
   bool get isBombArmed => _isBombArmed;
+  bool _isSearchingForLeavingArrow = false;
 
   void refresh() => notifyListeners();
 
@@ -150,6 +154,11 @@ class GameState extends ChangeNotifier {
 
     if (wasActiveLeaving) {
       onLeavingArrowResolved(arrowId);
+    }
+
+    // ── THE FIX: Trigger the search ONLY after an arrow clears ──
+    if (!_isComplete && !_isGameOver && _leavingArrowsRemaining > 0 && _activeLeavingArrowId == null) {
+      _startAsyncLeavingArrowSearch();
     }
 
     notifyListeners();
@@ -251,13 +260,15 @@ class GameState extends ChangeNotifier {
       return TapResult.ignored;
     }
 
-    // Decrement the leaving-arrow counter on every user tap.
-    // Forced launches skip this to avoid a feedback loop.
+    // Decrement on EVERY user tap (correct or wrong).
+    // Forced launches skip this so the counter doesn't go negative.
     if (!isForced) {
       decrementLeavingArrowCounter();
     }
 
     final exitInfo = _computeExitInfo(arrow);
+
+    // ── THE FIX: Remove the bypass. If it's blocked, it's blocked. ──
     if (exitInfo.blocked) {
       _comboCount = 0;
       onCameraShake?.call();
@@ -283,7 +294,6 @@ class GameState extends ChangeNotifier {
       _orphanDots.remove(k);
     }
 
-    // Slash arrows clear every mine on their exit path.
     if (exitInfo.rocksToDestroy.isNotEmpty) {
       final toRemove = exitInfo.rocksToDestroy.toSet();
       _rocks.removeWhere((r) => toRemove.contains(r.id));
@@ -471,7 +481,6 @@ class GameState extends ChangeNotifier {
     if (_activeLeavingArrowId == arrow.id) {
       _pendingForceLaunch.remove(arrow.id);
       _activeLeavingArrowId = null;
-      _promoteNextLeavingArrow();
     }
 
     notifyListeners();
@@ -546,151 +555,104 @@ class GameState extends ChangeNotifier {
   Set<String> get pendingForceLaunch => _pendingForceLaunch;
   bool get hasActiveLeavingArrow => _activeLeavingArrowId != null;
 
-  /// Difficulty buffer: how many "wasted taps" the player gets beyond the
-  /// theoretical minimum. 1 for early levels, 2 for later ones.
-  int _bufferForDifficulty() {
-    final lvl = _currentLevel.levelNumber;
-    if (lvl <= 100) return 2; // Early levels get 2 forgiving extra taps
-    return 2;                 // High levels stay strict at exactly 2 extra taps
-  }
 
-  /// How many *other* arrows need to clear before [targetArrowId] becomes
-  /// solvable. 0 if the target is already solvable.
-  ///
-  /// Uses a greedy simulation: repeatedly remove any solvable arrow
-  /// (excluding the target) until the target's path is clear.
-  int _computeRequiredClearsFor(String targetArrowId) {
-    final working = List<ArrowModel>.from(_arrows);
-    final rocks = List<RockModel>.from(_rocks);
-    final dots = Map<String, OrphanDotType>.from(_orphanDots);
-
-    final targetIdx = working.indexWhere((a) => a.id == targetArrowId);
-    if (targetIdx == -1) return 0;
-    final target = working[targetIdx];
-
-    // Already solvable?
-    if (!_computeExitInfoFor(target, working, rocks, dots).blocked) {
-      return 0;
-    }
-
-    int cleared = 0;
-    bool madeProgress = true;
-    while (madeProgress) {
-      madeProgress = false;
-      for (int i = 0; i < working.length; i++) {
-        final a = working[i];
-        if (a.id == targetArrowId) continue;
-        if (a.state != ArrowState.idle) continue;
-        if (!_computeExitInfoFor(a, working, rocks, dots).blocked) {
-          working.removeAt(i);
-          cleared++;
-          madeProgress = true;
-          break;
-        }
-      }
-      // Target solved?
-      if (!_computeExitInfoFor(target, working, rocks, dots).blocked) {
-        return cleared;
-      }
-    }
-    // Couldn't reach a solvable state (deadlock-y board). Return what
-    // we managed; the buffer gives breathing room regardless.
-    return cleared;
-  }
-
-  /// Call at level start. Seeds the leaving-arrow cycle.
   void seedLeavingArrows({required int count}) {
     _leavingArrowsRemaining = count;
     _leavingArrowTapCount = 10;
     _leavingArrowTapLimit = 10;
     _activeLeavingArrowId = null;
     _pendingForceLaunch.clear();
-    _promoteNextLeavingArrow();
+    _isSearchingForLeavingArrow = false;
   }
 
-  void _promoteNextLeavingArrow() {
-    if (_leavingArrowsRemaining <= 0) {
-      _activeLeavingArrowId = null;
-      return;
-    }
+  Future<void> _startAsyncLeavingArrowSearch() async {
+    if (_leavingArrowsRemaining <= 0) return;
+    if (_isComplete || _isGameOver || _activeLeavingArrowId != null) return;
+    if (_isSearchingForLeavingArrow) return;
 
-    final allCandidates = _arrows
-        .where((a) =>
-    a.state == ArrowState.idle &&
-        a.type == ArrowType.normal &&
-        !a.isLeavingArrow)
-        .toList();
+    _isSearchingForLeavingArrow = true;
 
-    if (allCandidates.isEmpty) {
-      _leavingArrowsRemaining = 0;
-      _activeLeavingArrowId = null;
-      return;
-    }
+    final args = {
+      'arrows': _arrows.map((a) => a.toJson()).toList(),
+      'rocks': _rocks.map((r) => r.toJson()).toList(),
+      'orphanDots': _orphanDots.entries.map((e) {
+        final parts = e.key.split(',');
+        return OrphanDot(row: int.parse(parts[0]), col: int.parse(parts[1]), type: e.value).toJson();
+      }).toList(),
+      'gridSize': _currentLevel.gridSize,
+    };
 
-    // Shuffle so the pick is random among eligible candidates.
-    allCandidates.shuffle();
+    try {
+      final result = await compute(LeavingArrowSolver.findBestLeavingArrow, args);
 
-    final buffer = _bufferForDifficulty();
-    // ── THE FIX: Lower the hardCap so the limit is never crazy high ──
-    const hardCap = 15; // Was 20. Now max required is 13 (13 + 2 = 15).
-
-    // A candidate is only fair if its required clears fit within the limit.
-    //   limit = required + buffer
-    //   limit <= hardCap
-    // => required <= hardCap - buffer
-    //
-    // Also require at least 2 required clears — an arrow that's already
-    // solvable isn't a real "leaving arrow" challenge (its counter would
-    // tick down on every unrelated tap).
-    final maxAllowedRequired = hardCap - buffer;
-    const minRequired = 2;
-
-    ArrowModel? chosen;
-    int chosenRequired = 0;
-
-    int attempts = 0;
-    for (final candidate in allCandidates) {
-      if (++attempts > 40) break; // give up after 40 simulations
-      final required = _computeRequiredClearsFor(candidate.id);
-      if (required >= minRequired && required <= maxAllowedRequired) {
-        chosen = candidate;
-        chosenRequired = required;
-        break;
+      if (_isComplete || _isGameOver || _activeLeavingArrowId != null) {
+        _isSearchingForLeavingArrow = false;
+        return;
       }
+
+      if (result != null) {
+        final id = result['id'] as String;
+        final required = result['required'] as int;
+
+        final idx = _arrows.indexWhere((a) => a.id == id);
+
+        if (idx == -1 || _arrows[idx].state != ArrowState.idle) {
+          debugPrint('🏹 Arrow $id is gone or sliding. Retrying search...');
+          _isSearchingForLeavingArrow = false;
+          _startAsyncLeavingArrowSearch();
+          return;
+        }
+
+        // ── THE MARGIN LOGIC ──
+        final lvl = _currentLevel.levelNumber;
+        int margin;
+
+        if (lvl <= 50) {
+          margin = 3; // Early levels: 3 extra tries
+        } else if (lvl <= 150) {
+          margin = 2; // Mid levels: 2 extra tries
+        } else {
+          // High levels (151+): 50% chance for 1, 50% chance for 2
+          margin = Random().nextBool() ? 1 : 2;
+        }
+
+        _arrows[idx] = _arrows[idx].copyWith(isLeavingArrow: true);
+        _activeLeavingArrowId = id;
+
+        // ── THE PERFECT MATH ──
+        // required = absolute minimum moves to clear blockers
+        // + 1 = tap the target
+        // + margin = extra tries based on player level
+        final limit = (required + 1 + margin).clamp(4, 15);
+
+        _leavingArrowTapLimit = limit;
+        _leavingArrowTapCount = limit;
+        _leavingArrowsRemaining--;
+
+        debugPrint('🏹 Leaving arrow promoted: id=$id required=$required margin=$margin limit=$limit');
+        notifyListeners();
+      } else {
+        debugPrint('🏹 No fair leaving arrow found async. Skipping.');
+        _leavingArrowsRemaining = 0;
+        _activeLeavingArrowId = null;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('🏹 Leaving arrow async search failed: $e');
+    } finally {
+      _isSearchingForLeavingArrow = false;
     }
-
-    if (chosen == null) {
-      // No fair candidate on this board — skip the remaining leaving arrows
-      // for this level rather than hand the player an unwinnable challenge.
-      debugPrint(
-          '🏹 No fair leaving arrow found '
-              '(max $maxAllowedRequired clears). Skipping remaining $_leavingArrowsRemaining.');
-      _leavingArrowsRemaining = 0;
-      _activeLeavingArrowId = null;
-      notifyListeners();
-      return;
-    }
-
-    final idx = _arrows.indexWhere((a) => a.id == chosen!.id);
-    if (idx == -1) {
-      _leavingArrowsRemaining = 0;
-      _activeLeavingArrowId = null;
-      return;
-    }
-
-    final limit = (chosenRequired + buffer).clamp(minRequired, hardCap);
-
-    _arrows[idx] = _arrows[idx].copyWith(isLeavingArrow: true);
-    _activeLeavingArrowId = chosen.id;
-    _leavingArrowTapLimit = limit;
-    _leavingArrowTapCount = limit;
-    _leavingArrowsRemaining--;
-
-    debugPrint(
-        '🏹 Leaving arrow promoted: id=${chosen.id} required=$chosenRequired buffer=$buffer limit=$limit');
-
-    notifyListeners();
   }
+
+  void onLeavingArrowResolved(String arrowId) {
+    if (_activeLeavingArrowId != arrowId) return;
+    _pendingForceLaunch.remove(arrowId);
+    _activeLeavingArrowId = null;
+
+    // Spin up the search for the NEXT leaving arrow in the background
+    _startAsyncLeavingArrowSearch();
+  }
+
 
   /// Decrement the leaving-arrow counter on every user tap.
   void decrementLeavingArrowCounter() {
@@ -704,7 +666,7 @@ class GameState extends ChangeNotifier {
     _leavingArrowTapCount--;
     if (_leavingArrowTapCount <= 0) {
       _pendingForceLaunch.add(activeId);
-      _leavingArrowTapCount = _leavingArrowTapLimit;
+      _leavingArrowTapCount = _leavingArrowTapLimit; // Reset to prevent negative
     }
     notifyListeners();
   }
@@ -714,13 +676,6 @@ class GameState extends ChangeNotifier {
     _pendingForceLaunch.remove(arrowId);
   }
 
-  /// Called when the currently active leaving arrow has left the board.
-  void onLeavingArrowResolved(String arrowId) {
-    if (_activeLeavingArrowId != arrowId) return;
-    _pendingForceLaunch.remove(arrowId);
-    _activeLeavingArrowId = null;
-    _promoteNextLeavingArrow();
-  }
 
   void forceGameOver() {
     _isGameOver = true;

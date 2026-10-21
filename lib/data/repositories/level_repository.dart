@@ -5,6 +5,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
+import '../level_generator/mask_generator.dart';
+import '../level_generator/shape_generator.dart';
+import '../level_generator/solver.dart';
 import '../levels/art_shapes.dart';
 import '../models/level.dart';
 import '../level_generator/level_generator.dart';
@@ -29,8 +32,51 @@ LevelModel generateArtLevelIsolate(Map<String, dynamic> args) {
 }
 
 @pragma('vm:entry-point')
+LevelModel? generateBlitzLevelIsolate(Map<String, dynamic> args) {
+  final levelNumber = args['levelNumber'] as int;
+  final gridSize = args['gridSize'] as int;
+  final shapeName = args['shapeName'] as String;
+  final seed = args['seed'] as int;
+
+  final shape = MaskShape.values.firstWhere(
+        (s) => s.name == shapeName,
+    orElse: () => MaskShape.square,
+  );
+
+  final mask = MaskGenerator.shapeByName(
+    shape.name,
+    gridSize,
+    math.Random(seed),
+  );
+
+  final level = LevelGenerator.generateFromMask(
+    levelNumber: levelNumber,
+    mask: mask,
+    gridSize: gridSize,
+    maskShape: shape,
+    seed: seed,
+  );
+
+  return level;
+}
+
+@pragma('vm:entry-point')
 LevelModel generateLevelIsolate(int levelNumber) {
-  return LevelGenerator.generateLevel(levelNumber);
+  // 1. Figure out the grid size
+  int gridSize = 8 + (levelNumber ~/ 10);
+  if (gridSize > 16) gridSize = 16;
+
+  // 2. Generate the shape mask
+  final shapeData = LevelShapeGenerator.generateMask(levelNumber, gridSize);
+
+  // 3. Generate the level with the mask
+  return LevelGenerator.generateFromMask(
+    levelNumber: levelNumber,
+    mask: shapeData.mask,
+    gridSize: gridSize,
+    maskShape: shapeData.shape,
+    seed: levelNumber * 1337,
+  );
 }
 
 @pragma('vm:entry-point')
@@ -39,8 +85,11 @@ LevelModel generateComplexLevelIsolate(int levelNumber) {
 }
 
 @pragma('vm:entry-point')
-LevelModel generateSeededLevelIsolate(List<int> args) {
-  return LevelGenerator.generateLevel(args[0], seed: args[1]);
+LevelModel? generateSeededLevelIsolate(List<int> args) {
+  final level = LevelGenerator.generateLevel(args[0], seed: args[1]);
+  // Verify INSIDE the isolate — never on the UI thread.
+  if (LevelSolver.solve(level, 200000) == null) return null;
+  return level;
 }
 
 class LevelRepository {
@@ -103,9 +152,25 @@ class LevelRepository {
     final cached = _tryLoadCached(levelNumber);
     if (cached != null) return cached;
 
-    final level = shouldBeArtLevel(levelNumber)
-        ? buildArtLevel(levelNumber)
-        : LevelGenerator.generateLevel(levelNumber);
+    LevelModel level;
+    if (shouldBeArtLevel(levelNumber)) {
+      level = buildArtLevel(levelNumber);
+    } else {
+      // Generate the shape (Square, Rectangle, Pyramid, Circle...)
+      // We assume a base grid size here. Adjust `10` if your LevelGenerator scales differently.
+      int gridSize = 8 + (levelNumber ~/ 10);
+      if (gridSize > 16) gridSize = 16;
+
+      final shapeData = LevelShapeGenerator.generateMask(levelNumber, gridSize);
+
+      level = LevelGenerator.generateFromMask(
+        levelNumber: levelNumber,
+        mask: shapeData.mask,
+        gridSize: gridSize,
+        maskShape: shapeData.shape,
+        seed: levelNumber * 1337,
+      );
+    }
 
     _cache[levelNumber] = level;
     _saveToDisk(levelNumber, level);
@@ -246,17 +311,20 @@ class LevelRepository {
     }
   }
 
-  Future<LevelModel> getBlitzLevelAsync(
-      int levelNumber, {
-        required int seed,
-      }) async {
-    try {
-      return await compute(generateSeededLevelIsolate, [levelNumber, seed])
-          .timeout(const Duration(seconds: 15));
-    } catch (e) {
-      debugPrint('Seeded generation failed, using sync: $e');
-      return LevelGenerator.generateLevel(levelNumber, seed: seed);
+  Future<LevelModel> getBlitzLevelAsync(int levelNumber, {required int seed}) async {
+    for (int attempt = 0; attempt < 4; attempt++) {           // was 15
+      final currentSeed = seed + attempt * 999;
+      try {
+        final level = await compute(generateSeededLevelIsolate, [levelNumber, currentSeed])
+            .timeout(const Duration(seconds: 8));             // was 10
+        if (level != null) return level;
+        debugPrint('❌ Blitz attempt $attempt failed (isolate rejected)');
+      } catch (e) {
+        debugPrint('Blitz generation error: $e');
+      }
     }
+    debugPrint('⚠️ FATAL: Blitz generation failed 4 times. Using safe fallback.');
+    return LevelGenerator.generateLevel(1);
   }
 
   bool isCached(int levelNumber) {

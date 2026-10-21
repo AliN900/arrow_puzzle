@@ -12,48 +12,7 @@ class AppStringsId extends AppStrings {
   String get appName => 'Arrow Puzzle';
 
   @override
-  String get menuHome => 'Beranda';
-
-  @override
-  String get menuDaily => 'Harian';
-
-  @override
-  String get menuInventory => 'Inventaris';
-
-  @override
-  String get menuSettings => 'Pengaturan';
-
-  @override
-  String get menuProfile => 'Profil';
-
-  @override
-  String get menuTrophies => 'Piala';
-
-  @override
-  String get menuLeaderboard => 'Peringkat';
-
-  @override
-  String get menuContinue => 'Lanjutkan';
-
-  @override
-  String menuLevel(int level) {
-    return 'Level $level';
-  }
-
-  @override
-  String get buttonPlay => 'Main';
-
-  @override
   String get buttonCancel => 'Batal';
-
-  @override
-  String get buttonConfirm => 'Konfirmasi';
-
-  @override
-  String get buttonBuy => 'Beli';
-
-  @override
-  String get buttonRestart => 'Mulai ulang';
 
   @override
   String get buttonResume => 'Lanjutkan';
@@ -62,69 +21,10 @@ class AppStringsId extends AppStrings {
   String get buttonExit => 'Keluar';
 
   @override
-  String get buttonClose => 'Tutup';
-
-  @override
-  String get buttonNext => 'Level berikutnya';
-
-  @override
-  String get buttonSignIn => 'Masuk';
-
-  @override
-  String get buttonSignUp => 'Buat akun';
-
-  @override
-  String get buttonSignOut => 'Keluar';
-
-  @override
-  String get buttonDeleteAccount => 'Hapus akun';
-
-  @override
-  String get buttonClaim => 'Klaim gratis';
-
-  @override
-  String get buttonWatchAd => 'Tonton iklan';
-
-  @override
-  String get buttonAccept => 'Terima & lanjutkan';
-
-  @override
-  String get buttonShare => 'Bagikan ke teman';
-
-  @override
-  String get buttonStartBlitz => 'Mulai Blitz';
-
-  @override
-  String buttonStartRush(String tier) {
-    return 'Mulai $tier';
-  }
-
-  @override
   String get gameModeClassic => 'Klasik';
 
   @override
-  String get gameModeZen => 'Mode Zen';
-
-  @override
   String get gameModeTimeAttack => 'Lawan Waktu';
-
-  @override
-  String get gameModeArrowRush => 'Anak Panah Cepat';
-
-  @override
-  String get gameModeBlitz => 'Blitz';
-
-  @override
-  String get gameModeMineArrows => 'Panah Ranjau';
-
-  @override
-  String get difficultyEasy => 'Mudah';
-
-  @override
-  String get difficultyHard => 'Sulit';
-
-  @override
-  String get difficultyImpossible => 'Mustahil';
 
   @override
   String get settingsTitle => 'Pengaturan';
@@ -134,12 +34,6 @@ class AppStringsId extends AppStrings {
 
   @override
   String get settingsDarkMode => 'Mode Gelap';
-
-  @override
-  String get settingsAccentColor => 'Warna Aksen';
-
-  @override
-  String get settingsAudioHaptics => 'AUDIO & GETARAN';
 
   @override
   String get settingsSoundEffects => 'Efek suara';
@@ -157,66 +51,10 @@ class AppStringsId extends AppStrings {
   String get settingsAbout => 'TENTANG';
 
   @override
-  String get settingsPrivacy => 'Kebijakan Privasi';
-
-  @override
-  String get settingsTerms => 'Syarat & Ketentuan';
-
-  @override
-  String get settingsLanguage => 'Bahasa';
-
-  @override
-  String settingsVersion(String version) {
-    return 'Versi $version';
-  }
-
-  @override
-  String get settingsSharingComingSoon => 'Berbagi segera hadir';
-
-  @override
-  String get consentTitle => 'Selamat datang di Arrow Puzzle';
-
-  @override
-  String get consentSubtitle =>
-      'Sebelum memulai, tinjau dan terima syarat kami.';
-
-  @override
-  String get consentLocalProgress =>
-      'Kemajuan Anda disimpan secara lokal di perangkat.';
-
-  @override
-  String get consentCloudSync =>
-      'Akun opsional menyinkronkan kemajuan ke cloud.';
-
-  @override
-  String get consentAds => 'Game menampilkan iklan agar tetap gratis.';
-
-  @override
-  String get consentAgreement =>
-      'Dengan menekan di atas, Anda menyetujui Syarat & Ketentuan kami.';
-
-  @override
   String get dialogExitTitle => 'Keluar dari game?';
 
   @override
   String get dialogExitMessage => 'Yakin ingin keluar?';
-
-  @override
-  String get dialogSignOutTitle => 'Keluar dari akun?';
-
-  @override
-  String get dialogSignOutMessage =>
-      'Kemajuan cloud Anda tetap tersimpan. Perangkat ini akan direset ke akun tamu dari level 1.';
-
-  @override
-  String get dialogDeleteTitle => 'Hapus Akun?';
-
-  @override
-  String get dialogDeleteMessage =>
-      'Ini akan menghapus akun dan kemajuan cloud Anda secara permanen. Tidak dapat dibatalkan.';
-
-  @override
-  String get profileGuest => 'Bermain sebagai tamu';
 
   @override
   String get profileSaveToCloud => 'Simpan ke Cloud';
@@ -228,96 +66,10 @@ class AppStringsId extends AppStrings {
   String get profileSignedIn => 'Masuk';
 
   @override
-  String get profileStatsLevel => 'Level';
-
-  @override
-  String get profileStatsStars => 'Bintang';
-
-  @override
-  String get profileStatsTrophies => 'Piala';
-
-  @override
   String get dailyRewardsTitle => 'HADIAH HARIAN';
 
   @override
-  String dailyRewardsDay(int day, int max) {
-    return 'Hari $day dari $max';
-  }
-
-  @override
-  String get dailyRewardsComeBack => 'Kembali besok';
-
-  @override
-  String get dailyRewardsClaimed => 'Sudah diklaim hari ini!';
-
-  @override
-  String get levelComplete => 'Level Selesai!';
-
-  @override
-  String get levelFailed => 'Nyawa habis!';
-
-  @override
-  String get levelTimeUp => 'Waktu habis!';
-
-  @override
-  String get gameOverRestart => 'Mulai ulang level';
-
-  @override
-  String get gameOverHome => 'Beranda';
-
-  @override
   String get blitzTitle => 'Blitz';
-
-  @override
-  String get blitzStage => 'TAHAP';
-
-  @override
-  String get blitzComplete => 'Blitz Selesai!';
-
-  @override
-  String get blitzOver => 'Blitz Berakhir';
-
-  @override
-  String get blitzFinalScore => 'SKOR AKHIR';
-
-  @override
-  String blitzSurvivedAll(int count) {
-    return 'Anda melewati semua $count tahap.';
-  }
-
-  @override
-  String blitzClearedOf(int cleared, int total) {
-    return 'Menyelesaikan $cleared dari $total tahap.';
-  }
-
-  @override
-  String get commonComingSoon => 'Segera hadir';
-
-  @override
-  String get commonLoading => 'Memuat...';
-
-  @override
-  String get commonError => 'Terjadi kesalahan. Coba lagi.';
-
-  @override
-  String get commonRetry => 'Coba lagi';
-
-  @override
-  String get dailyRewardsClaimFree => 'Klaim gratis';
-
-  @override
-  String get dailyRewardsWatchAd => 'Tonton iklan';
-
-  @override
-  String get dailyRewardsSnackClaimed => 'Diklaim!';
-
-  @override
-  String get dailyRewardsClaimedToday => 'Sudah diklaim hari ini!';
-
-  @override
-  String dailyRewardsNextIn(String time) {
-    return 'Hadiah berikutnya dalam $time';
-  }
 
   @override
   String get unlockTitle => 'Selamat!';
@@ -518,6 +270,89 @@ class AppStringsId extends AppStrings {
 
   @override
   String get levelCompleteDoubleCoins => 'Gandakan Koin';
+
+  @override
+  String get settingsAboutCredits => 'Tentang Game & Kredit';
+
+  @override
+  String get aboutTitle => 'Tentang & Kredit';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Versi $version';
+  }
+
+  @override
+  String get aboutDeveloper =>
+      'Dirancang & Dikembangkan oleh Ali Hussein (ahb.Dev)';
+
+  @override
+  String get aboutOriginalConcept =>
+      'Konsep game asli: ArrowEscape oleh sidhant947';
+
+  @override
+  String get aboutVisitWebsite => 'Kunjungi Situs Web ahb.Dev';
+
+  @override
+  String get aboutMusicTitle => 'MUSIK (OpenGameArt)';
+
+  @override
+  String get aboutUnderwaterTheme => 'Tema Bawah Air';
+
+  @override
+  String get aboutCallerTheme => 'Tema Menu Utama';
+
+  @override
+  String get aboutGrooveTheme => 'Groove of Timeatk Rushmode';
+
+  @override
+  String get aboutMusicSource =>
+      'Semua trek musik bersumber dari OpenGameArt.org.';
+
+  @override
+  String get aboutIconsTitle => 'IKON (SVG Repo)';
+
+  @override
+  String get aboutIconsCredit1 =>
+      'Burung, Berlian, Kacamata, Ikan, Paus, Bunga, Roket, Kunci, Bintang';
+
+  @override
+  String get aboutIconsCredit2 => 'Kupu-kupu, Kura-kura';
+
+  @override
+  String get aboutIconsCredit3 => 'Mahkota, Rumah, Pohon';
+
+  @override
+  String get aboutIconsCredit4 => 'Hati';
+
+  @override
+  String get aboutIconsAuthors =>
+      'Oleh Noah Jacobus, Konstantin Filatov, Solar Icons, Dazzle UI, pixelbazaar, & Iconhub';
+
+  @override
+  String get aboutVisitSvgRepo => 'Kunjungi SVGRepo.com';
+
+  @override
+  String get aboutOpenSourceTitle => 'OPEN SOURCE';
+
+  @override
+  String get aboutOpenSourceBody =>
+      'Game ini dibangun menggunakan teknologi open-source yang luar biasa:';
+
+  @override
+  String get aboutCopyright =>
+      '© 2026 ahb.Dev. Hak cipta dilindungi undang-undang.';
+
+  @override
+  String gameTimedLevel(String seconds) {
+    return 'LEVEL BERWAKTU · ${seconds}dtk';
+  }
+
+  @override
+  String get gameSolverCalculating => 'Menghitung solusi...';
+
+  @override
+  String get gameSolverUnsolvable => '❌ TIDAK TERPECAHKAN! Level buntu.';
 
   @override
   String get pauseTitle => 'Jeda';
@@ -1014,18 +849,7 @@ class AppStringsId extends AppStrings {
   String get nothingToUndo => 'Tidak ada yang bisa dibatalkan';
 
   @override
-  String get blitzCompleteTitle => 'Blitz Selesai!';
-
-  @override
-  String get blitzOverTitle => 'Blitz Berakhir';
-
-  @override
   String get blitzSplashStage => 'TAHAP';
-
-  @override
-  String blitzPoints(int score) {
-    return '$score poin';
-  }
 
   @override
   String get arrowSpeedEscapeSpeed => 'Kecepatan kabur';
@@ -1106,41 +930,16 @@ class AppStringsId extends AppStrings {
   String get leaderboardTabAllTime => 'Sepanjang Masa';
 
   @override
-  String get leaderboardYourRank => 'Peringkat Anda';
-
-  @override
-  String get leaderboardNotRanked => 'Belum diperingkat';
-
-  @override
   String get leaderboardSignInToRank => 'Masuk untuk muncul di papan';
 
   @override
   String get leaderboardEmptyState => 'Belum ada skor';
 
   @override
-  String get leaderboardScore => 'Skor';
-
-  @override
   String get leaderboardLevel => 'Level';
 
   @override
   String get leaderboardStars => 'Bintang';
-
-  @override
-  String get leaderboardTrophies => 'Trofi';
-
-  @override
-  String get leaderboardYou => 'Anda';
-
-  @override
-  String get leaderboardRankPrefix => '#';
-
-  @override
-  String get leaderboardOptInTitle => 'Tampilkan di papan peringkat';
-
-  @override
-  String get leaderboardOptInSubtitle =>
-      'Biarkan pemain lain melihat peringkat Anda';
 
   @override
   String get inventoryTitle => 'Inventaris';
@@ -1176,24 +975,6 @@ class AppStringsId extends AppStrings {
   }
 
   @override
-  String inventoryBuyItemTitle(String item) {
-    return 'Beli $item?';
-  }
-
-  @override
-  String inventoryUnlockTitle(String title) {
-    return 'Buka $title?';
-  }
-
-  @override
-  String inventoryCoinsPrice(int count) {
-    return '$count koin';
-  }
-
-  @override
-  String get inventoryBuy => 'Beli';
-
-  @override
   String get rushDifficultyEasy => 'Mudah';
 
   @override
@@ -1207,14 +988,6 @@ class AppStringsId extends AppStrings {
 
   @override
   String get profilePlayingAsGuest => 'Bermain sebagai tamu';
-
-  @override
-  String get profileSignInSuccess => 'Masuk — progres tersinkron';
-
-  @override
-  String profileSignInFailed(String error) {
-    return 'Gagal masuk: $error';
-  }
 
   @override
   String get profileSaveYourProgress => 'Simpan progresmu';
@@ -1407,9 +1180,6 @@ class AppStringsId extends AppStrings {
   }
 
   @override
-  String get homeContinue => 'Lanjutkan';
-
-  @override
   String get homeDaily => 'Harian';
 
   @override
@@ -1420,9 +1190,6 @@ class AppStringsId extends AppStrings {
 
   @override
   String get homeLeaderboard => 'Peringkat';
-
-  @override
-  String get homeComingSoon => 'Segera hadir';
 
   @override
   String get homeInventory => 'Inventaris';
@@ -1661,9 +1428,6 @@ class AppStringsId extends AppStrings {
   String get multiplayerJoinMatch => 'GABUNG';
 
   @override
-  String get zenCardSubtitle => 'Tanpa waktu. Tanpa batas. Selesaikan saja.';
-
-  @override
   String get profileSyncing => 'Menyinkronkan...';
 
   @override
@@ -1675,15 +1439,6 @@ class AppStringsId extends AppStrings {
   @override
   String get timeBlitzDesc =>
       'Ketuk panah untuk menambah waktu. Ketukan terblokir mengurangi waktu. Bertahanlah selama mungkin.';
-
-  @override
-  String get timeBlitzOverTitle => 'Time Blitz Berakhir';
-
-  @override
-  String get timeBlitzScoreLabel => 'PANAH DIHABISKAN';
-
-  @override
-  String get timeBlitzLevelsLabel => 'Level dicapai';
 
   @override
   String get profileEditName => 'Ubah Nama';
@@ -1707,9 +1462,6 @@ class AppStringsId extends AppStrings {
   String get settingsShareFriends => 'Bagikan ke teman';
 
   @override
-  String get settingsSharingSoon => 'Segera hadir';
-
-  @override
   String get blitzTimeLeftLabel => 'SISA WAKTU';
 
   @override
@@ -1725,18 +1477,6 @@ class AppStringsId extends AppStrings {
 
   @override
   String get levelDetailsNotPlayed => 'Belum dimainkan';
-
-  @override
-  String get levelDetailsGrid => 'Grid';
-
-  @override
-  String get levelDetailsTimed => 'Berwaktu';
-
-  @override
-  String get levelDetailsMines => 'Ranjau';
-
-  @override
-  String get levelDetailsMoves => 'Langkah';
 
   @override
   String get levelDetailsStart => 'Mulai';

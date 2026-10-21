@@ -38,6 +38,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 import 'core/app_colors.dart';
 import 'core/audio_haptic_helper.dart';
+import 'core/music_player.dart';
 import 'core/sfx_player.dart';
 import 'data/repositories/coins_repository.dart';
 import 'data/repositories/leaderboard_repository.dart';
@@ -269,6 +270,7 @@ void main() async {
 
   try {
     await SfxPlayer.instance.init();
+    await MusicPlayer.instance.init();
   } catch (e) {
     debugPrint('SfxPlayer.init skipped: $e');
   }

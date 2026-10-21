@@ -114,89 +114,11 @@ abstract class AppStrings {
   /// **'Arrow Puzzle'**
   String get appName;
 
-  /// No description provided for @menuHome.
-  ///
-  /// In en, this message translates to:
-  /// **'Home'**
-  String get menuHome;
-
-  /// No description provided for @menuDaily.
-  ///
-  /// In en, this message translates to:
-  /// **'Daily'**
-  String get menuDaily;
-
-  /// No description provided for @menuInventory.
-  ///
-  /// In en, this message translates to:
-  /// **'Inventory'**
-  String get menuInventory;
-
-  /// No description provided for @menuSettings.
-  ///
-  /// In en, this message translates to:
-  /// **'Settings'**
-  String get menuSettings;
-
-  /// No description provided for @menuProfile.
-  ///
-  /// In en, this message translates to:
-  /// **'Profile'**
-  String get menuProfile;
-
-  /// No description provided for @menuTrophies.
-  ///
-  /// In en, this message translates to:
-  /// **'Trophies'**
-  String get menuTrophies;
-
-  /// No description provided for @menuLeaderboard.
-  ///
-  /// In en, this message translates to:
-  /// **'Leaderboard'**
-  String get menuLeaderboard;
-
-  /// No description provided for @menuContinue.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue'**
-  String get menuContinue;
-
-  /// No description provided for @menuLevel.
-  ///
-  /// In en, this message translates to:
-  /// **'Level {level}'**
-  String menuLevel(int level);
-
-  /// No description provided for @buttonPlay.
-  ///
-  /// In en, this message translates to:
-  /// **'Play'**
-  String get buttonPlay;
-
   /// No description provided for @buttonCancel.
   ///
   /// In en, this message translates to:
   /// **'Cancel'**
   String get buttonCancel;
-
-  /// No description provided for @buttonConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm'**
-  String get buttonConfirm;
-
-  /// No description provided for @buttonBuy.
-  ///
-  /// In en, this message translates to:
-  /// **'Buy'**
-  String get buttonBuy;
-
-  /// No description provided for @buttonRestart.
-  ///
-  /// In en, this message translates to:
-  /// **'Restart'**
-  String get buttonRestart;
 
   /// No description provided for @buttonResume.
   ///
@@ -210,131 +132,17 @@ abstract class AppStrings {
   /// **'Exit'**
   String get buttonExit;
 
-  /// No description provided for @buttonClose.
-  ///
-  /// In en, this message translates to:
-  /// **'Close'**
-  String get buttonClose;
-
-  /// No description provided for @buttonNext.
-  ///
-  /// In en, this message translates to:
-  /// **'Next Level'**
-  String get buttonNext;
-
-  /// No description provided for @buttonSignIn.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign In'**
-  String get buttonSignIn;
-
-  /// No description provided for @buttonSignUp.
-  ///
-  /// In en, this message translates to:
-  /// **'Create Account'**
-  String get buttonSignUp;
-
-  /// No description provided for @buttonSignOut.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign out'**
-  String get buttonSignOut;
-
-  /// No description provided for @buttonDeleteAccount.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete Account'**
-  String get buttonDeleteAccount;
-
-  /// No description provided for @buttonClaim.
-  ///
-  /// In en, this message translates to:
-  /// **'Claim for free'**
-  String get buttonClaim;
-
-  /// No description provided for @buttonWatchAd.
-  ///
-  /// In en, this message translates to:
-  /// **'Watch ad'**
-  String get buttonWatchAd;
-
-  /// No description provided for @buttonAccept.
-  ///
-  /// In en, this message translates to:
-  /// **'Accept & Continue'**
-  String get buttonAccept;
-
-  /// No description provided for @buttonShare.
-  ///
-  /// In en, this message translates to:
-  /// **'Share with friends'**
-  String get buttonShare;
-
-  /// No description provided for @buttonStartBlitz.
-  ///
-  /// In en, this message translates to:
-  /// **'Start Blitz'**
-  String get buttonStartBlitz;
-
-  /// No description provided for @buttonStartRush.
-  ///
-  /// In en, this message translates to:
-  /// **'Start {tier}'**
-  String buttonStartRush(String tier);
-
   /// No description provided for @gameModeClassic.
   ///
   /// In en, this message translates to:
   /// **'Classic'**
   String get gameModeClassic;
 
-  /// No description provided for @gameModeZen.
-  ///
-  /// In en, this message translates to:
-  /// **'Zen Mode'**
-  String get gameModeZen;
-
   /// No description provided for @gameModeTimeAttack.
   ///
   /// In en, this message translates to:
   /// **'Time Attack'**
   String get gameModeTimeAttack;
-
-  /// No description provided for @gameModeArrowRush.
-  ///
-  /// In en, this message translates to:
-  /// **'Arrow Rush'**
-  String get gameModeArrowRush;
-
-  /// No description provided for @gameModeBlitz.
-  ///
-  /// In en, this message translates to:
-  /// **'Blitz'**
-  String get gameModeBlitz;
-
-  /// No description provided for @gameModeMineArrows.
-  ///
-  /// In en, this message translates to:
-  /// **'Mine Arrows'**
-  String get gameModeMineArrows;
-
-  /// No description provided for @difficultyEasy.
-  ///
-  /// In en, this message translates to:
-  /// **'Easy'**
-  String get difficultyEasy;
-
-  /// No description provided for @difficultyHard.
-  ///
-  /// In en, this message translates to:
-  /// **'Hard'**
-  String get difficultyHard;
-
-  /// No description provided for @difficultyImpossible.
-  ///
-  /// In en, this message translates to:
-  /// **'Impossible'**
-  String get difficultyImpossible;
 
   /// No description provided for @settingsTitle.
   ///
@@ -353,18 +161,6 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Dark Mode'**
   String get settingsDarkMode;
-
-  /// No description provided for @settingsAccentColor.
-  ///
-  /// In en, this message translates to:
-  /// **'Accent Color'**
-  String get settingsAccentColor;
-
-  /// No description provided for @settingsAudioHaptics.
-  ///
-  /// In en, this message translates to:
-  /// **'AUDIO & HAPTICS'**
-  String get settingsAudioHaptics;
 
   /// No description provided for @settingsSoundEffects.
   ///
@@ -396,72 +192,6 @@ abstract class AppStrings {
   /// **'ABOUT'**
   String get settingsAbout;
 
-  /// No description provided for @settingsPrivacy.
-  ///
-  /// In en, this message translates to:
-  /// **'Privacy Policy'**
-  String get settingsPrivacy;
-
-  /// No description provided for @settingsTerms.
-  ///
-  /// In en, this message translates to:
-  /// **'Terms & Conditions'**
-  String get settingsTerms;
-
-  /// No description provided for @settingsLanguage.
-  ///
-  /// In en, this message translates to:
-  /// **'Language'**
-  String get settingsLanguage;
-
-  /// No description provided for @settingsVersion.
-  ///
-  /// In en, this message translates to:
-  /// **'Version {version}'**
-  String settingsVersion(String version);
-
-  /// No description provided for @settingsSharingComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Sharing coming soon'**
-  String get settingsSharingComingSoon;
-
-  /// No description provided for @consentTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Welcome to Arrow Puzzle'**
-  String get consentTitle;
-
-  /// No description provided for @consentSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Before we begin, please review and accept our terms.'**
-  String get consentSubtitle;
-
-  /// No description provided for @consentLocalProgress.
-  ///
-  /// In en, this message translates to:
-  /// **'Your progress is saved locally on your device.'**
-  String get consentLocalProgress;
-
-  /// No description provided for @consentCloudSync.
-  ///
-  /// In en, this message translates to:
-  /// **'Optional accounts sync progress to the cloud.'**
-  String get consentCloudSync;
-
-  /// No description provided for @consentAds.
-  ///
-  /// In en, this message translates to:
-  /// **'The game shows ads to keep it free.'**
-  String get consentAds;
-
-  /// No description provided for @consentAgreement.
-  ///
-  /// In en, this message translates to:
-  /// **'By tapping above you agree to our Terms & Conditions.'**
-  String get consentAgreement;
-
   /// No description provided for @dialogExitTitle.
   ///
   /// In en, this message translates to:
@@ -473,36 +203,6 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Are you sure you want to leave?'**
   String get dialogExitMessage;
-
-  /// No description provided for @dialogSignOutTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign out?'**
-  String get dialogSignOutTitle;
-
-  /// No description provided for @dialogSignOutMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Your cloud save stays. This device will reset to a fresh guest account and start from level 1.'**
-  String get dialogSignOutMessage;
-
-  /// No description provided for @dialogDeleteTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete Account?'**
-  String get dialogDeleteTitle;
-
-  /// No description provided for @dialogDeleteMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'This will permanently delete your cloud save and account. This action cannot be undone.'**
-  String get dialogDeleteMessage;
-
-  /// No description provided for @profileGuest.
-  ///
-  /// In en, this message translates to:
-  /// **'Playing as guest'**
-  String get profileGuest;
 
   /// No description provided for @profileSaveToCloud.
   ///
@@ -522,173 +222,17 @@ abstract class AppStrings {
   /// **'Signed in'**
   String get profileSignedIn;
 
-  /// No description provided for @profileStatsLevel.
-  ///
-  /// In en, this message translates to:
-  /// **'Level'**
-  String get profileStatsLevel;
-
-  /// No description provided for @profileStatsStars.
-  ///
-  /// In en, this message translates to:
-  /// **'Stars'**
-  String get profileStatsStars;
-
-  /// No description provided for @profileStatsTrophies.
-  ///
-  /// In en, this message translates to:
-  /// **'Trophies'**
-  String get profileStatsTrophies;
-
   /// No description provided for @dailyRewardsTitle.
   ///
   /// In en, this message translates to:
   /// **'DAILY REWARDS'**
   String get dailyRewardsTitle;
 
-  /// No description provided for @dailyRewardsDay.
-  ///
-  /// In en, this message translates to:
-  /// **'Day {day} of {max}'**
-  String dailyRewardsDay(int day, int max);
-
-  /// No description provided for @dailyRewardsComeBack.
-  ///
-  /// In en, this message translates to:
-  /// **'Come back tomorrow'**
-  String get dailyRewardsComeBack;
-
-  /// No description provided for @dailyRewardsClaimed.
-  ///
-  /// In en, this message translates to:
-  /// **'Claimed today!'**
-  String get dailyRewardsClaimed;
-
-  /// No description provided for @levelComplete.
-  ///
-  /// In en, this message translates to:
-  /// **'Level Complete!'**
-  String get levelComplete;
-
-  /// No description provided for @levelFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Out of Lives!'**
-  String get levelFailed;
-
-  /// No description provided for @levelTimeUp.
-  ///
-  /// In en, this message translates to:
-  /// **'Out of Time!'**
-  String get levelTimeUp;
-
-  /// No description provided for @gameOverRestart.
-  ///
-  /// In en, this message translates to:
-  /// **'Restart Level'**
-  String get gameOverRestart;
-
-  /// No description provided for @gameOverHome.
-  ///
-  /// In en, this message translates to:
-  /// **'Home'**
-  String get gameOverHome;
-
   /// No description provided for @blitzTitle.
   ///
   /// In en, this message translates to:
   /// **'Blitz'**
   String get blitzTitle;
-
-  /// No description provided for @blitzStage.
-  ///
-  /// In en, this message translates to:
-  /// **'STAGE'**
-  String get blitzStage;
-
-  /// No description provided for @blitzComplete.
-  ///
-  /// In en, this message translates to:
-  /// **'Blitz Complete!'**
-  String get blitzComplete;
-
-  /// No description provided for @blitzOver.
-  ///
-  /// In en, this message translates to:
-  /// **'Blitz Over'**
-  String get blitzOver;
-
-  /// No description provided for @blitzFinalScore.
-  ///
-  /// In en, this message translates to:
-  /// **'FINAL SCORE'**
-  String get blitzFinalScore;
-
-  /// No description provided for @blitzSurvivedAll.
-  ///
-  /// In en, this message translates to:
-  /// **'You survived all {count} stages.'**
-  String blitzSurvivedAll(int count);
-
-  /// No description provided for @blitzClearedOf.
-  ///
-  /// In en, this message translates to:
-  /// **'Cleared {cleared} of {total} stages.'**
-  String blitzClearedOf(int cleared, int total);
-
-  /// No description provided for @commonComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Coming soon'**
-  String get commonComingSoon;
-
-  /// No description provided for @commonLoading.
-  ///
-  /// In en, this message translates to:
-  /// **'Loading...'**
-  String get commonLoading;
-
-  /// No description provided for @commonError.
-  ///
-  /// In en, this message translates to:
-  /// **'Something went wrong. Please try again.'**
-  String get commonError;
-
-  /// No description provided for @commonRetry.
-  ///
-  /// In en, this message translates to:
-  /// **'Retry'**
-  String get commonRetry;
-
-  /// No description provided for @dailyRewardsClaimFree.
-  ///
-  /// In en, this message translates to:
-  /// **'Claim for free'**
-  String get dailyRewardsClaimFree;
-
-  /// No description provided for @dailyRewardsWatchAd.
-  ///
-  /// In en, this message translates to:
-  /// **'Watch ad'**
-  String get dailyRewardsWatchAd;
-
-  /// No description provided for @dailyRewardsSnackClaimed.
-  ///
-  /// In en, this message translates to:
-  /// **'Claimed!'**
-  String get dailyRewardsSnackClaimed;
-
-  /// No description provided for @dailyRewardsClaimedToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Claimed today!'**
-  String get dailyRewardsClaimedToday;
-
-  /// No description provided for @dailyRewardsNextIn.
-  ///
-  /// In en, this message translates to:
-  /// **'Next reward in {time}'**
-  String dailyRewardsNextIn(String time);
 
   /// No description provided for @unlockTitle.
   ///
@@ -1001,6 +545,150 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Double Coins'**
   String get levelCompleteDoubleCoins;
+
+  /// No description provided for @settingsAboutCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'About the Game & Credits'**
+  String get settingsAboutCredits;
+
+  /// No description provided for @aboutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About & Credits'**
+  String get aboutTitle;
+
+  /// No description provided for @aboutVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String aboutVersion(String version);
+
+  /// No description provided for @aboutDeveloper.
+  ///
+  /// In en, this message translates to:
+  /// **'Designed & Developed by Ali Hussein (ahb.Dev)'**
+  String get aboutDeveloper;
+
+  /// No description provided for @aboutOriginalConcept.
+  ///
+  /// In en, this message translates to:
+  /// **'Original game concept: ArrowEscape by sidhant947'**
+  String get aboutOriginalConcept;
+
+  /// No description provided for @aboutVisitWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit ahb.Dev Website'**
+  String get aboutVisitWebsite;
+
+  /// No description provided for @aboutMusicTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'MUSIC (OpenGameArt)'**
+  String get aboutMusicTitle;
+
+  /// No description provided for @aboutUnderwaterTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Underwater Theme'**
+  String get aboutUnderwaterTheme;
+
+  /// No description provided for @aboutCallerTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Caller / Main Menu Theme'**
+  String get aboutCallerTheme;
+
+  /// No description provided for @aboutGrooveTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Groove of Timeatk Rushmode'**
+  String get aboutGrooveTheme;
+
+  /// No description provided for @aboutMusicSource.
+  ///
+  /// In en, this message translates to:
+  /// **'All music tracks are sourced from OpenGameArt.org.'**
+  String get aboutMusicSource;
+
+  /// No description provided for @aboutIconsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'ICONS (SVG Repo)'**
+  String get aboutIconsTitle;
+
+  /// No description provided for @aboutIconsCredit1.
+  ///
+  /// In en, this message translates to:
+  /// **'Bird, Diamond, Glasses, Fish, Whale, Flower, Rocket, Key, Star'**
+  String get aboutIconsCredit1;
+
+  /// No description provided for @aboutIconsCredit2.
+  ///
+  /// In en, this message translates to:
+  /// **'Butterfly, Turtle'**
+  String get aboutIconsCredit2;
+
+  /// No description provided for @aboutIconsCredit3.
+  ///
+  /// In en, this message translates to:
+  /// **'Crown, House, Tree'**
+  String get aboutIconsCredit3;
+
+  /// No description provided for @aboutIconsCredit4.
+  ///
+  /// In en, this message translates to:
+  /// **'Heart'**
+  String get aboutIconsCredit4;
+
+  /// No description provided for @aboutIconsAuthors.
+  ///
+  /// In en, this message translates to:
+  /// **'By Noah Jacobus, Konstantin Filatov, Solar Icons, Dazzle UI, pixelbazaar, & Iconhub'**
+  String get aboutIconsAuthors;
+
+  /// No description provided for @aboutVisitSvgRepo.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit SVGRepo.com'**
+  String get aboutVisitSvgRepo;
+
+  /// No description provided for @aboutOpenSourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'OPEN SOURCE'**
+  String get aboutOpenSourceTitle;
+
+  /// No description provided for @aboutOpenSourceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This game is built using amazing open-source technologies:'**
+  String get aboutOpenSourceBody;
+
+  /// No description provided for @aboutCopyright.
+  ///
+  /// In en, this message translates to:
+  /// **'© 2026 ahb.Dev. All rights reserved.'**
+  String get aboutCopyright;
+
+  /// No description provided for @gameTimedLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'TIMED LEVEL · {seconds}s'**
+  String gameTimedLevel(String seconds);
+
+  /// No description provided for @gameSolverCalculating.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculating solution...'**
+  String get gameSolverCalculating;
+
+  /// No description provided for @gameSolverUnsolvable.
+  ///
+  /// In en, this message translates to:
+  /// **'❌ UNSOLVABLE! The level is deadlocked.'**
+  String get gameSolverUnsolvable;
 
   /// No description provided for @pauseTitle.
   ///
@@ -1884,29 +1572,11 @@ abstract class AppStrings {
   /// **'Nothing to undo'**
   String get nothingToUndo;
 
-  /// No description provided for @blitzCompleteTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Blitz Complete!'**
-  String get blitzCompleteTitle;
-
-  /// No description provided for @blitzOverTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Blitz Over'**
-  String get blitzOverTitle;
-
   /// No description provided for @blitzSplashStage.
   ///
   /// In en, this message translates to:
   /// **'STAGE'**
   String get blitzSplashStage;
-
-  /// No description provided for @blitzPoints.
-  ///
-  /// In en, this message translates to:
-  /// **'{score} pts'**
-  String blitzPoints(int score);
 
   /// No description provided for @arrowSpeedEscapeSpeed.
   ///
@@ -2052,18 +1722,6 @@ abstract class AppStrings {
   /// **'All-Time'**
   String get leaderboardTabAllTime;
 
-  /// No description provided for @leaderboardYourRank.
-  ///
-  /// In en, this message translates to:
-  /// **'Your Rank'**
-  String get leaderboardYourRank;
-
-  /// No description provided for @leaderboardNotRanked.
-  ///
-  /// In en, this message translates to:
-  /// **'Not ranked yet'**
-  String get leaderboardNotRanked;
-
   /// No description provided for @leaderboardSignInToRank.
   ///
   /// In en, this message translates to:
@@ -2076,12 +1734,6 @@ abstract class AppStrings {
   /// **'No scores yet — be the first!'**
   String get leaderboardEmptyState;
 
-  /// No description provided for @leaderboardScore.
-  ///
-  /// In en, this message translates to:
-  /// **'Score'**
-  String get leaderboardScore;
-
   /// No description provided for @leaderboardLevel.
   ///
   /// In en, this message translates to:
@@ -2093,36 +1745,6 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Stars'**
   String get leaderboardStars;
-
-  /// No description provided for @leaderboardTrophies.
-  ///
-  /// In en, this message translates to:
-  /// **'Trophies'**
-  String get leaderboardTrophies;
-
-  /// No description provided for @leaderboardYou.
-  ///
-  /// In en, this message translates to:
-  /// **'You'**
-  String get leaderboardYou;
-
-  /// No description provided for @leaderboardRankPrefix.
-  ///
-  /// In en, this message translates to:
-  /// **'#'**
-  String get leaderboardRankPrefix;
-
-  /// No description provided for @leaderboardOptInTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show me on leaderboard'**
-  String get leaderboardOptInTitle;
-
-  /// No description provided for @leaderboardOptInSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Let other players see your rank'**
-  String get leaderboardOptInSubtitle;
 
   /// No description provided for @inventoryTitle.
   ///
@@ -2178,30 +1800,6 @@ abstract class AppStrings {
   /// **'Need {count} more coins'**
   String inventoryNeedMoreCoins(int count);
 
-  /// No description provided for @inventoryBuyItemTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Buy {item}?'**
-  String inventoryBuyItemTitle(String item);
-
-  /// No description provided for @inventoryUnlockTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlock {title}?'**
-  String inventoryUnlockTitle(String title);
-
-  /// No description provided for @inventoryCoinsPrice.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} coins'**
-  String inventoryCoinsPrice(int count);
-
-  /// No description provided for @inventoryBuy.
-  ///
-  /// In en, this message translates to:
-  /// **'Buy'**
-  String get inventoryBuy;
-
   /// No description provided for @rushDifficultyEasy.
   ///
   /// In en, this message translates to:
@@ -2231,18 +1829,6 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Playing as guest'**
   String get profilePlayingAsGuest;
-
-  /// No description provided for @profileSignInSuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Signed in — progress synced'**
-  String get profileSignInSuccess;
-
-  /// No description provided for @profileSignInFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign-in failed: {error}'**
-  String profileSignInFailed(String error);
 
   /// No description provided for @profileSaveYourProgress.
   ///
@@ -2580,12 +2166,6 @@ abstract class AppStrings {
   /// **'Level {level}'**
   String homeLevelNumber(int level);
 
-  /// No description provided for @homeContinue.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue'**
-  String get homeContinue;
-
   /// No description provided for @homeDaily.
   ///
   /// In en, this message translates to:
@@ -2609,12 +2189,6 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Leaderboard'**
   String get homeLeaderboard;
-
-  /// No description provided for @homeComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Coming soon'**
-  String get homeComingSoon;
 
   /// No description provided for @homeInventory.
   ///
@@ -3024,12 +2598,6 @@ abstract class AppStrings {
   /// **'JOIN MATCH'**
   String get multiplayerJoinMatch;
 
-  /// No description provided for @zenCardSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'No timer. No limits. Just solve.'**
-  String get zenCardSubtitle;
-
   /// No description provided for @profileSyncing.
   ///
   /// In en, this message translates to:
@@ -3053,24 +2621,6 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Tap arrows to earn time. Blocked taps cost time. Survive as long as you can.'**
   String get timeBlitzDesc;
-
-  /// No description provided for @timeBlitzOverTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Time Blitz Over'**
-  String get timeBlitzOverTitle;
-
-  /// No description provided for @timeBlitzScoreLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'ARROWS CLEARED'**
-  String get timeBlitzScoreLabel;
-
-  /// No description provided for @timeBlitzLevelsLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Levels reached'**
-  String get timeBlitzLevelsLabel;
 
   /// No description provided for @profileEditName.
   ///
@@ -3114,12 +2664,6 @@ abstract class AppStrings {
   /// **'Share with friends'**
   String get settingsShareFriends;
 
-  /// No description provided for @settingsSharingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Sharing coming soon'**
-  String get settingsSharingSoon;
-
   /// No description provided for @blitzTimeLeftLabel.
   ///
   /// In en, this message translates to:
@@ -3149,30 +2693,6 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Not played yet'**
   String get levelDetailsNotPlayed;
-
-  /// No description provided for @levelDetailsGrid.
-  ///
-  /// In en, this message translates to:
-  /// **'Grid'**
-  String get levelDetailsGrid;
-
-  /// No description provided for @levelDetailsTimed.
-  ///
-  /// In en, this message translates to:
-  /// **'Timed'**
-  String get levelDetailsTimed;
-
-  /// No description provided for @levelDetailsMines.
-  ///
-  /// In en, this message translates to:
-  /// **'Mines'**
-  String get levelDetailsMines;
-
-  /// No description provided for @levelDetailsMoves.
-  ///
-  /// In en, this message translates to:
-  /// **'Moves'**
-  String get levelDetailsMoves;
 
   /// No description provided for @levelDetailsStart.
   ///

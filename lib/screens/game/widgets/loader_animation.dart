@@ -62,7 +62,7 @@ class LoaderPainter extends CustomPainter {
     final bgPaint = Paint()
       ..color = color.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5;
+      ..strokeWidth = 7.5;
     canvas.drawCircle(center, radius, bgPaint);
 
     final startAngle = progress * 2 * pi;

@@ -111,14 +111,28 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round;
 
+  final void Function(ArrowComponent arrow)? speedUpIntersectingArrows;
+
   ArrowComponent({
     required this.arrowModel,
     required this.cellSize,
     required this.gameState,
     this.onExitCompleted,
+    this.speedUpIntersectingArrows,
   }) : super(size: Vector2.all(cellSize * gameState.level.gridSize)) {
     _computeBounds();
   }
+
+  bool get isExiting => _isExiting;
+
+  void speedUpExit() {
+    if (_isExiting) {
+      _exitProgress = 0.95;
+      _exitDuration = 1.00; // Very fast finish
+    }
+  }
+
+
 
   void updateCellSize(double newSize) {
     cellSize = newSize;
@@ -147,11 +161,26 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   @override
   bool containsLocalPoint(Vector2 point) {
     if (_isExiting || _isRestoring || _isEntering) return false;
+
+    final gridSize = gameState.level.gridSize;
     final col = (point.x / cellSize).floor();
     final row = (point.y / cellSize).floor();
-    if (row < _minR || row > _maxR || col < _minC || col > _maxC) {
+
+    if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) {
       return false;
     }
+
+    // ── FIX: Full cell tolerance + path check ──
+    // Use center-distance < 0.5 cells (100% of cell width) for maximum forgiveness
+    final centerX = (col + 0.5) * cellSize;
+    final centerY = (row + 0.5) * cellSize;
+    final dx = (point.x - centerX).abs();
+    final dy = (point.y - centerY).abs();
+
+    // If the tap is outside the cell center, reject
+    if (dx > cellSize * 0.5 || dy > cellSize * 0.5) return false;
+
+    // Verify the cell is actually part of this arrow's path
     return arrowModel.path.any((pt) => pt[0] == row && pt[1] == col);
   }
 
@@ -193,6 +222,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     final result = gameState.tapArrow(arrowModel.id, isForced: isForced);
     switch (result) {
       case TapResult.exited:
+        speedUpIntersectingArrows?.call(this);
         SfxPlayer.instance.playArrowClear();
         AudioHapticHelper.playSuccess(combo: gameState.comboCount);
         _startExitAnimation();
@@ -600,7 +630,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     }
 
     final mainColor = _color();
-    final sw = cellSize * (isSlashArrow ? 0.18 : 0.13);
+    final sw = cellSize * (isSlashArrow ? 0.25 : 0.2);
 
     final Path bodyPath;
     if (isAnimatingNow) {
@@ -659,6 +689,17 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       _drawSlashShine(canvas, bodyPath, sw);
     }
 
+    // ── FIX: Draw a subtle dark outline behind the head to separate it from the tail ──
+    final caretPath = _buildCaretPath(pts, sw);
+    canvas.drawPath(
+      caretPath,
+      Paint()
+        ..color = const Color(0xFF1E1E1E) // Matches the board surface
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = sw * 1.5
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
     _drawHead(canvas, pts, mainColor, sw);
 
     if (gameState.isArrowLeaving(arrowModel.id) &&
@@ -825,8 +866,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     final tip = pts.first + Offset(dx * cellSize * 0.3, dy * cellSize * 0.3);
 
-    final hd = cellSize * 0.25;
-    final hw = cellSize * 0.18;
+    final hd = cellSize * 0.3;
+    final hw = cellSize * 0.25;
 
     final base = tip - Offset(dx * hd, dy * hd);
     final px = -dy, py = dx;

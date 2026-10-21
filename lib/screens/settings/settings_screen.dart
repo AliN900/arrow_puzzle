@@ -7,10 +7,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../core/constants.dart';
-import '../../data/repositories/leaderboard_repository.dart';
+import '../../core/package_info_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
-import '../../services/leaderboard_service.dart';
+import '../about/about_screen.dart';
 import 'widgets/settings_section_header.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_switch_tile.dart';
@@ -202,17 +202,86 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 divider,
-                // SettingsSwitchTile(
-                //   icon: Icons.music_note_outlined,
-                //   title: 'Music',
-                //   value: progress.musicEnabled,
-                //   onChanged: (_) =>
-                //       ref.read(progressRepositoryProvider).toggleMusic(),
-                //   accentColor: accentColor,
-                //   textPrimary: textPrimary,
-                //   textSecondary: textSecondary,
-                // ),
-                // divider,
+                SettingsSwitchTile(
+                  icon: Icons.music_note_outlined,
+                  title: strings.settingsMusic,
+                  value: progress.musicEnabled,
+                  onChanged: (_) {
+                    AudioHapticHelper.playClick();
+                    ref.read(progressRepositoryProvider).toggleMusic();
+                  },
+                  accentColor: accentColor,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                ),
+                // ── Music Volume Slider ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        progress.musicVolume == 0
+                            ? Icons.volume_off_rounded
+                            : Icons.volume_down_rounded,
+                        size: 20,
+                        color: progress.musicEnabled
+                            ? textSecondary
+                            : textSecondary.withValues(alpha: 0.4),
+                      ),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: progress.musicEnabled
+                                ? accentColor
+                                : accentColor.withValues(alpha: 0.3),
+                            thumbColor: progress.musicEnabled
+                                ? accentColor
+                                : accentColor.withValues(alpha: 0.3),
+                            inactiveTrackColor: accentColor.withValues(alpha: 0.15),
+                            overlayColor: accentColor.withValues(alpha: 0.1),
+                            trackHeight: 3,
+                          ),
+                          child: Slider(
+                            value: progress.musicVolume,
+                            min: 0.0,
+                            max: 1.0,
+                            divisions: 10,
+                            onChanged: progress.musicEnabled
+                                ? (value) {
+                              ref
+                                  .read(progressRepositoryProvider)
+                                  .setMusicVolume(value);
+                            }
+                                : null,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.volume_up_rounded,
+                        size: 20,
+                        color: progress.musicEnabled
+                            ? textSecondary
+                            : textSecondary.withValues(alpha: 0.4),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          '${(progress.musicVolume * 100).round()}%',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: progress.musicEnabled
+                                ? textPrimary
+                                : textPrimary.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                divider,
                 SettingsSwitchTile(
                   icon: Icons.vibration_outlined,
                   title: strings.settingsVibration,
@@ -252,58 +321,34 @@ class SettingsScreen extends ConsumerWidget {
             SettingsCard(
               cardColor: cardColor,
               children: [
-                // DEBUG-ONLY: LB opt-in toggle. In release builds, opt-in is
-                // automatic (see ProgressRepository default), so this tile is hidden.
-                if (kDebugMode) ...[
-                  SettingsSwitchTile(
-                    icon: Icons.emoji_events_outlined,
-                    title: strings.leaderboardOptInTitle,
-                    value: progress.leaderboardOptIn,
-                    onChanged: (value) async {
-                      AudioHapticHelper.playClick();
-                      final auth = ref.read(authServiceProvider);
-                      final repo = ref.read(progressRepositoryProvider);
-                      await repo.setLeaderboardOptIn(value);
+                // 1. About the Game & Credits
+                SettingsNavTile(
+                  icon: Icons.info_outline_rounded,
+                  title: strings.settingsAboutCredits,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AboutScreen()),
+                    );
+                  },
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                ),
+                divider,
 
-                      if (value && !auth.isGuest) {
-                        try {
-                          await LeaderboardRepository.instance.pushCurrentUser(
-                            level: progress.currentLevel,
-                            totalStars: progress.totalStars,
-                            trophies: progress.unlockedTrophies.length,
-                            weeklyScore: progress.lbWeeklyScore,
-                            monthlyScore: progress.lbMonthlyScore,
-                            allTimeScore: progress.lbAllTimeScore,
-                            weeklyPeriodStart: progress.lbWeeklyPeriodStart ??
-                                LeaderboardService.currentWeekStartUtc(),
-                            monthlyPeriodStart: progress.lbMonthlyPeriodStart ??
-                                LeaderboardService.currentMonthStartUtc(),
-                            weeklyReachedAt: progress.lbWeeklyReachedAt,
-                            monthlyReachedAt: progress.lbMonthlyReachedAt,
-                          );
-                          await repo.markLbClean();
-                        } catch (e) {
-                          debugPrint('Opt-in push failed: $e');
-                        }
-                      }
-                    },
-                    accentColor: accentColor,
-                    textPrimary: textPrimary,
-                    textSecondary: textSecondary,
-                  ),
-                  divider,
-                ],
+                // 2. Share with Friends
                 SettingsNavTile(
                   icon: Icons.qr_code_rounded,
                   title: strings.settingsShareFriends,
                   onTap: () {
-                    AudioHapticHelper.playClick();
                     showShareQR(context);
                   },
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
                 ),
                 divider,
+
+                // 3. Privacy Policy
                 SettingsNavTile(
                   icon: Icons.shield_outlined,
                   title: strings.settingsPrivacyPolicy,
@@ -315,6 +360,8 @@ class SettingsScreen extends ConsumerWidget {
                   textSecondary: textSecondary,
                 ),
                 divider,
+
+                // 4. Terms & Conditions
                 SettingsNavTile(
                   icon: Icons.description_outlined,
                   title: strings.settingsTermsConditions,
@@ -339,9 +386,9 @@ class SettingsScreen extends ConsumerWidget {
                     builder: (_) => const DebugLevelJumper(),
                   );
                 },
-                child: _buildVersionBadge(strings, textPrimary, textSecondary),
+                child: _buildVersionBadge(context, ref, strings, textPrimary, textSecondary),
               )
-                  : _buildVersionBadge(strings, textPrimary, textSecondary),
+                  : _buildVersionBadge(context, ref, strings, textPrimary, textSecondary),
             ),
             const SizedBox(height: 40),
           ],
@@ -352,10 +399,14 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 Widget _buildVersionBadge(
+    BuildContext context,
+    WidgetRef ref,
     AppStrings strings,
     Color textPrimary,
     Color textSecondary,
     ) {
+  final versionAsync = ref.watch(packageInfoProvider);
+
   return Column(
     children: [
       Text(
@@ -367,9 +418,16 @@ Widget _buildVersionBadge(
         ),
       ),
       const SizedBox(height: 4),
-      Text(
-        strings.settingsVersionLabel('1.0.0'),
-        style: TextStyle(fontSize: 14, color: textSecondary),
+      versionAsync.when(
+        data: (info) => Text(
+          strings.settingsVersionLabel(info.version),
+          style: TextStyle(fontSize: 14, color: textSecondary),
+        ),
+        loading: () => const SizedBox.shrink(),
+        error: (_, _) => Text(
+          strings.settingsVersionLabel('1.1.2'),
+          style: TextStyle(fontSize: 14, color: textSecondary),
+        ),
       ),
     ],
   );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 import '../../core/board_themes.dart';
+import '../../core/music_player.dart';
 import '../../core/rush_difficulty.dart';
 import '../../core/sfx_player.dart';
 import '../models/level_result.dart';
@@ -39,6 +40,7 @@ class ProgressRepository extends ChangeNotifier {
   final Set<String> _purchasedArrows = {};
   int _itemsGrantedFromStars = 0;
   bool _privacyAccepted = false;
+  double _musicVolume = 0.4;
 
   DateTime? _lastSettingsModified;
 
@@ -76,6 +78,7 @@ class ProgressRepository extends ChangeNotifier {
   double get soundVolume => _soundVolume;
   int get arrowSpeed => _arrowSpeed;
   bool get privacyAccepted => _privacyAccepted;
+  double get musicVolume => _musicVolume;
 
 
   bool get leaderboardOptIn => _leaderboardOptIn;
@@ -127,6 +130,12 @@ class ProgressRepository extends ChangeNotifier {
     final repo = ProgressRepository._();
     await repo._init();
     return repo;
+  }
+  Future<void> setMusicVolume(double volume) async {
+    _musicVolume = volume.clamp(0.0, 1.0);
+    MusicPlayer.instance.setVolume(_musicVolume);
+    await _save();
+    notifyListeners();
   }
 
   bool _lbDirty = false;
@@ -203,6 +212,7 @@ class ProgressRepository extends ChangeNotifier {
 
   Future<void> toggleMusic() async {
     _musicEnabled = !_musicEnabled;
+    MusicPlayer.instance.toggleMute(!_musicEnabled);
     await _save();
     notifyListeners();
   }
@@ -262,6 +272,17 @@ class ProgressRepository extends ChangeNotifier {
     SfxPlayer.instance.setEnabled(_soundEnabled);
     SfxPlayer.instance.setVolume(_soundVolume);
     _musicEnabled = _box.get('musicEnabled', defaultValue: true);
+    // ... existing audio loads
+    _soundVolume = _box.get('soundVolume', defaultValue: 0.7);
+    _musicEnabled = _box.get('musicEnabled', defaultValue: true);
+    _musicVolume = _box.get('musicVolume', defaultValue: 0.4); // <--- ADD THIS
+
+    SfxPlayer.instance.setEnabled(_soundEnabled);
+    SfxPlayer.instance.setVolume(_soundVolume);
+
+    // Apply to MusicPlayer on load
+    MusicPlayer.instance.setVolume(_musicVolume);
+    MusicPlayer.instance.toggleMute(!_musicEnabled);
     _soundVolume = _box.get('soundVolume', defaultValue: 0.7);
     _arrowSpeed = _box.get('arrowSpeed', defaultValue: 0);
     _rushDifficultyIndex = _box.get('rushDifficultyIndex', defaultValue: 0);
@@ -358,6 +379,7 @@ class ProgressRepository extends ChangeNotifier {
       // Save new fields
       'soundEnabled': _soundEnabled,
       'musicEnabled': _musicEnabled,
+      'musicVolume': _musicVolume,
       'soundVolume': _soundVolume,
       'languageCode': _languageCode,
       'arrowSpeed': _arrowSpeed,
@@ -738,6 +760,7 @@ class ProgressRepository extends ChangeNotifier {
         'soundEnabled': _soundEnabled,
         'soundVolume': _soundVolume,
         'musicEnabled': _musicEnabled,
+        'musicVolume': _musicVolume,
         'hapticsEnabled': _hapticsEnabled,
         'languageCode': _languageCode,
         'arrowSpeed': _arrowSpeed,
@@ -961,6 +984,7 @@ class ProgressRepository extends ChangeNotifier {
     }
     if (b('musicEnabled') != null && b('musicEnabled') != _musicEnabled) {
       _musicEnabled = b('musicEnabled')!;
+      MusicPlayer.instance.setVolume(_musicVolume);
       changed = true;
     }
     if (b('hapticsEnabled') != null && b('hapticsEnabled') != _hapticsEnabled) {

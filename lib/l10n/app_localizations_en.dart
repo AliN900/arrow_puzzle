@@ -12,48 +12,7 @@ class AppStringsEn extends AppStrings {
   String get appName => 'Arrow Puzzle';
 
   @override
-  String get menuHome => 'Home';
-
-  @override
-  String get menuDaily => 'Daily';
-
-  @override
-  String get menuInventory => 'Inventory';
-
-  @override
-  String get menuSettings => 'Settings';
-
-  @override
-  String get menuProfile => 'Profile';
-
-  @override
-  String get menuTrophies => 'Trophies';
-
-  @override
-  String get menuLeaderboard => 'Leaderboard';
-
-  @override
-  String get menuContinue => 'Continue';
-
-  @override
-  String menuLevel(int level) {
-    return 'Level $level';
-  }
-
-  @override
-  String get buttonPlay => 'Play';
-
-  @override
   String get buttonCancel => 'Cancel';
-
-  @override
-  String get buttonConfirm => 'Confirm';
-
-  @override
-  String get buttonBuy => 'Buy';
-
-  @override
-  String get buttonRestart => 'Restart';
 
   @override
   String get buttonResume => 'Resume';
@@ -62,69 +21,10 @@ class AppStringsEn extends AppStrings {
   String get buttonExit => 'Exit';
 
   @override
-  String get buttonClose => 'Close';
-
-  @override
-  String get buttonNext => 'Next Level';
-
-  @override
-  String get buttonSignIn => 'Sign In';
-
-  @override
-  String get buttonSignUp => 'Create Account';
-
-  @override
-  String get buttonSignOut => 'Sign out';
-
-  @override
-  String get buttonDeleteAccount => 'Delete Account';
-
-  @override
-  String get buttonClaim => 'Claim for free';
-
-  @override
-  String get buttonWatchAd => 'Watch ad';
-
-  @override
-  String get buttonAccept => 'Accept & Continue';
-
-  @override
-  String get buttonShare => 'Share with friends';
-
-  @override
-  String get buttonStartBlitz => 'Start Blitz';
-
-  @override
-  String buttonStartRush(String tier) {
-    return 'Start $tier';
-  }
-
-  @override
   String get gameModeClassic => 'Classic';
 
   @override
-  String get gameModeZen => 'Zen Mode';
-
-  @override
   String get gameModeTimeAttack => 'Time Attack';
-
-  @override
-  String get gameModeArrowRush => 'Arrow Rush';
-
-  @override
-  String get gameModeBlitz => 'Blitz';
-
-  @override
-  String get gameModeMineArrows => 'Mine Arrows';
-
-  @override
-  String get difficultyEasy => 'Easy';
-
-  @override
-  String get difficultyHard => 'Hard';
-
-  @override
-  String get difficultyImpossible => 'Impossible';
 
   @override
   String get settingsTitle => 'Settings';
@@ -134,12 +34,6 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get settingsDarkMode => 'Dark Mode';
-
-  @override
-  String get settingsAccentColor => 'Accent Color';
-
-  @override
-  String get settingsAudioHaptics => 'AUDIO & HAPTICS';
 
   @override
   String get settingsSoundEffects => 'Sound effects';
@@ -157,66 +51,10 @@ class AppStringsEn extends AppStrings {
   String get settingsAbout => 'ABOUT';
 
   @override
-  String get settingsPrivacy => 'Privacy Policy';
-
-  @override
-  String get settingsTerms => 'Terms & Conditions';
-
-  @override
-  String get settingsLanguage => 'Language';
-
-  @override
-  String settingsVersion(String version) {
-    return 'Version $version';
-  }
-
-  @override
-  String get settingsSharingComingSoon => 'Sharing coming soon';
-
-  @override
-  String get consentTitle => 'Welcome to Arrow Puzzle';
-
-  @override
-  String get consentSubtitle =>
-      'Before we begin, please review and accept our terms.';
-
-  @override
-  String get consentLocalProgress =>
-      'Your progress is saved locally on your device.';
-
-  @override
-  String get consentCloudSync =>
-      'Optional accounts sync progress to the cloud.';
-
-  @override
-  String get consentAds => 'The game shows ads to keep it free.';
-
-  @override
-  String get consentAgreement =>
-      'By tapping above you agree to our Terms & Conditions.';
-
-  @override
   String get dialogExitTitle => 'Exit Game?';
 
   @override
   String get dialogExitMessage => 'Are you sure you want to leave?';
-
-  @override
-  String get dialogSignOutTitle => 'Sign out?';
-
-  @override
-  String get dialogSignOutMessage =>
-      'Your cloud save stays. This device will reset to a fresh guest account and start from level 1.';
-
-  @override
-  String get dialogDeleteTitle => 'Delete Account?';
-
-  @override
-  String get dialogDeleteMessage =>
-      'This will permanently delete your cloud save and account. This action cannot be undone.';
-
-  @override
-  String get profileGuest => 'Playing as guest';
 
   @override
   String get profileSaveToCloud => 'Save to Cloud';
@@ -228,96 +66,10 @@ class AppStringsEn extends AppStrings {
   String get profileSignedIn => 'Signed in';
 
   @override
-  String get profileStatsLevel => 'Level';
-
-  @override
-  String get profileStatsStars => 'Stars';
-
-  @override
-  String get profileStatsTrophies => 'Trophies';
-
-  @override
   String get dailyRewardsTitle => 'DAILY REWARDS';
 
   @override
-  String dailyRewardsDay(int day, int max) {
-    return 'Day $day of $max';
-  }
-
-  @override
-  String get dailyRewardsComeBack => 'Come back tomorrow';
-
-  @override
-  String get dailyRewardsClaimed => 'Claimed today!';
-
-  @override
-  String get levelComplete => 'Level Complete!';
-
-  @override
-  String get levelFailed => 'Out of Lives!';
-
-  @override
-  String get levelTimeUp => 'Out of Time!';
-
-  @override
-  String get gameOverRestart => 'Restart Level';
-
-  @override
-  String get gameOverHome => 'Home';
-
-  @override
   String get blitzTitle => 'Blitz';
-
-  @override
-  String get blitzStage => 'STAGE';
-
-  @override
-  String get blitzComplete => 'Blitz Complete!';
-
-  @override
-  String get blitzOver => 'Blitz Over';
-
-  @override
-  String get blitzFinalScore => 'FINAL SCORE';
-
-  @override
-  String blitzSurvivedAll(int count) {
-    return 'You survived all $count stages.';
-  }
-
-  @override
-  String blitzClearedOf(int cleared, int total) {
-    return 'Cleared $cleared of $total stages.';
-  }
-
-  @override
-  String get commonComingSoon => 'Coming soon';
-
-  @override
-  String get commonLoading => 'Loading...';
-
-  @override
-  String get commonError => 'Something went wrong. Please try again.';
-
-  @override
-  String get commonRetry => 'Retry';
-
-  @override
-  String get dailyRewardsClaimFree => 'Claim for free';
-
-  @override
-  String get dailyRewardsWatchAd => 'Watch ad';
-
-  @override
-  String get dailyRewardsSnackClaimed => 'Claimed!';
-
-  @override
-  String get dailyRewardsClaimedToday => 'Claimed today!';
-
-  @override
-  String dailyRewardsNextIn(String time) {
-    return 'Next reward in $time';
-  }
 
   @override
   String get unlockTitle => 'Congratulations!';
@@ -518,6 +270,87 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get levelCompleteDoubleCoins => 'Double Coins';
+
+  @override
+  String get settingsAboutCredits => 'About the Game & Credits';
+
+  @override
+  String get aboutTitle => 'About & Credits';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get aboutDeveloper => 'Designed & Developed by Ali Hussein (ahb.Dev)';
+
+  @override
+  String get aboutOriginalConcept =>
+      'Original game concept: ArrowEscape by sidhant947';
+
+  @override
+  String get aboutVisitWebsite => 'Visit ahb.Dev Website';
+
+  @override
+  String get aboutMusicTitle => 'MUSIC (OpenGameArt)';
+
+  @override
+  String get aboutUnderwaterTheme => 'Underwater Theme';
+
+  @override
+  String get aboutCallerTheme => 'Caller / Main Menu Theme';
+
+  @override
+  String get aboutGrooveTheme => 'Groove of Timeatk Rushmode';
+
+  @override
+  String get aboutMusicSource =>
+      'All music tracks are sourced from OpenGameArt.org.';
+
+  @override
+  String get aboutIconsTitle => 'ICONS (SVG Repo)';
+
+  @override
+  String get aboutIconsCredit1 =>
+      'Bird, Diamond, Glasses, Fish, Whale, Flower, Rocket, Key, Star';
+
+  @override
+  String get aboutIconsCredit2 => 'Butterfly, Turtle';
+
+  @override
+  String get aboutIconsCredit3 => 'Crown, House, Tree';
+
+  @override
+  String get aboutIconsCredit4 => 'Heart';
+
+  @override
+  String get aboutIconsAuthors =>
+      'By Noah Jacobus, Konstantin Filatov, Solar Icons, Dazzle UI, pixelbazaar, & Iconhub';
+
+  @override
+  String get aboutVisitSvgRepo => 'Visit SVGRepo.com';
+
+  @override
+  String get aboutOpenSourceTitle => 'OPEN SOURCE';
+
+  @override
+  String get aboutOpenSourceBody =>
+      'This game is built using amazing open-source technologies:';
+
+  @override
+  String get aboutCopyright => '© 2026 ahb.Dev. All rights reserved.';
+
+  @override
+  String gameTimedLevel(String seconds) {
+    return 'TIMED LEVEL · ${seconds}s';
+  }
+
+  @override
+  String get gameSolverCalculating => 'Calculating solution...';
+
+  @override
+  String get gameSolverUnsolvable => '❌ UNSOLVABLE! The level is deadlocked.';
 
   @override
   String get pauseTitle => 'Paused';
@@ -1013,18 +846,7 @@ class AppStringsEn extends AppStrings {
   String get nothingToUndo => 'Nothing to undo';
 
   @override
-  String get blitzCompleteTitle => 'Blitz Complete!';
-
-  @override
-  String get blitzOverTitle => 'Blitz Over';
-
-  @override
   String get blitzSplashStage => 'STAGE';
-
-  @override
-  String blitzPoints(int score) {
-    return '$score pts';
-  }
 
   @override
   String get arrowSpeedEscapeSpeed => 'Escape speed';
@@ -1105,40 +927,16 @@ class AppStringsEn extends AppStrings {
   String get leaderboardTabAllTime => 'All-Time';
 
   @override
-  String get leaderboardYourRank => 'Your Rank';
-
-  @override
-  String get leaderboardNotRanked => 'Not ranked yet';
-
-  @override
   String get leaderboardSignInToRank => 'Sign in to appear on the leaderboard';
 
   @override
   String get leaderboardEmptyState => 'No scores yet — be the first!';
 
   @override
-  String get leaderboardScore => 'Score';
-
-  @override
   String get leaderboardLevel => 'Level';
 
   @override
   String get leaderboardStars => 'Stars';
-
-  @override
-  String get leaderboardTrophies => 'Trophies';
-
-  @override
-  String get leaderboardYou => 'You';
-
-  @override
-  String get leaderboardRankPrefix => '#';
-
-  @override
-  String get leaderboardOptInTitle => 'Show me on leaderboard';
-
-  @override
-  String get leaderboardOptInSubtitle => 'Let other players see your rank';
 
   @override
   String get inventoryTitle => 'Inventory';
@@ -1174,24 +972,6 @@ class AppStringsEn extends AppStrings {
   }
 
   @override
-  String inventoryBuyItemTitle(String item) {
-    return 'Buy $item?';
-  }
-
-  @override
-  String inventoryUnlockTitle(String title) {
-    return 'Unlock $title?';
-  }
-
-  @override
-  String inventoryCoinsPrice(int count) {
-    return '$count coins';
-  }
-
-  @override
-  String get inventoryBuy => 'Buy';
-
-  @override
   String get rushDifficultyEasy => 'Easy';
 
   @override
@@ -1205,14 +985,6 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get profilePlayingAsGuest => 'Playing as guest';
-
-  @override
-  String get profileSignInSuccess => 'Signed in — progress synced';
-
-  @override
-  String profileSignInFailed(String error) {
-    return 'Sign-in failed: $error';
-  }
 
   @override
   String get profileSaveYourProgress => 'Save your progress';
@@ -1408,9 +1180,6 @@ class AppStringsEn extends AppStrings {
   }
 
   @override
-  String get homeContinue => 'Continue';
-
-  @override
   String get homeDaily => 'Daily';
 
   @override
@@ -1421,9 +1190,6 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get homeLeaderboard => 'Leaderboard';
-
-  @override
-  String get homeComingSoon => 'Coming soon';
 
   @override
   String get homeInventory => 'Inventory';
@@ -1662,9 +1428,6 @@ class AppStringsEn extends AppStrings {
   String get multiplayerJoinMatch => 'JOIN MATCH';
 
   @override
-  String get zenCardSubtitle => 'No timer. No limits. Just solve.';
-
-  @override
   String get profileSyncing => 'Syncing...';
 
   @override
@@ -1676,15 +1439,6 @@ class AppStringsEn extends AppStrings {
   @override
   String get timeBlitzDesc =>
       'Tap arrows to earn time. Blocked taps cost time. Survive as long as you can.';
-
-  @override
-  String get timeBlitzOverTitle => 'Time Blitz Over';
-
-  @override
-  String get timeBlitzScoreLabel => 'ARROWS CLEARED';
-
-  @override
-  String get timeBlitzLevelsLabel => 'Levels reached';
 
   @override
   String get profileEditName => 'Edit Name';
@@ -1708,9 +1462,6 @@ class AppStringsEn extends AppStrings {
   String get settingsShareFriends => 'Share with friends';
 
   @override
-  String get settingsSharingSoon => 'Sharing coming soon';
-
-  @override
   String get blitzTimeLeftLabel => 'TIME LEFT';
 
   @override
@@ -1726,18 +1477,6 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get levelDetailsNotPlayed => 'Not played yet';
-
-  @override
-  String get levelDetailsGrid => 'Grid';
-
-  @override
-  String get levelDetailsTimed => 'Timed';
-
-  @override
-  String get levelDetailsMines => 'Mines';
-
-  @override
-  String get levelDetailsMoves => 'Moves';
 
   @override
   String get levelDetailsStart => 'Start';

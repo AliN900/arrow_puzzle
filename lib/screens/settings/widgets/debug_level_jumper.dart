@@ -388,7 +388,8 @@ class _DebugLevelJumperState extends ConsumerState<DebugLevelJumper> {
               color: accent,
               onTap: () async {
                 await ref.read(progressRepositoryProvider).unlockAllLevels();
-                if (mounted) Navigator.pop(context);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
             ),
             const SizedBox(height: 8),

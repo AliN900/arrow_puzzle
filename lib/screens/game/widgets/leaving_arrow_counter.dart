@@ -6,12 +6,15 @@ class LeavingArrowCounter extends StatefulWidget {
   final int count;
   final int max;
   final Color color;
+  final VoidCallback? onTap;
 
   const LeavingArrowCounter({
     super.key,
     required this.count,
     required this.max,
     required this.color,
+    this.onTap,
+
   });
 
   @override
@@ -67,44 +70,47 @@ class _LeavingArrowCounterState extends State<LeavingArrowCounter>
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scale,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: widget.color.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: widget.color.withValues(alpha: 0.65),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: widget.color.withValues(alpha: 0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: widget.color.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: widget.color.withValues(alpha: 0.65),
+              width: 1.5,
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              size: 15,
-              color: widget.color,
-            ),
-            const SizedBox(width: 5),
-            Text(
-              '${widget.count}',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                color: widget.color,
-                letterSpacing: 0.5,
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 15,
+                color: widget.color,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '${widget.count}',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: widget.color,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

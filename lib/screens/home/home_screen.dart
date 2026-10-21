@@ -9,6 +9,7 @@ import '../../core/app_themes.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../core/board_themes.dart';
 import '../../core/items.dart';
+import '../../core/music_player.dart';
 import '../../data/models/trophy.dart';
 import '../../dev/test_mine_level.dart';
 import '../../main.dart';
@@ -35,6 +36,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    MusicPlayer.instance.play(MusicPlayer.trackMenu);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       _preWarmLevels();

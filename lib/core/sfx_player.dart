@@ -20,8 +20,30 @@ class SfxPlayer {
   void setVolume(double v) => _volume = v.clamp(0.0, 1.0);
 
   Future<void> init() async {
+    // ── THE FIX: Duck music instead of pausing it ──
+    final audioContext = AudioContext(
+      android: AudioContextAndroid(
+        isSpeakerphoneOn: false,
+        audioMode: AndroidAudioMode.normal,
+        stayAwake: false,
+        contentType: AndroidContentType.sonification,
+        usageType: AndroidUsageType.game,
+        // Duck the music temporarily instead of stealing full focus
+        audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+      ),
+      iOS: AudioContextIOS(
+        // Use playback so it works even if the mute switch is on
+        category: AVAudioSessionCategory.playback,
+        options: {AVAudioSessionOptions.mixWithOthers},
+      ),
+    );
+
     for (final p in _pool) {
       try {
+        // Apply the mixing context to every player in the pool
+        await p.setAudioContext(audioContext);
+
+        // Note: If lowLatency still fails on some devices, mediaPlayer is a safer fallback
         await p.setPlayerMode(PlayerMode.lowLatency);
       } catch (e) {
         debugPrint('SfxPlayer: lowLatency failed, falling back — $e');

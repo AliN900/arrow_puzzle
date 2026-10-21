@@ -24,6 +24,9 @@ class MaskGenerator {
       case 'hexagon':   return hexagonMask(side);
       case 'blob':      return blobMask(side, rng.nextInt(9999));
       case 'circle':    return circleMask(side);
+      case 'pyramid':             return pyramidMask(side);
+      case 'rectangleHorizontal': return rectangleHorizontalMask(side);
+      case 'rectangleVertical':   return rectangleVerticalMask(side);
       default:          return squareMask(side);
     }
   }
@@ -308,6 +311,50 @@ class MaskGenerator {
       }
       return false;
     });
+  }
+
+  /// Isoceles triangle — narrow tip at the top, wide base at the bottom.
+  /// Centered horizontally. Good for Blitz stages because the tip is easy
+  /// to fill (few cells, clear exits) while the base provides body mass.
+  static Set<String> pyramidMask(int side) {
+    final mask = <String>{};
+    for (int r = 0; r < side; r++) {
+      final t = (r + 0.5) / side;          // 0 at top → 1 at bottom
+      final halfWidth = 0.5 * t;           // fraction of side
+      final centerC = (side - 1) / 2.0;
+      final left  = (centerC - halfWidth * side).round().clamp(0, side - 1);
+      final right = (centerC + halfWidth * side).round().clamp(0, side - 1);
+      for (int c = left; c <= right; c++) {
+        mask.add('$r,$c');
+      }
+    }
+    return _clean(mask, side);
+  }
+
+  /// Wide rectangle: full width, but only the middle ~55% of rows.
+  static Set<String> rectangleHorizontalMask(int side) {
+    final mask = <String>{};
+    final startRow = (side * 0.22).round().clamp(0, side - 2);
+    final endRow   = (side * 0.78).round().clamp(startRow + 1, side);
+    for (int r = startRow; r < endRow; r++) {
+      for (int c = 0; c < side; c++) {
+        mask.add('$r,$c');
+      }
+    }
+    return _clean(mask, side);
+  }
+
+  /// Tall rectangle: full height, but only the middle ~55% of columns.
+  static Set<String> rectangleVerticalMask(int side) {
+    final mask = <String>{};
+    final startCol = (side * 0.22).round().clamp(0, side - 2);
+    final endCol   = (side * 0.78).round().clamp(startCol + 1, side);
+    for (int r = 0; r < side; r++) {
+      for (int c = startCol; c < endCol; c++) {
+        mask.add('$r,$c');
+      }
+    }
+    return _clean(mask, side);
   }
 
   static Set<String> circleMask(int side) {
