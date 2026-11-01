@@ -16,9 +16,8 @@ class BuilderStyle {
       this.maxLen, this.lenSpread, this.seedMode);
 
   static const all = [
-    // 85% straight bias ensures long maze lines, but allows turning to fill gaps
-    // Max length 35 allows ~25-30 arrows on a board (mimicking the screenshots)
-    BuilderStyle('maze', 0.85, 0.05, 35, 0.30, SeedMode.random),
+    // SeedMode.corner guarantees the arrows hug the walls and interlock perfectly.
+    BuilderStyle('maze', 0.85, 0.05, 22, 0.30, SeedMode.corner),
   ];
 
   static BuilderStyle forLevel(int level, {bool allowLong = false, bool isMaze = false}) {
@@ -26,11 +25,11 @@ class BuilderStyle {
   }
 
   static int maxLenForLevel(int level, int baseMax) {
-    if (level <= 10)  return 20;
-    if (level <= 20)  return 25;
-    if (level <= 40)  return 30;
-    if (level <= 80)  return 35;
-    return 35;
+    if (level <= 10)  return 18;
+    if (level <= 20)  return 20;
+    if (level <= 40)  return 22;
+    if (level <= 80)  return 25;
+    return 25;
   }
 
   BuilderStyle relaxed(int attempt) => BuilderStyle(
@@ -59,7 +58,7 @@ class LongArrowBuilder {
     required Set<String> mask,
     required int gridSize,
     required int levelNumber,
-    int repairIters = 400,
+    int repairIters = 1000, // <-- Changed from 400 to 1000
   }) {
     final cells = <int>{};
     for (final k in mask) {

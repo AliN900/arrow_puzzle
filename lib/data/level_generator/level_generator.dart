@@ -57,7 +57,7 @@ class LevelGenerator {
       final fillRatio = filled.length / level.mask.length;
 
       // Silhouettes are naturally thin shapes — allow lower fill before rejecting.
-      final minFill = maskShape == MaskShape.silhouette ? 0.65 : 0.90;
+      final minFill = maskShape == MaskShape.silhouette ? 0.65 : 0.99;
       if (fillRatio < minFill) {
         debugPrint('❌ L$levelNumber attempt $attempt: fill '
             '${(fillRatio * 100).toStringAsFixed(1)}% — retrying');
@@ -647,95 +647,6 @@ class LevelGenerator {
   //   return last!;
   // }
 
-  static LevelModel generateBoardLevel(int levelNumber, {int? seed}) {
-    final baseSeed = seed ?? (levelNumber * 103 + 51);
-    final type = AppConstants.levelTypeFor(levelNumber);
-    final shapeRng = Random(baseSeed);
-    final maskShape = _shapeFor(type, shapeRng, levelNumber);
-
-    final targetArrows = _minArrowCount(levelNumber);
-    final avgLenEst    = _estArrowLen(levelNumber);
-    final targetCells  = targetArrows * avgLenEst;
-
-    int gridSize = AppConstants.gridSizeForLevel(levelNumber);
-    Set<String> mask;
-
-    if (maskShape == MaskShape.square) {
-      // ── MAZE LEVELS (Tall Rectangles) ──
-      final d = boardDims(levelNumber);
-      int rows = d.rows;
-      int cols = d.cols;
-
-      if (levelNumber > 1) {
-        while (rows * cols < targetCells * 0.85 && rows < 38 && cols < 28) {
-          rows += 2;
-          cols += 1;
-        }
-      }
-
-      gridSize = max(rows, cols);
-
-      // ── THIS IS THE FIX: Calculate offsets to center the rectangle ──
-      final rowOffset = (gridSize - rows) ~/ 2;
-      final colOffset = (gridSize - cols) ~/ 2;
-
-      mask = <String>{
-        for (int r = 0; r < rows; r++)
-          for (int c = 0; c < cols; c++) '${r + rowOffset},${c + colOffset}',
-      };
-      debugPrint('📐 L$levelNumber Maze: ${rows}x$cols (centered in $gridSize²) cells=${mask.length}');
-
-    } else {
-      // ── GEOMETRIC SHAPES (Heart, Star, etc.) ──
-      mask = MaskGenerator.shapeByName(maskShape.name, gridSize, Random(baseSeed + 1));
-
-      if (levelNumber > 1) {
-        const maxGrid = 34;
-        for (int iter = 0; iter < 40; iter++) {
-          if (mask.length >= targetCells * 0.85 || gridSize >= maxGrid) break;
-          gridSize++;
-          mask = MaskGenerator.shapeByName(maskShape.name, gridSize, Random(baseSeed + 1));
-        }
-      }
-      debugPrint('📐 L$levelNumber ${maskShape.name}: grid=$gridSize² cells=${mask.length}');
-    }
-
-    LevelModel? last;
-    final maxAttempts = levelNumber > 1 ? 5 : 1;
-
-    for (int attempt = 0; attempt < maxAttempts; attempt++) {
-      final level = generateLongFromMask(
-        levelNumber: levelNumber,
-        mask: mask,
-        gridSize: gridSize,
-        maskShape: maskShape,
-        seed: baseSeed + attempt * 997,
-      );
-      last = level;
-
-      if (levelNumber == 1) return level;
-
-      final total = level.arrows.length;
-      if (total < targetArrows * 0.85) {
-        debugPrint('📐 L$levelNumber: too few arrows ($total) — retry');
-        continue;
-      }
-
-      // Use the Analyzer to make sure the level is actually a puzzle
-      final analysis = _analyzeLevel(level);
-      if (analysis.maxChoice > 6) {
-        debugPrint('📐 L$levelNumber: max choices ${analysis.maxChoice} > 6 — retry');
-        continue;
-      }
-      if (analysis.avgChoice < 1.5) {
-        debugPrint('📐 L$levelNumber: avg choices ${analysis.avgChoice.toStringAsFixed(1)} < 1.5 — retry');
-        continue;
-      }
-
-      return level;
-    }
-    return last!;
-  }
 
   /// Minimum arrow count per level.  L1–5 ramp softly, L6 jumps hard, then
   /// a steady +1.5/level up to a 60-arrow ceiling.
@@ -2079,14 +1990,20 @@ class LevelGenerator {
 
     final mod5 = levelNumber % 5;
 
-    // 1 and 2 are Mazes
+    // 1 and 2 are Mazes (Rectangles)
     if (mod5 == 1 || mod5 == 2) return MaskShape.square;
 
-    // 3 and 4 are Geometric
+    // 3 and 4 are Geometric Shapes (Pyramid REMOVED)
     const varieties = [
-      MaskShape.heart, MaskShape.star, MaskShape.diamond,
-      MaskShape.hexagon, MaskShape.circle, MaskShape.blob,
-      MaskShape.pyramid, MaskShape.tree, MaskShape.fish, MaskShape.bird
+      MaskShape.heart,
+      MaskShape.star,
+      MaskShape.diamond,
+      MaskShape.hexagon,
+      MaskShape.circle,
+      MaskShape.blob,
+      MaskShape.tree,
+      MaskShape.fish,
+      MaskShape.bird
     ];
 
     final cycle = levelNumber ~/ 5;
@@ -2094,6 +2011,64 @@ class LevelGenerator {
     if (mod5 == 4) return varieties[(cycle + 3) % varieties.length];
 
     return MaskShape.square;
+  }
+
+  static LevelModel generateBoardLevel(int levelNumber, {int? seed}) {
+    final baseSeed = seed ?? (levelNumber * 103 + 51);
+    final type = AppConstants.levelTypeFor(levelNumber);
+    final shapeRng = Random(baseSeed);
+    final maskShape = _shapeFor(type, shapeRng, levelNumber);
+
+    int gridSize = AppConstants.gridSizeForLevel(levelNumber);
+    Set<String> mask;
+
+    if (maskShape == MaskShape.square) {
+      // ── MAZE LEVELS (Tall Rectangles) ──
+      final d = boardDims(levelNumber);
+      int rows = d.rows;
+      int cols = d.cols;
+
+      // Scale up for higher levels
+      if (levelNumber > 1) {
+        while (rows * cols < 400 + levelNumber * 30 && rows < 38 && cols < 28) {
+          rows += 2;
+          cols += 1;
+        }
+      }
+
+      gridSize = max(rows, cols);
+
+      final rowOffset = (gridSize - rows) ~/ 2;
+      final colOffset = (gridSize - cols) ~/ 2;
+
+      mask = <String>{
+        for (int r = 0; r < rows; r++)
+          for (int c = 0; c < cols; c++) '${r + rowOffset},${c + colOffset}',
+      };
+      debugPrint('📐 L$levelNumber Maze: ${rows}x$cols (centered in $gridSize²) cells=${mask.length}');
+
+    } else {
+      // ── GEOMETRIC SHAPES ──
+      mask = MaskGenerator.shapeByName(maskShape.name, gridSize, Random(baseSeed + 1));
+
+      if (levelNumber > 1) {
+        const maxGrid = 34;
+        while (mask.length < 400 + levelNumber * 30 && gridSize < maxGrid) {
+          gridSize++;
+          mask = MaskGenerator.shapeByName(maskShape.name, gridSize, Random(baseSeed + 1));
+        }
+      }
+      debugPrint('📐 L$levelNumber ${maskShape.name}: grid=$gridSize² cells=${mask.length}');
+    }
+
+    // Generate the level. The builder has 40 internal attempts to find a solvable layout.
+    return generateLongFromMask(
+      levelNumber: levelNumber,
+      mask: mask,
+      gridSize: gridSize,
+      maskShape: maskShape,
+      seed: baseSeed,
+    );
   }
 
 
