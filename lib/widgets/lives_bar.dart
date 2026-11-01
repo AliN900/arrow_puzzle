@@ -50,15 +50,24 @@ class LivesBar extends HookWidget {
         final heartWidget = Stack(
           alignment: Alignment.center,
           children: [
-            if (isFull)
+            if (isFull) ...[
+              // ── 1. Border layer + drop shadow ──
               Icon(
                 Icons.favorite,
                 color: isLowLives
-                    ? Colors.redAccent.withValues(alpha: 0.4)
-                    : Colors.black.withValues(alpha: 0.15),
-                size: 27,
+                    ? const Color(0xFFB71C1C)          // deep red border
+                    : Colors.black.withValues(alpha: 0.35), // dark ring for white heart
+                size: 28,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.30),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            if (isFull)
+
+              // ── 2. Gradient fill (provides the inner shading) ──
               ShaderMask(
                 shaderCallback: (bounds) => LinearGradient(
                   colors: isLowLives
@@ -70,27 +79,34 @@ class LivesBar extends HookWidget {
                 child: const Icon(
                   Icons.favorite,
                   color: Colors.white,
-                  size: 25,
+                  size: 24,
                 ),
-              )
-            else
-              Icon(
-                Icons.favorite_border,
-                color: surfaceLight,
-                size: 24,
               ),
-            if (isFull)
+
+              // ── 3. Highlight dot (now glows slightly) ──
               Positioned(
-                top: 5,
-                left: 5,
+                top: 6,
+                left: 6,
                 child: Container(
                   width: 5,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: Colors.white.withValues(alpha: 0.7),
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        blurRadius: 3,
+                      ),
+                    ],
                   ),
                 ),
+              ),
+            ] else
+              Icon(
+                Icons.favorite_border,
+                color: surfaceLight,
+                size: 24,
               ),
           ],
         );

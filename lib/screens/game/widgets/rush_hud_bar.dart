@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 class RushHudBar extends StatelessWidget {
   final int clearedCount;
   final double fillPercentage;
@@ -13,6 +15,7 @@ class RushHudBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDanger = fillPercentage > 0.8;
+    final strings = AppStrings.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -33,7 +36,7 @@ class RushHudBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'Cleared: $clearedCount',
+            strings.rushCleared(clearedCount),
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w900,

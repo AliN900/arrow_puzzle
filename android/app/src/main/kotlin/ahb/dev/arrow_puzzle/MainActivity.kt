@@ -1,5 +1,7 @@
 package ahb.dev.arrow_puzzle
 
+
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -47,6 +49,12 @@ class MainActivity : FlutterActivity() {
         }
 
         applyImmersiveMode()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // This ensures Flutter receives the intent when returning from ads
+        setIntent(intent)
     }
 
     override fun onResume() {

@@ -11,6 +11,8 @@ import '../../core/board_themes.dart';
 import '../../core/items.dart';
 import '../../core/music_player.dart';
 import '../../data/models/trophy.dart';
+import '../../dev/mine_arrow_dev_screen.dart';
+import '../multiplayer/multiplayer_screen.dart';
 import '../../dev/test_mine_level.dart';
 import '../../main.dart';
 import '../../widgets/coin_pill.dart';
@@ -22,6 +24,12 @@ import '../game/game_screen.dart';
 import '../level_select/level_select_screen.dart';
 import '../profile/profile_screen.dart';
 import '../trophies/trophies_screen.dart';
+
+/// Compile-time build flag:
+/// - Defaults to `false` for standard Production builds.
+/// - Set to `true` via `--dart-define=ENABLE_MP=true` for Open Testing builds.
+const bool kEnableMultiplayer =
+bool.fromEnvironment('ENABLE_MP', defaultValue: false);
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -213,9 +221,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           auth.avatarUrl!.isEmpty
                           ? Center(
                         child: Text(
-                          auth.isGuest
-                              ? 'P'
-                              : auth.avatarInitial,
+                          auth.avatarInitial,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -232,9 +238,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          auth.isGuest
-                              ? strings.homePlayer
-                              : auth.displayName,
+                          auth.displayName,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -275,21 +279,184 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 },
               ),
 
+              // ── 1v1 MULTIPLAYER CARD (Renders when ENABLE_MP=true) ──
+              if (kEnableMultiplayer) ...[
+                const SizedBox(height: 16),
+                IgnorePointer(
+                  ignoring: auth.isGuest,
+                  child: GestureDetector(
+                    onTap: () {
+                      AudioHapticHelper.playClick();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MultiplayerScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: auth.isGuest
+                              ? [Colors.grey.shade500, Colors.grey.shade700]
+                              : [
+                            accent,
+                            accent.withValues(alpha: 0.85),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            // 👈 NEW: Grey shadow for guests
+                            color: auth.isGuest
+                                ? Colors.black.withValues(alpha: 0.2)
+                                : accent.withValues(alpha: 0.35),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              // 👈 NEW: Lock icon for guests
+                              auth.isGuest
+                                  ? Icons.lock_rounded
+                                  : Icons.sports_esports_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  strings.homeMpTitle,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  // 👈 NEW: Prompt text for guests
+                                  auth.isGuest
+                                      ? 'Sign in / Sign up to play'
+                                      : strings.homeMpSubtitle,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            // 👈 NEW: Change arrow to lock for guests
+                            auth.isGuest
+                                ? Icons.lock_rounded
+                                : Icons.arrow_forward_ios_rounded,
+                            color: auth.isGuest ? Colors.white54 : Colors.white,
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 16),
 
               const ZenModeCard(),
 
               const SizedBox(height: 16),
 
+              // ── DEBUG / DEV ONLY TOOLS (OVERFLOW SAFE) ──
               if (kDebugMode) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: _debugMineButton(context, 250)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _debugMineButton(context, 400)),
-                  ],
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.amber.withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.bug_report_rounded,
+                              color: Colors.amber, size: 18),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'DEV PROTOTYPES (DEBUG MODE ONLY)',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.amber,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _debugDevScreenButton(
+                              context,
+                              label: 'MINE STAIRCASE',
+                              icon: Icons.grid_goldenratio_rounded,
+                              color: const Color(0xFFFF9800),
+                              screen: const MineArrowDevScreen(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _debugDevScreenButton(
+                              context,
+                              label: '1v1 RACE',
+                              icon: Icons.sports_esports_rounded,
+                              color: const Color(0xFF00E676),
+                              screen: const MultiplayerScreen(),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: _debugMineButton(context, 250)),
+                          const SizedBox(width: 8),
+                          Expanded(child: _debugMineButton(context, 400)),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 16),
               ],
 
               // --- 2x2 Grid Section ---
@@ -456,7 +623,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       },
       behavior: HitTestBehavior.opaque,
       child: Container(
-        // ── Fixed height so all four tiles are identical ──
         height: 132,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -473,7 +639,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Icon row ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -489,12 +654,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
               ],
             ),
-
-            // Pushes text to the bottom edge — guarantees identical
-            // text baselines across all four tiles.
             const Spacer(),
-
-            // ── Title ──
             Text(
               title,
               maxLines: 1,
@@ -506,8 +666,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             const SizedBox(height: 4),
-
-            // ── Optional progress bar ──
             if (progress != null) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(3),
@@ -520,8 +678,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 4),
             ],
-
-            // ── Subtitle ──
             Text(
               subtitle,
               maxLines: 2,
@@ -538,7 +694,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// Thousands separator for LC values (240 → "240", 1234 → "1,234").
   String _formatLc(int n) {
     final s = n.toString();
     final buf = StringBuffer();
@@ -549,6 +704,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return buf.toString();
   }
 
+  Widget _debugDevScreenButton(
+      BuildContext context, {
+        required String label,
+        required IconData icon,
+        required Color color,
+        required Widget screen,
+      }) {
+    return GestureDetector(
+      onTap: () {
+        AudioHapticHelper.playClick();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => screen),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.black87, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _debugMineButton(BuildContext context, int levelNumber) {
     return GestureDetector(
@@ -565,26 +762,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
           color: const Color(0xFFE53935),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.science_rounded,
-                color: Colors.white, size: 14),
-            const SizedBox(width: 6),
-            Text(
-              'TEST L$levelNumber',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.science_rounded,
+                  color: Colors.white, size: 14),
+              const SizedBox(width: 6),
+              Text(
+                'TEST L$levelNumber',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

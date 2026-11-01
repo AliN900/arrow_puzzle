@@ -178,6 +178,21 @@ class ProgressRepository extends ChangeNotifier {
     await _save();
   }
 
+  Future<void> setLbScores({
+    required int weekly,
+    required int monthly,
+    required int allTime,
+  }) async {
+    // 1. Update the local variables so the UI reflects the secure server numbers immediately
+    _lbWeeklyScore = weekly;
+    _lbMonthlyScore = monthly;
+    _lbAllTimeScore = allTime;
+
+    // 2. Save to Hive so it survives an app restart
+    await _save();
+    notifyListeners();
+  }
+
   Future<void> _init() async {
     _box = await Hive.openBox('progress');
     _resultsBox = await Hive.openBox('levelResults');
@@ -659,15 +674,26 @@ class ProgressRepository extends ChangeNotifier {
   }
 
   bool isArrowUnlocked(GameTheme theme) {
-    const freeThemes = {
-      GameTheme.classic,
-      GameTheme.neon,
-      GameTheme.retro,
-      GameTheme.cyber,
-    };
-    if (freeThemes.contains(theme)) return true;
+    // 1. White/Classic is always free
+    if (theme == GameTheme.classic) return true;
+
+    // 2. Progression-locked themes (Trophy based)
+    if (theme == GameTheme.neon) {
+      return isTrophyUnlocked('neon_arrow_trophy');
+    }
+    if (theme == GameTheme.retro) {
+      return isTrophyUnlocked('retro_arrow_trophy');
+    }
+    if (theme == GameTheme.ruby) {
+      return isTrophyUnlocked('ruby_arrow_trophy');
+    }
+
+    // 3. Unlock code override
     if (_skinsUnlocked) return true;
+
+    // 4. Coin purchased themes
     if (_purchasedArrows.contains(theme.name)) return true;
+
     return false;
   }
 

@@ -249,6 +249,7 @@ class _LevelDetailsDialogState extends ConsumerState<LevelDetailsDialog> {
   }
 
   Widget _buildError(Color textPrimary, Color textSecondary) {
+    final strings = AppStrings.of(context);
     return SizedBox(
       height: 200,
       child: Center(
@@ -258,7 +259,7 @@ class _LevelDetailsDialogState extends ConsumerState<LevelDetailsDialog> {
             Icon(Icons.error_outline_rounded, color: textSecondary, size: 40),
             const SizedBox(height: 12),
             Text(
-              'Failed to load level',
+              strings.levelFailedToLoad,
               style: TextStyle(color: textPrimary, fontSize: 15),
             ),
           ],

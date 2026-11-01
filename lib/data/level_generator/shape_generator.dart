@@ -9,14 +9,14 @@ class LevelShapeGenerator {
   }
 
   /// Generates the shape and mask for a normal level.
-  static ({MaskShape shape, Set<String> mask}) generateMask(int levelNumber, int gridSize) {
+  static ({MaskShape shape, Set<String> mask}) generateMask(
+    int levelNumber,
+    int gridSize,
+  ) {
     // 1. If it's a special level, return Square (or whatever default your special generator uses)
     // Note: If your special levels have their own hardcoded masks, you should skip this generator for them.
     if (isSpecialLevel(levelNumber)) {
-      return (
-      shape: MaskShape.square,
-      mask: _generateSquare(gridSize)
-      );
+      return (shape: MaskShape.square, mask: _generateSquare(gridSize));
     }
 
     // 2. Cycle through shapes for normal levels based on the level number
@@ -27,9 +27,15 @@ class LevelShapeGenerator {
       case 0:
         return (shape: MaskShape.square, mask: _generateSquare(gridSize));
       case 1:
-        return (shape: MaskShape.rectangleHorizontal, mask: _generateRectangleH(gridSize));
+        return (
+          shape: MaskShape.rectangleHorizontal,
+          mask: _generateRectangleH(gridSize),
+        );
       case 2:
-        return (shape: MaskShape.rectangleVertical, mask: _generateRectangleV(gridSize));
+        return (
+          shape: MaskShape.rectangleVertical,
+          mask: _generateRectangleV(gridSize),
+        );
       case 3:
         return (shape: MaskShape.circle, mask: _generateCircle(gridSize));
       case 4:
@@ -44,7 +50,10 @@ class LevelShapeGenerator {
   // ─── MASK GENERATORS ───
 
   static Set<String> _generateSquare(int size) {
-    return {for (int r = 0; r < size; r++) for (int c = 0; c < size; c++) '$r,$c'};
+    return {
+      for (int r = 0; r < size; r++)
+        for (int c = 0; c < size; c++) '$r,$c',
+    };
   }
 
   static Set<String> _generateRectangleH(int size) {

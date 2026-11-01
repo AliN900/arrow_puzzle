@@ -6,6 +6,7 @@ enum GameTheme {
   neon,
   classic,
   retro,
+  ruby,
   cyber,
   hacker,
   aurora,
@@ -13,7 +14,9 @@ enum GameTheme {
   forest,
   pastel,
   sunset,
+  rainbowStatic,
   rainbow,
+
 }
 
 class ThemeColors {
@@ -82,6 +85,20 @@ class AppThemes {
             end: Alignment.bottomCenter,
           ),
           hasGlow: false,
+        );
+      case GameTheme.ruby:
+        return const ThemeColors(
+          background: Color(0xFF1A0508),
+          surface: Color(0xFF2D0A10),
+          arrowColor: Color(0xFFFF1744),
+          accentColor: Color(0xFFF50057),
+          accentDark: Color(0xFFC51162),
+          bgGradient: LinearGradient(
+            colors: [Color(0xFF2D0A10), Color(0xFF1A0508)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          hasGlow: true,
         );
       case GameTheme.cyber:
         return const ThemeColors(
@@ -194,6 +211,23 @@ class AppThemes {
             end: Alignment.bottomCenter,
           ),
           hasGlow: true,
+          // arrowPalette: REMOVED
+        );
+
+    // 2. The Static Rainbow (Keeps the arrowPalette)
+      case GameTheme.rainbowStatic:
+        return const ThemeColors(
+          background: Color(0xFF12141C),
+          surface: Color(0xFF1E2130),
+          arrowColor: Color(0xFFFF4081),
+          accentColor: Color(0xFF00E5FF),
+          accentDark: Color(0xFF00B0FF),
+          bgGradient: LinearGradient(
+            colors: [Color(0xFF191C2B), Color(0xFF0F1017)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          hasGlow: true,
           arrowPalette: [
             Color(0xFFFF5252), // Red
             Color(0xFFFF9100), // Orange
@@ -215,14 +249,16 @@ extension GameThemeLocalization on GameTheme {
       case GameTheme.neon:       return s.themeNeon;
       case GameTheme.classic:    return s.themeClassic;
       case GameTheme.retro:      return s.themeRetro;
-      case GameTheme.cyber:      return s.themeCyber;
+      case GameTheme.ruby:      return s.themeRuby;
       case GameTheme.hacker:     return s.themeHacker;
       case GameTheme.aurora:     return s.themeAurora;
       case GameTheme.blueprint:  return s.themeBlueprint;
       case GameTheme.forest:     return s.themeForest;
       case GameTheme.pastel:     return s.themePastel;
       case GameTheme.sunset:     return s.themeSunset;
-      case GameTheme.rainbow:    return s.themeRainbow;
+      case GameTheme.cyber:      return s.themeCyber;
+      case GameTheme.rainbow:       return s.themeRainbow;
+      case GameTheme.rainbowStatic: return "${s.themeRainbow} (Solid)";
     }
   }
 }

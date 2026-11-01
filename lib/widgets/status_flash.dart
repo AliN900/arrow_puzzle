@@ -2,25 +2,24 @@ import 'package:flutter/material.dart';
 
 enum StatusFlashKind { success, error }
 
-/// Floating success / fail indicator.
-///
-/// Renders only a large ✓ or ✗ icon in a coloured ring, anchored above
-/// the game item bar (bottom-start). The optional [message] parameter is
-/// accepted for API compatibility but intentionally not rendered.
 class StatusFlash {
   StatusFlash._();
 
   static OverlayEntry? _current;
 
-  static void success(BuildContext context, [String? message]) {
-    _show(context, StatusFlashKind.success);
+  /// Shows a floating Success (✓) icon.
+  /// Use [isGameBoard] = true to keep the game-specific positioning (bottom-left).
+  static void success(BuildContext context, [String? message, bool isGameBoard = false]) {
+    _show(context, StatusFlashKind.success, isGameBoard);
   }
 
-  static void fail(BuildContext context, [String? message]) {
-    _show(context, StatusFlashKind.error);
+  /// Shows a floating Error (✗) icon.
+  /// Use [isGameBoard] = true to keep the game-specific positioning (bottom-left).
+  static void fail(BuildContext context, [String? message, bool isGameBoard = false]) {
+    _show(context, StatusFlashKind.error, isGameBoard);
   }
 
-  static void _show(BuildContext context, StatusFlashKind kind) {
+  static void _show(BuildContext context, StatusFlashKind kind, bool isGameBoard) {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) return;
 
@@ -28,14 +27,14 @@ class StatusFlash {
     _current = null;
 
     final isSuccess = kind == StatusFlashKind.success;
-    final color =
-    isSuccess ? const Color(0xFF4CAF50) : const Color(0xFFFF5252);
+    final color = isSuccess ? const Color(0xFF4CAF50) : const Color(0xFFFF5252);
     final icon = isSuccess ? Icons.check_rounded : Icons.close_rounded;
 
     final entry = OverlayEntry(
       builder: (_) => _StatusFlashOverlay(
         icon: icon,
         color: color,
+        isGameBoard: isGameBoard, // <── Pass the flag to the widget
         onDone: () {
           _current?.remove();
           _current = null;
@@ -50,11 +49,13 @@ class StatusFlash {
 class _StatusFlashOverlay extends StatefulWidget {
   final IconData icon;
   final Color color;
+  final bool isGameBoard;
   final VoidCallback onDone;
 
   const _StatusFlashOverlay({
     required this.icon,
     required this.color,
+    required this.isGameBoard,
     required this.onDone,
   });
 
@@ -122,49 +123,58 @@ class _StatusFlashOverlayState extends State<_StatusFlashOverlay>
 
   @override
   Widget build(BuildContext context) {
-    return PositionedDirectional(
-      // ── Anchored to the same edge as GameItemBar ──
-      // GameItemBar is `start: 12, bottom: 12` with a 56-px toggle button.
-      // Flash is 76 px, so `start: 2` centres it over the toggle:
-      //   toggle centre = 12 + 28 = 40
-      //   flash  centre =  2 + 38 = 40  ✓
-      // `bottom: 80` sits it 12 px above the top of the toggle.
-      start: 8,
-      bottom: 150,
-      child: IgnorePointer(
-        child: AnimatedBuilder(
-          animation: _ctrl,
-          builder: (context, _) {
-            return Opacity(
-              opacity: _fade.value,
-              child: Transform.scale(
-                scale: _scale.value,
-                child: Container(
-                  width: 66,
-                  height: 66,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: widget.color.withValues(alpha: 0.18),
-                    border: Border.all(color: widget.color, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: widget.color.withValues(alpha: 0.5),
-                        blurRadius: 24,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    widget.icon,
-                    color: widget.color,
-                    size: 48,
-                  ),
+    // The actual icon widget
+    final iconWidget = IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (context, _) {
+          return Opacity(
+            opacity: _fade.value,
+            child: Transform.scale(
+              scale: _scale.value,
+              child: Container(
+                width: 66,
+                height: 66,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.color.withValues(alpha: 0.18),
+                  border: Border.all(color: widget.color, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.color.withValues(alpha: 0.5),
+                      blurRadius: 24,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  widget.icon,
+                  color: widget.color,
+                  size: 48,
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
+
+    // ── Dynamic Positioning ──
+    if (widget.isGameBoard) {
+      // Game Mode: Bottom Left (above the item bar)
+      return PositionedDirectional(
+        start: 8,
+        bottom: 150,
+        child: iconWidget,
+      );
+    } else {
+      // App Mode: Bottom Center (above the navigation bar)
+      return Positioned(
+        bottom: MediaQuery.of(context).padding.bottom + 40,
+        left: 0,
+        right: 0,
+        child: Center(child: iconWidget),
+      );
+    }
   }
 }

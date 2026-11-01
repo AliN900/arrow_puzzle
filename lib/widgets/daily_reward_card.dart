@@ -131,7 +131,7 @@ class _DailyRewardCardState extends ConsumerState<DailyRewardCard> {
                       child: isClaimed && !isToday
                           ? Icon(Icons.check_rounded, color: accent, size: 18)
                           : isDay7
-                          ? const Text('🎁', style: TextStyle(fontSize: 15))
+                          ? Text(strings.giftEmoji, style: const TextStyle(fontSize: 15))
                           : Text(
                         '$day',
                         style: TextStyle(

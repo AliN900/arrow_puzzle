@@ -52,6 +52,7 @@ class TrophiesScreen extends ConsumerWidget {
         itemBuilder: (context, index) {
           final trophy = trophies[index];
           final isUnlocked = progress.isTrophyUnlocked(trophy.id);
+          final perkText = trophy.localizedPerk(context);
 
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -93,7 +94,6 @@ class TrophiesScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,41 +140,22 @@ class TrophiesScreen extends ConsumerWidget {
                           height: 1.3,
                         ),
                       ),
-
-                      if (trophy.type == TrophyType.benefit) ...[
+                      if (trophy.type == TrophyType.benefit && perkText != null) ...[
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.2),
+                            color: _getPerkBadgeColor(trophy.benefit)
+                                .withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            strings.trophiesPerkHeart,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (trophy.type == TrophyType.benefit &&
-                          trophy.benefit == TrophyBenefit.leaderboard) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.blueAccent.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'Unlocks Leaderboard',
+                            perkText,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blueAccent,
+                              color: _getPerkBadgeColor(trophy.benefit),
                             ),
                           ),
                         ),
@@ -188,5 +169,22 @@ class TrophiesScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Color _getPerkBadgeColor(TrophyBenefit benefit) {
+    switch (benefit) {
+      case TrophyBenefit.extraHeart:
+        return Colors.amber;
+      case TrophyBenefit.leaderboard:
+        return Colors.blueAccent;
+      case TrophyBenefit.arrowSkinNeon:
+        return Colors.cyanAccent;
+      case TrophyBenefit.arrowSkinRetro:
+        return Colors.deepOrangeAccent;
+      case TrophyBenefit.arrowSkinRuby:
+        return Colors.pinkAccent;
+      case TrophyBenefit.none:
+        return Colors.grey;
+    }
   }
 }

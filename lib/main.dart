@@ -21,6 +21,7 @@
 
 import 'dart:async';
 import 'dart:ui';
+import 'package:arrow_puzzle/screens/multiplayer/providers/challenge_provider.dart';
 import 'package:arrow_puzzle/screens/onboarding/privacy_consent_screen.dart';
 import 'package:arrow_puzzle/services/auth_service.dart';
 import 'package:arrow_puzzle/services/cloud_sync_service.dart';
@@ -28,6 +29,7 @@ import 'package:arrow_puzzle/services/huawei_iap_service.dart';
 import 'package:arrow_puzzle/services/leaderboard_service.dart';
 import 'package:arrow_puzzle/services/store_detector.dart';
 import 'package:arrow_puzzle/unity_rewarded_ad.dart';
+import 'package:arrow_puzzle/widgets/global_challenge_overlay.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -48,6 +50,11 @@ import 'l10n/app_localizations.dart';
 import 'screens/main_screen.dart';
 
 const bool _kScreenshotMode = bool.fromEnvironment('SCREENSHOT_MODE');
+
+
+// Create a global navigator key
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+
 
 // ─────────────────────────────────────────────────────────────────────
 // Providers
@@ -94,6 +101,11 @@ void _attachAuthListener() {
   _authListenerAttached = true;
 
   AuthService.instance.addListener(() {
+    // 🛑 DO NOT sync if there is no email. (Guests have no email).
+    if (AuthService.instance.email == null) {
+      return;
+    }
+
     final userId = AuthService.instance.userId;
     if (userId == null) return;
     if (userId == _lastMergedUserId) return;
@@ -143,6 +155,11 @@ Future<void> mergeCloudAndLocal(
     ProgressRepository progress,
     CoinsRepository coins,
     ) async {
+  // 🛑 ADD THIS: Do not merge cloud data for guests
+  if (AuthService.instance.isGuest) {
+    debugPrint('🛑 [Sync] Guest user — skipping cloud merge completely.');
+    return;
+  }
   final auth = AuthService.instance;
   final userId = auth.userId;
   if (auth.isGuest) return;
@@ -279,7 +296,6 @@ void main() async {
     try {
       UnityAds.init(
         gameId: '800386220',
-        testMode: true,
         onComplete: () {
           debugPrint('Unity Ads initialized');
           UnityRewardedAd.preload();
@@ -376,6 +392,10 @@ class _ArrowPuzzleState extends ConsumerState<ArrowPuzzle>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _applyImmersive();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      // 👈 Add unawaited here
+      unawaited(ref.read(challengeProvider.notifier).toggleReady(false));
     }
   }
 
@@ -407,6 +427,7 @@ class _ArrowPuzzleState extends ConsumerState<ArrowPuzzle>
     return MaterialApp(
       title: 'Arrow Puzzle: Tap Maze Escape',
       debugShowCheckedModeBanner: false,
+      navigatorKey: _rootNavigatorKey,
       themeMode: themeMode,
       theme: ThemeData(
         useMaterial3: true,
@@ -471,7 +492,10 @@ class _ArrowPuzzleState extends ConsumerState<ArrowPuzzle>
             padding: mq.padding.copyWith(top: kTopSafeMargin),
             viewPadding: mq.viewPadding.copyWith(top: kTopSafeMargin),
           ),
-          child: child!,
+          child: GlobalChallengeOverlay(
+            navigatorKey: _rootNavigatorKey,
+            child: child!,
+          ),
         );
       },
     );

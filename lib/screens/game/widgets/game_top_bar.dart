@@ -31,8 +31,7 @@ class GameTopBar extends ConsumerWidget {
     final strings = AppStrings.of(context);
 
     String titleText;
-    if (gameMode == GameMode.timeAttack ||
-        gameMode == GameMode.timeBlitz) {
+    if (gameMode == GameMode.timeAttack || gameMode == GameMode.timeBlitz) {
       titleText = strings.gameTopBarScore(score);
     } else if (gameMode == GameMode.zen) {
       titleText = gameMode.localizedLabel(context);
@@ -41,7 +40,7 @@ class GameTopBar extends ConsumerWidget {
     } else if (isRandom) {
       titleText = strings.gameTopBarRandom;
     } else {
-      titleText = strings.gameTopBarLevelNumber(level.levelNumber.toString());
+      titleText = strings.levelDetailsTitle(level.levelNumber);
     }
 
     final progress = ref.watch(progressRepositoryProvider);
@@ -51,8 +50,6 @@ class GameTopBar extends ConsumerWidget {
 
     Widget? livesWidget;
     if (showHearts) {
-      // Only Zen has truly infinite hearts. Endless Rush now uses the
-      // player's real campaign hearts.
       final isInfiniteMode = gameMode == GameMode.zen;
 
       if (isInfiniteMode || lives > 5) {
@@ -66,8 +63,11 @@ class GameTopBar extends ConsumerWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.favorite_rounded,
-                  color: Colors.redAccent, size: 18),
+              const Icon(
+                Icons.favorite_rounded,
+                color: Colors.redAccent,
+                size: 18,
+              ),
               const SizedBox(width: 4),
               Text(
                 isInfiniteMode ? '∞' : '$lives',
@@ -81,49 +81,127 @@ class GameTopBar extends ConsumerWidget {
           ),
         );
       } else {
-        // Endless Rush reports level 999, which would always give the wrong
-        // heart cap. Use the player's real campaign level for the ratio.
         final effectiveLevel = gameMode == GameMode.endlessRush
             ? progress.currentLevel
             : level.levelNumber;
 
-        livesWidget = LivesBar(
-          lives: lives,
-          maxLives: progress.getMaxLivesForLevel(effectiveLevel),
+        livesWidget = FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: LivesBar(
+            lives: lives,
+            maxLives: progress.getMaxLivesForLevel(effectiveLevel),
+          ),
         );
       }
     }
 
+    const double sideSlotWidth = 95.0; // Keeps center title symmetrically balanced
+
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Stack(
-        alignment: Alignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            titleText,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: 1.2,
+          // ── 1. LEFT SLOT: Hearts / Infinite Indicator ─────────────────
+          SizedBox(
+            width: sideSlotWidth,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: livesWidget ?? const SizedBox.shrink(),
             ),
           ),
-          if (livesWidget != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: livesWidget,
+
+          // ── 2. CENTER SLOT: Bounded Responsive Title (Stroke + Shader) ──
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Outer stroke border + drop shadow
+                      Text(
+                        titleText,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth = 4.0
+                            ..color = const Color(0x59000000),
+                          shadows: const [
+                            Shadow(
+                              color: Color(0x4D000000),
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Gradient fill
+                      ShaderMask(
+                        shaderCallback: _heartGradient,
+                        child: Text(
+                          titleText,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: GestureDetector(
-              onTap: onPause,
-              child: const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Icon(
-                  Icons.pause_rounded,
-                  color: Colors.white,
-                  size: 26,
+          ),
+
+          // ── 3. RIGHT SLOT: Pause Button ───────────────────────────────
+          SizedBox(
+            width: sideSlotWidth,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: GestureDetector(
+                onTap: onPause,
+                behavior: HitTestBehavior.opaque,
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(
+                        Icons.pause_rounded,
+                        color: Color(0x59000000),
+                        size: 28,
+                        shadows: [
+                          Shadow(
+                            color: Color(0x4D000000),
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      ShaderMask(
+                        shaderCallback: _heartGradient,
+                        child: Icon(
+                          Icons.pause_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -133,3 +211,9 @@ class GameTopBar extends ConsumerWidget {
     );
   }
 }
+
+Shader _heartGradient(Rect bounds) => const LinearGradient(
+  colors: [Colors.white, Color(0xFFB0B0B0)],
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+).createShader(bounds);

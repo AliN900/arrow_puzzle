@@ -281,6 +281,7 @@ class _PodiumSlot extends StatelessWidget {
   Widget build(BuildContext context) {
     final initial = entry?.avatarInitial ?? '?';
     final name = entry?.displayName ?? '—';
+    final strings = AppStrings.of(context);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -293,9 +294,9 @@ class _PodiumSlot extends StatelessWidget {
               color: color.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text(
-              'YOU',
-              style: TextStyle(
+            child: Text(
+              strings.leaderboardYou,
+              style: const TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1,
@@ -562,6 +563,7 @@ class _LockedLeaderboardView extends StatelessWidget {
     final target        = progress.leaderboardUnlockTarget;
     final earned        = progress.lbAllTimeScore;
     final pct           = progress.leaderboardUnlockProgress;
+    final strings = AppStrings.of(context);
 
     return Scaffold(
       backgroundColor: bg,
@@ -573,7 +575,7 @@ class _LockedLeaderboardView extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Leaderboard',
+          strings.leaderboardTitle,
           style: TextStyle(
             fontWeight: FontWeight.w900,
             color: textPrimary,
@@ -589,7 +591,7 @@ class _LockedLeaderboardView extends StatelessWidget {
               Icon(Icons.lock_rounded, size: 64, color: textSecondary),
               const SizedBox(height: 20),
               Text(
-                'Locked',
+                strings.leaderboardLocked,
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
@@ -598,7 +600,7 @@ class _LockedLeaderboardView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Earn $target LC to unlock the global leaderboard.',
+                strings.leaderboardEarnToUnlock(target),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: textSecondary, fontSize: 14),
               ),
@@ -614,7 +616,7 @@ class _LockedLeaderboardView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '$earned / $target LC',
+                strings.leaderboardProgress(earned, target),
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   color: textPrimary,

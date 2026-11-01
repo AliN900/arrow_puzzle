@@ -37,7 +37,6 @@ import '../../game_banner.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
-import '../../services/leaderboard_service.dart';
 import '../../widgets/game_item_bar.dart';
 import '../../widgets/pop_dialog.dart';
 import '../../widgets/status_flash.dart';
@@ -91,13 +90,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   int _timeAttackScore = 0;
 
-// ── Time Blitz state ──
+  // ── Time Blitz state ──
   int _timeBlitzScore = 0;
   bool _timeBlitzStarted = false;
   int _lastTimeBlitzArrowCount = -1;
   int _missesThisLevel = 0;
 
-// ── Timer pulse animation state (up to 3 visible simultaneously) ──
+  // ── Timer pulse animation state ──
   final List<_TimerPulse> _timerPulses = [];
   int _nextPulseId = 0;
   int _nextPulseSlot = 0;
@@ -112,10 +111,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
   bool _isInteracting = false;
 
   // ── Blitz mode state ──
-  int _blitzStage = 0;              // 0-indexed
+  int _blitzStage = 0;
   int _blitzScore = 0;
+  int _blitzArrowsCleared = 0;
   int _blitzStageCount = 5;
-  int _blitzRunStartHearts = 3;     // captured at stage 0
+  int _blitzRunStartHearts = 3;
   bool _blitzShowingSplash = false;
   int _blitzSplashStage = 1;
   late int _blitzRunSeed;
@@ -126,11 +126,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int _pendingMilestoneItems = 0;
   int _rocksBeforeBomb = 0;
 
-  // ---------------------------------------------------------------------------
-  // Board sizing / zoom
-  // ---------------------------------------------------------------------------
-  /// Preferred cell size at scale 1.0. Grows the board's intrinsic size
-  /// proportionally with `gridSize`, so large levels don't cram tiny cells.
+  // ── Board sizing / zoom ──
   static const double _kCellPx = 64.0;
   static const double _kBoardPadding = 24.0;
   Object? _lastFitKey;
@@ -142,46 +138,44 @@ class _GameScreenState extends ConsumerState<GameScreen>
   final TransformationController _transformationController =
   TransformationController();
 
-  /// Cell size for the current board. Endless Rush boards start huge
-  /// (16×16+), so we compress cells slightly as the grid grows to keep the
-  /// canvas from ballooning past the viewport.
   double get _cellPx {
     if (widget.gameMode == GameMode.endlessRush) {
       final g = _gameState?.level.gridSize ?? _level.gridSize;
-      return (64 - (g - 16) * 2).clamp(48, 64).toDouble();
+      return (64.0 - (g - 16) * 2.0).clamp(48.0, 64.0);
     }
     return _kCellPx;
   }
 
   double get _contentSize =>
       (_gameState?.level.gridSize ?? _level.gridSize) * _cellPx;
-  // -------------------------------------------------------------------------
-// Endless Rush level scaling
-// -------------------------------------------------------------------------
 
+  // ── Endless Rush level scaling ──
   static int _startingGridForLevel(int level, RushDifficulty d) =>
       ((6 + level ~/ 60).clamp(6, 12) + d.gridBonus).clamp(6, 15);
 
   static int _maxGridForLevel(int level, RushDifficulty d) =>
       (_startingGridForLevel(level, d) + 3).clamp(5, 17);
 
-  static int _initialArrowCountForLevel(int level, int startGrid, RushDifficulty d) {
-    final fill = (0.35 + level / 600).clamp(0.35, 0.50);
-    final count = (startGrid * startGrid * fill / 2.5 * d.arrowMult).round();
+  static int _initialArrowCountForLevel(
+      int level, int startGrid, RushDifficulty d) {
+    final fill = (0.35 + level / 600.0).clamp(0.35, 0.50);
+    final count =
+    (startGrid * startGrid * fill / 2.5 * d.arrowMult).round();
     return count.clamp(3, 120);
   }
 
   static int _minSpawnDelayForLevel(int level, RushDifficulty d) =>
-      ((700 - level * 0.5) * d.delayMult).round().clamp(200, 900);
+      ((700.0 - level * 0.5) * d.delayMult).round().clamp(200, 900);
 
   static int _maxSpawnDelayForLevel(int level, RushDifficulty d) =>
-      ((3500 - level * 2.5) * d.delayMult).round().clamp(1200, 4000);
+      ((3500.0 - level * 2.5) * d.delayMult).round().clamp(1200, 4000);
 
   static double _lossFillForLevel(int level, RushDifficulty d) =>
-      ((0.85 - level / 12000) + d.lossOffset).clamp(0.70, 0.88);
+      ((0.85 - level / 12000.0) + d.lossOffset).clamp(0.70, 0.88);
 
-  static double _rushSpeedMultiplierForLevel(int level, RushDifficulty d) =>
-      (1.0 + (level / 1200).clamp(0.0, 0.25)) * d.speedMult;
+  static double _rushSpeedMultiplierForLevel(
+      int level, RushDifficulty d) =>
+      (1.0 + (level / 1200.0).clamp(0.0, 0.25)) * d.speedMult;
 
   static int _lastStandCountForLevel(int level) =>
       1 + (level ~/ 200).clamp(0, 1);
@@ -213,24 +207,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _runTotalItemsUsed = 0;
   }
 
-
-
-  // ── Blitz scaling ─────────────────────────────────────────────────────
-// Stage count grows with the player's campaign level: 5 stages baseline,
-// +5 stages for every 100 levels reached. Capped at 40.
   static int _blitzStageCountForLevel(int playerLevel) =>
       ((playerLevel ~/ 100 + 1) * 5).clamp(5, 40);
 
-
-  /// Which geometric shape to use for a given Blitz stage.
-  ///
-  /// Rotates through 8 shapes so every stage feels a bit different while
-  /// staying easy to read at a glance. The run seed shifts the phase, so
-  /// two different runs start on different shapes — keeps the mode fresh.
   static MaskShape _blitzShapeForStage(int stage, int runSeed) {
-    // First 3 stages always square — teaches the mode on a known board.
     if (stage < 3) return MaskShape.square;
-    // Then rotate through the interesting shapes.
     const shapes = <MaskShape>[
       MaskShape.pyramid,
       MaskShape.rectangleHorizontal,
@@ -243,73 +224,47 @@ class _GameScreenState extends ConsumerState<GameScreen>
     return shapes[(stage - 3 + runSeed.abs()) % shapes.length];
   }
 
-
-  /// Time limit for a stage. Ramps from 35s down to 18s across the run —
-  /// gentler than a linear 30→9, and the floor is 18s so late stages are
-  /// still tense but fair.
   static int _blitzTimerForStage({
     required int stageIndex,
     required int stageCount,
     required int arrowCount,
   }) {
     final t = stageCount > 1 ? stageIndex / (stageCount - 1) : 0.0;
-
-    // Base buffer: 15s early → 10s late. Covers board scan + first tap.
     final base = 15.0 - t * 5.0;
-
-    // Per-arrow budget: 2.5s → 1.8s. Tightens as stages progress but
-    // never drops below a fair reading speed.
     final perArrow = 2.5 - t * 0.7;
-
     final seconds = (base + perArrow * arrowCount).round();
     return seconds.clamp(10, 300);
   }
 
-  /// Classic: leaving arrows start at level 20.
-  ///   20-49 → 1
-  ///   50-79 → 2
-  ///   80-109 → 3
-  ///   110-139 → 4
-  ///   140+ → 5 (cap)
   int _leavingArrowsForLevel(int levelNum) {
     if (levelNum < 20) return 0;
-    return ((levelNum - 20) ~/ 30 + 1).clamp(1, 5);
+    return ((levelNum - 20) ~/ 20 + 1).clamp(1, 25);
   }
 
-  /// Time Blitz: scales faster since it's the survival mode.
   int _leavingArrowsForStage(int stage, int playerLevel) {
-    // Player Level 20 -> 1 arrow. Level 400+ -> 10 arrows.
-    final levelCount = ((playerLevel - 20) / 38.0).clamp(0, 10).round();
-    // Every 2 stages adds an extra arrow.
+    final levelCount = ((playerLevel - 20) / 38.0).clamp(0.0, 10.0).round();
     final stageCount = (stage ~/ 2).clamp(0, 10);
-
     return (levelCount + stageCount).clamp(1, 20);
   }
 
-
-  /// Applies a scale + translation matrix that centres [contentSize] inside a
-  /// viewport of [viewportSize] at the given [fitScale].
   void _applyFitTransform({
     required Size viewportSize,
     required double contentSize,
     required double fitScale,
   }) {
-    final tx = (viewportSize.width - contentSize * fitScale) / 2;
-    final ty = (viewportSize.height - contentSize * fitScale) / 2;
+    final tx = (viewportSize.width - contentSize * fitScale) / 2.0;
+    final ty = (viewportSize.height - contentSize * fitScale) / 2.0;
 
     final target = Matrix4.identity()
       ..translateByDouble(tx, ty, 0.0, 1.0)
       ..scaleByDouble(fitScale, fitScale, fitScale, 1.0);
 
-    // First application (boot): snap directly, don't animate from identity.
     if (_toFitMatrix == null) {
       _toFitMatrix = target;
       _transformationController.value = target;
       return;
     }
 
-    // Subsequent applications (grid growth, rotation): animate from
-    // whatever the current rendered transform is.
     _fitAnimController.stop();
     _fromFitMatrix = _transformationController.value;
     _toFitMatrix = target;
@@ -325,10 +280,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _transformationController.value =
         Matrix4Tween(begin: from, end: to).lerp(t);
   }
-
-  // ---------------------------------------------------------------------------
-  // Lifecycle
-  // ---------------------------------------------------------------------------
 
   @override
   void initState() {
@@ -355,11 +306,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-
   void _onTransformChanged() {
     if (_isInteracting) return;
     if (_fitAnimController.isAnimating) return;
-
     _clampBoardPosition();
   }
 
@@ -376,19 +325,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final tx = matrix.getTranslation().x;
     final ty = matrix.getTranslation().y;
 
-    // ── LENIENT BOUNDS ──
-    // Only require 30% overlap between board and viewport.
-    // The board can be panned up to 70% off-screen before it snaps back.
     const double overlapRatio = 0.5;
-
     final double minOverlapX = overlapRatio * math.min(contentW, _viewportSize.width);
     final double minOverlapY = overlapRatio * math.min(contentH, _viewportSize.height);
 
-    // Board's right edge must be at least minOverlapX from screen's left (0)
-    // Board's left edge must be at most viewportWidth - minOverlapX
     final double minTx = minOverlapX - contentW;
     final double maxTx = _viewportSize.width - minOverlapX;
-
     final double minTy = minOverlapY - contentH;
     final double maxTy = _viewportSize.height - minOverlapY;
 
@@ -401,8 +343,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-
-
   Future<void> _loadLevelAsync(int levelNum) async {
     if (widget.prebuiltLevel != null) {
       _level = widget.prebuiltLevel!;
@@ -411,9 +351,29 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
 
+    if (widget.gameMode == GameMode.zen) {
+      final randomLevel = _getRandomZenLevel();
+      final levelRepo = ref.read(levelRepositoryProvider);
 
+      if (mounted) setState(() => _isLoadingLevel = true);
+      try {
+        final level = await levelRepo.getLevelAsync(
+          randomLevel,
+          preGenerateNext: false,
+        );
+        if (!mounted) return;
+        _level = level;
+        _initGame();
+        setState(() => _isLoadingLevel = false);
+      } catch (_) {
+        if (!mounted) return;
+        _level = levelRepo.getLevel(randomLevel);
+        _initGame();
+        setState(() => _isLoadingLevel = false);
+      }
+      return;
+    }
 
-    // ── Blitz & Time Blitz ──
     if (widget.gameMode == GameMode.blitz ||
         widget.gameMode == GameMode.timeBlitz) {
       final progress = ref.read(progressRepositoryProvider);
@@ -421,14 +381,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
       final stageIndex = _blitzStage;
       _blitzStageCount = _blitzStageCountForLevel(playerLevel);
 
-      // 1. DYNAMIC STAGE MULTIPLIER (5 to 22)
       final double t = ((playerLevel - 50) / 350.0).clamp(0.0, 1.0);
       final int stageMultiplier = (5 + (t * 17)).round();
-
-      // 2. CALCULATE TARGET LEVEL (Used for difficulty generation)
       final targetLevel = (playerLevel + (stageIndex * stageMultiplier)).clamp(1, 800);
 
-      // 3. DYNAMIC BOARD SIZE (Scales smoothly from 14x14 up to 24x24)
       final double levelScale = ((playerLevel - 20) / 380.0).clamp(0.0, 1.0);
       final int baseSize = (14 + (levelScale * 10)).round();
       final gridSize = (baseSize + (stageIndex * 0.5)).round();
@@ -439,7 +395,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       LevelModel? generated;
       try {
         generated = await compute(generateBlitzLevelIsolate, {
-          'levelNumber': targetLevel, // <── Pass target difficulty
+          'levelNumber': targetLevel,
           'gridSize': gridSize,
           'shapeName': shape.name,
           'seed': stageSeed,
@@ -450,9 +406,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
       if (!mounted) return;
 
       if (generated == null || generated.gridSize != gridSize) {
-        debugPrint('⚠️ Blitz fell back to local square generation');
         _level = LevelGenerator.generateFromMask(
-          levelNumber: targetLevel, // <── Pass target difficulty
+          levelNumber: targetLevel,
           mask: MaskGenerator.shapeByName(
             'square',
             gridSize,
@@ -466,19 +421,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _level = generated;
       }
 
-      // ── THE FIX: OVERRIDE THE DISPLAY NUMBER ──
-      // The board is generated with the high difficulty, but we display the stage number.
       _level = _level.copyWith(levelNumber: stageIndex + 1);
-
       _initGame();
       if (mounted) setState(() => _isLoadingLevel = false);
       return;
     }
 
-
     if (widget.gameMode == GameMode.endlessRush) {
-      // Use the player's actual campaign level, not widget.level (which is
-      // usually just 1 when the mode is launched from the menu).
       final progress = ref.read(progressRepositoryProvider);
       final effectiveLevel = _kDebugRushLevel > 0
           ? _kDebugRushLevel
@@ -514,9 +463,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
         generated.add(arrow);
       }
 
-      // Cache every per-level parameter that _tickEndlessRush / _endlessAttemptSpawn
-      // will read. Recomputing these every tick is wasteful and would let a
-      // mid-run `widget.level` change desync the pacing.
       _endlessMaxGrid = maxGrid;
       _endlessMinDelayMs =
           _minSpawnDelayForLevel(effectiveLevel, widget.rushDifficulty);
@@ -605,7 +551,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
-
   Timer? _endlessSpawnTimer;
   int _endlessInitialArrowCount = 0;
   int _endlessMaxGrid = 8;
@@ -616,13 +561,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int _lastSeenArrowCount = -1;
   bool _endlessLastStandLocked = false;
 
-
-
-
-  /// Boots the endless-rush pressure loop. Call from _initGame.
-  ///
-  /// Gives the player a fixed 5-second survey window before pressure begins,
-  /// then hands off to the recursive `_tickEndlessRush` scheduler.
   void _startEndlessRush() {
     _endlessSpawnTimer?.cancel();
     final gs = _gameState;
@@ -631,8 +569,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _endlessSpawnTimer = Timer(const Duration(seconds: 5), _tickEndlessRush);
   }
 
-  /// Ad-reward continue for Endless Rush: drops board density to ~50 % so
-  /// the next spawn attempt doesn't instantly re-trigger game-over.
   void _clearArrowsForAdContinue() {
     final gs = _gameState;
     if (gs == null) return;
@@ -652,7 +588,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
 
-    // Remove the biggest arrows first — frees the most cells per removal.
     final sorted = List<ArrowModel>.from(gs.arrows)
       ..sort((a, b) => b.path.length.compareTo(a.path.length));
 
@@ -668,14 +603,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
     gs.refresh();
   }
 
-  /// Recursive scheduler. Every tick:
-  ///   1. win if board is empty
-  ///   2. gate spawns until 50% of the initial arrow count is cleared
-  ///   3. otherwise schedule a spawn whose delay shrinks as clearing progresses
-  ///      OR as elapsed time increases (slow background pressure).
   void _tickEndlessRush() {
     _endlessSpawnTimer?.cancel();
-
     if (!mounted || _gameState == null) return;
 
     if (_isPaused || _isAppBackgrounded || _showingGameOver || _showingComplete) {
@@ -683,8 +612,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
           Timer(const Duration(milliseconds: 500), _tickEndlessRush);
       return;
     }
-
-
 
     final gs = _gameState!;
     final realArrows = gs.arrows.length;
@@ -695,10 +622,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
 
-    // Last stand (count scales with player level).
     if (realArrows <= _endlessLastStandCount) {
       _endlessLastStandLocked = true;
-
 
       if (telegraphs > 0) {
         gs.cancelAllTelegraphs();
@@ -712,8 +637,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
 
-    // NEW: early loss check — if the board is at max grid and densely packed,
-// end the run immediately instead of waiting for the next spawn attempt.
     final gridSize = gs.level.gridSize;
     if (gridSize >= _endlessMaxGrid) {
       final occupiedCells = <String>{};
@@ -736,16 +659,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
 
-    // NEW: cumulative arrows cleared this run — drives the pressure ramp.
     final clearedTotal = gs.clearedRushArrows;
-
-    // Pacing: base delay scales with current board fill, then a pressure
-    // term accelerates everything as the player clears more cumulative arrows.
     final remaining = realArrows + telegraphs;
     final remainingRatio = (remaining / initial).clamp(0.0, 1.0);
 
-    // Pressure: 0 clears → 1.0 scale. Every `initial` arrows cleared adds
-    // 0.20 to the denominator, capped so the floor is exactly 50 %.
     final pressure = (clearedTotal / initial).clamp(0.0, 5.0);
     final paceScale = 1.0 / (1.0 + 0.20 * pressure);
 
@@ -766,11 +683,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
-
-
-
-  /// One spawn attempt. Grows the grid when the board is getting cramped,
-  /// declares loss when the grid is maxed and still packed, otherwise spawns.
   void _endlessAttemptSpawn() {
     final gs = _gameState!;
     final gridSize = gs.level.gridSize;
@@ -809,18 +721,43 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
+  int? _lastZenLevel;
+
+  int _getRandomZenLevel() {
+    final progress = ref.read(progressRepositoryProvider);
+    final playerLevel = progress.currentLevel;
+    final maxLevel = math.min(playerLevel + 100, 400).clamp(20, 400);
+
+    int randomLevel = 1 + Random().nextInt(maxLevel);
+    int attempts = 0;
+    while (randomLevel == _lastZenLevel && attempts < 10) {
+      randomLevel = 1 + Random().nextInt(maxLevel);
+      attempts++;
+    }
+
+    _lastZenLevel = randomLevel;
+    return randomLevel;
+  }
 
   void _goToNextLevelInPlace() {
+    if (widget.gameMode == GameMode.blitz) return;
 
-    if (widget.gameMode == GameMode.blitz) return;   // Blitz advances internally
-
+    if (widget.gameMode == GameMode.zen) {
+      setState(() {
+        _showingComplete = false;
+        _showingGameOver = false;
+        _lastFitKey = null;
+      });
+      _loadLevelAsync(0);
+      return;
+    }
 
     final nextLevel = _level.levelNumber + 1;
     setState(() {
       _showingComplete = false;
       _showingGameOver = false;
       _loadedLevelNum = nextLevel;
-      _lastFitKey = null; // force re-fit for the new level
+      _lastFitKey = null;
     });
     _loadLevelAsync(nextLevel);
   }
@@ -835,8 +772,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
         widget.gameMode == GameMode.timeBlitz ||
         progress.heartRemover;
 
-    // Endless Rush and Blitz both scale with the player's real campaign level,
-    // not the widget's default (usually 1).
     final effectiveLevel =
     (widget.gameMode == GameMode.endlessRush ||
         widget.gameMode == GameMode.blitz)
@@ -846,14 +781,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final levelMaxLives = progress.getMaxLivesForLevel(effectiveLevel);
     _lives = isLifeFree ? 999 : levelMaxLives;
 
-    // ── THE FIX: Cap arrow speed in Zen mode ──
-    // Zen mode should be relaxing. Max out at "Normal" (1) regardless of settings.
     final int effectiveArrowSpeed = widget.gameMode == GameMode.zen
         ? math.min(progress.arrowSpeed, 1)
         : progress.arrowSpeed;
 
     if (widget.gameMode == GameMode.blitz && _blitzStage == 0) {
       _blitzRunStartHearts = _lives;
+      _blitzArrowsCleared = 0;
     }
 
     _showingGameOver = false;
@@ -861,8 +795,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _pendingMilestoneItems = 0;
     _itemUsesThisLevel.clear();
 
-
-    // ── LC run init ──
     if (!_runInitialized) {
       _runInitialized = true;
       _runStartTime = DateTime.now();
@@ -877,13 +809,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
       final modeKey = _lcModeKey;
       if (modeKey != null) {
         _currentRunEarnsLc = coinsRepo.canEarnLc(modeKey);
-        debugPrint('🏆 LC run init: mode=$modeKey canEarn=$_currentRunEarnsLc remaining=${coinsRepo.lcAttemptsRemaining(modeKey)}');
         if (_currentRunEarnsLc) {
           unawaited(coinsRepo.consumeLcAttempt(modeKey));
         }
       }
     }
-
 
     _gameState = GameState(
       level: _level,
@@ -892,7 +822,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       heartRemover: progress.heartRemover,
       boardTheme: progress.selectedBoard,
       assistMode: progress.assistMode,
-      // ── Use the capped speed here ──
       arrowSpeed: effectiveArrowSpeed,
       rushSpeedMultiplier: widget.gameMode == GameMode.endlessRush
           ? _rushSpeedMultiplierForLevel(
@@ -909,24 +838,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
           : _onLifeLost,
       gameMode: widget.gameMode,
       onCameraShake: _triggerShake,
+      onBombMissed: () {
+        if (mounted) StatusFlash.fail(context, "", true);
+      },
     );
     _gameState!.addListener(_onGameStateChanged);
 
-
-    // ── Seed leaving arrows (Classic + Time Blitz only) ──
     if (widget.gameMode == GameMode.classic) {
       final count = _leavingArrowsForLevel(_level.levelNumber);
       if (count > 0) {
         _gameState!.seedLeavingArrows(count: count);
       }
     } else if (widget.gameMode == GameMode.timeBlitz) {
-      // ── Passes playerLevel so it scales to 20 arrows ──
       final count = _leavingArrowsForStage(_blitzStage, progress.currentLevel);
       if (count > 0) {
         _gameState!.seedLeavingArrows(count: count);
       }
     }
-
 
     _game = ArrowPuzzleGame(
       level: _level,
@@ -936,7 +864,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       onLifeLost: isLifeFree ? () {} : _onLifeLost,
     );
 
-    // ── Switch Music based on GameMode ──
     if (widget.gameMode == GameMode.endlessRush ||
         widget.gameMode == GameMode.blitz ||
         widget.gameMode == GameMode.timeBlitz) {
@@ -947,21 +874,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     _resetTimerForLevel();
 
-    // Brief heads-up when a timed Classic level starts.
-    if (_totalTime > 0 && widget.gameMode == GameMode.classic) {
-      Future.delayed(const Duration(milliseconds: 400), () {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppStrings.of(context).gameTimedLevel(_totalTime.toString())),
-            duration: const Duration(seconds: 2),
-            backgroundColor: Colors.orangeAccent.shade700,
-          ),
-        );
-      });
-    }
+    // if (_totalTime > 0 && widget.gameMode == GameMode.classic) {
+    //   Future.delayed(const Duration(milliseconds: 400), () {
+    //     if (!mounted) return;
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(
+    //         content: Text(AppStrings.of(context).gameTimedLevel(_totalTime.toString())),
+    //         duration: const Duration(seconds: 2),
+    //         backgroundColor: Colors.orangeAccent.shade700,
+    //       ),
+    //     );
+    //   });
+    // }
 
-    // Blitz overrides the timer — its own per-stage duration.
     if (widget.gameMode == GameMode.blitz) {
       _levelTimer?.cancel();
       _totalTime = _blitzTimerForStage(
@@ -973,18 +898,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _startLevelTimer();
     }
 
-
-    // ── ADD THIS ──
-    // Reset the Time Blitz miss counter on every new level
     if (widget.gameMode == GameMode.timeBlitz) {
       _missesThisLevel = 0;
     }
 
-    // New game ⇒ new board ⇒ reset zoom fit next frame.
     _lastFitKey = null;
     _lastSeenArrowCount = -1;
     _lastTimeBlitzArrowCount = -1;
-    _endlessLastStandLocked   = false;
+    _endlessLastStandLocked = false;
     _toFitMatrix = null;
     _transformationController.value = Matrix4.identity();
     if (widget.gameMode == GameMode.endlessRush) {
@@ -992,44 +913,42 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-
   void _centerOnLeavingArrow() {
     final gs = _gameState;
     if (gs == null || gs.activeLeavingArrowId == null) return;
 
-    // Safely find the arrow
     final idx = gs.arrows.indexWhere((a) => a.id == gs.activeLeavingArrowId);
     if (idx == -1) return;
     final arrow = gs.arrows[idx];
 
-    // Get the head of the leaving arrow
     final head = arrow.path[0];
     final cs = _cellPx;
     final px = (head[1] + 0.5) * cs;
     final py = (head[0] + 0.5) * cs;
 
-    // ── FIX: Keep the CURRENT zoom level ──
     final matrix = _transformationController.value;
-    final scale = matrix.getMaxScaleOnAxis(); // Reads current zoom
+    final scale = matrix.getMaxScaleOnAxis();
 
-    // Calculate the translation required to center that point on screen
-    final targetTx = _viewportSize.width / 2 - px * scale;
-    final targetTy = _viewportSize.height / 2 - py * scale;
+    final targetTx = _viewportSize.width / 2.0 - px * scale;
+    final targetTy = _viewportSize.height / 2.0 - py * scale;
 
     final target = Matrix4.identity()
       ..translateByDouble(targetTx, targetTy, 0.0, 1.0)
       ..scaleByDouble(scale, scale, scale, 1.0);
 
-    // Animate to the target
     _fitAnimController.stop();
     _fromFitMatrix = _transformationController.value;
     _toFitMatrix = target;
     _fitAnimController.forward(from: 0);
   }
 
-
   void _onGameStateChanged() {
     if (!mounted) return;
+
+    if (!_gameState!.isBombArmed && _rocksBeforeBomb > 0) {
+      _rocksBeforeBomb = 0;
+      setState(() {});
+    }
 
     if (_rocksBeforeBomb > 0 &&
         _gameState!.rocks.length < _rocksBeforeBomb) {
@@ -1044,8 +963,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     setState(() => _lives = _gameState!.lives);
 
-    // Endless Rush: react *immediately* whenever the real-arrow count
-    // drops. Telegraph blinks notify 10×/sec, so we only act on change.
     if (widget.gameMode == GameMode.endlessRush) {
       final realArrows = _gameState!.arrows.length;
       if (realArrows != _lastSeenArrowCount) {
@@ -1058,62 +975,72 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-
-  Future<void> _awardLc(int amount) async {
+  Future<void> _awardLc({
+    required int lc,
+    required int arrowsCleared,
+    required int failedTaps,
+    required int itemsUsed,
+    required int durationSeconds,
+  }) async {
     if (!mounted) return;
-    if (amount <= 0) return;
-    if (!_currentRunEarnsLc) return;
-
-    final auth = AuthService.instance;
-    if (auth.isGuest) return;
+    if (lc <= 0) {
+      debugPrint('🏆 [Debug] Stopped: lc is 0 or less');
+      return;
+    }
+    if (!_currentRunEarnsLc) {
+      debugPrint('🏆 [Debug] Stopped: _currentRunEarnsLc is false');
+      return;
+    }
+    if (AuthService.instance.isGuest) {
+      debugPrint('🏆 [Debug] Stopped: User is a guest');
+      return;
+    }
 
     final progress = ref.read(progressRepositoryProvider);
-
-    // LC is a local currency → always award it, regardless of opt-in.
-    debugPrint('🏆 LC award: +$amount');
-    await progress.addLbPoints(amount);
-
+    await progress.addLbPoints(lc);
     if (!mounted) return;
-    StatusFlash.success(context, '+$amount LC');
+    StatusFlash.success(context, '+$lc LC');
 
-    // Only the public leaderboard push is gated by opt-in.
-    if (!progress.leaderboardOptIn) {
-      debugPrint('🏆 LC push skipped: leaderboardOptIn=false');
-      return;
-    }
-
-    if (!progress.isLeaderboardUnlocked) {
-      debugPrint('🏆 LC push deferred: leaderboard locked '
-          '(${progress.lbAllTimeScore}/${progress.leaderboardUnlockTarget} LC)');
-      return;
-    }
+    // if (!progress.leaderboardOptIn) {
+    //   debugPrint('🏆 [Debug] Stopped: User is not opted in to leaderboard');
+    //   return;
+    // }
+    // if (!progress.isLeaderboardUnlocked) {
+    //   debugPrint('🏆 [Debug] Stopped: Leaderboard is not unlocked');
+    //   return;
+    // }
 
     try {
-      await LeaderboardRepository.instance.pushCurrentUser(
+      debugPrint('🏆 [Debug] Sending to Appwrite...');
+      final result = await LeaderboardRepository.instance.awardLcRun(
+        mode: widget.gameMode.name,
+        difficulty: widget.rushDifficulty.index,
+        lcDelta: lc,
+        arrowsCleared: arrowsCleared,
+        failedTaps: failedTaps,
+        itemsUsed: itemsUsed,
+        durationSeconds: durationSeconds,
         level: progress.currentLevel,
         totalStars: progress.totalStars,
         trophies: progress.unlockedTrophies.length,
-        weeklyScore: progress.lbWeeklyScore,
-        monthlyScore: progress.lbMonthlyScore,
-        allTimeScore: progress.lbAllTimeScore,
-        weeklyPeriodStart: progress.lbWeeklyPeriodStart ??
-            LeaderboardService.currentWeekStartUtc(),
-        monthlyPeriodStart: progress.lbMonthlyPeriodStart ??
-            LeaderboardService.currentMonthStartUtc(),
-        weeklyReachedAt: progress.lbWeeklyReachedAt,
-        monthlyReachedAt: progress.lbMonthlyReachedAt,
       );
-      await progress.markLbClean();
+
+      if (result != null) {
+        debugPrint('🏆 [Debug] Appwrite Success! Awarded: ${result.lcAwarded}');
+        await progress.setLbScores(
+          weekly: result.weeklyScore,
+          monthly: result.monthlyScore,
+          allTime: result.allTimeScore,
+        );
+        await progress.markLbClean();
+      } else {
+        debugPrint('🏆 [Debug] Appwrite returned null (Rejected by server)');
+      }
     } catch (e) {
-      debugPrint('🏆 LB push failed, will retry: $e');
-      // _lbDirty stays true → retried on next _awardLc or app launch.
+      debugPrint('🏆 [Debug] LC push error: $e');
     }
   }
 
-  /// Shows a floating "+Ns" / "-Ns" text below the timer.
-  ///
-  /// Up to 3 pulses are visible at once, distributed across three slots
-  /// (left, center, right). A 4th pulse replaces the oldest (left slot).
   void _showTimerPulse(int deltaSeconds) {
     if (deltaSeconds == 0) return;
     if (!mounted) return;
@@ -1124,10 +1051,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _nextPulseSlot = (_nextPulseSlot + 1) % 3;
 
     setState(() {
-      // Clear any existing pulse occupying this slot.
       _timerPulses.removeWhere((p) => p.slot == slot);
-
-      // Add the new pulse.
       _timerPulses.add(_TimerPulse(
         id: id,
         text: isGain ? '+$deltaSeconds' : '$deltaSeconds',
@@ -1136,8 +1060,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       ));
     });
 
-    // Auto-remove after the animation completes.
-    Future.delayed(const Duration(milliseconds: 850), () {
+    Future.delayed(const Duration(milliseconds: 855), () {
       if (!mounted) return;
       setState(() {
         _timerPulses.removeWhere((p) => p.id == id);
@@ -1145,9 +1068,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
-
   Widget _buildPulseAnimated(_TimerPulse pulse) {
-    // Horizontal drift: left slot → left, center stays, right → right.
     final dx = switch (pulse.slot) {
       0 => -36.0,
       1 => 0.0,
@@ -1177,27 +1098,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
       duration: 750.ms,
       curve: Curves.easeOut,
       builder: (context, value, child) => Transform.translate(
-        offset: Offset(dx * value, 42 * value),
+        offset: Offset(dx * value, -42.0 * value),
         child: child,
       ),
     )
         .fadeOut(delay: 400.ms, duration: 300.ms);
   }
 
-  /// Time penalty for a blocked tap in Time Blitz.
-  /// Grows with each stage cleared, capped at 20 seconds.
-  ///   Stage 0   → -3s
-  ///   Stage 5   → -5s
-  ///   Stage 10  → -8s
-  ///   Stage 15  → -10s
-  ///   Stage 25  → -15s
-  ///   Stage 34+ → -20s
   int _timePenaltyForStage() {
-    return (3 + (_blitzStage * 0.5)).round().clamp(3, 20);
+    return (3.0 + (_blitzStage * 0.5)).round().clamp(3, 20);
   }
 
-  /// Time Blitz — tracks arrow clears and adds time per arrow.
-  /// Ignores mass-clears (level transitions) via a delta threshold.
   void _tickTimeBlitz() {
     final gs = _gameState;
     if (gs == null) return;
@@ -1205,7 +1116,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     final currentArrows = gs.arrows.length;
 
-    // First observation on a new level — record the baseline, no time gain.
     if (_lastTimeBlitzArrowCount < 0) {
       _lastTimeBlitzArrowCount = currentArrows;
       return;
@@ -1213,22 +1123,18 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     if (currentArrows < _lastTimeBlitzArrowCount) {
       final delta = _lastTimeBlitzArrowCount - currentArrows;
-      // delta > 5 = level just cleared → don't award time.
       if (delta <= 5) {
         _timeBlitzScore += delta;
         setState(() {
-          _timeRemaining += delta * 2; // +2s per arrow cleared
+          _timeRemaining += delta * 2;
         });
-        _showTimerPulse(delta * 2); // ← add this
+        _showTimerPulse(delta * 2);
       }
     }
 
     _lastTimeBlitzArrowCount = currentArrows;
   }
 
-  /// Fires the instant the count of *real* arrows (not telegraphs) drops.
-  /// If we've reached last-stand, cancel any blinking telegraph and
-  /// drop straight into the polling loop.
   void _onEndlessArrowCountChanged(int realArrows) {
     final gs = _gameState;
     if (gs == null) return;
@@ -1244,28 +1150,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-
   void _onLifeLost() {
     if (!mounted) return;
     _runFailedTaps++;
 
     if (widget.gameMode == GameMode.timeBlitz) {
-      _missesThisLevel++; // Increment the miss counter
+      _missesThisLevel++;
 
       final progress = ref.read(progressRepositoryProvider);
       final playerLevel = progress.currentLevel;
 
-      // 1. Base penalty from the stage (e.g., 3s to 20s)
       final basePenalty = _timePenaltyForStage();
-
-      // 2. Level scaling multiplier (Level 1 = +1s, Level 100 = +2s, Level 200 = +3s, etc.)
       final int levelScaling = 1 + (playerLevel ~/ 100);
-
-      // 3. Escalation: Each subsequent miss adds more time based on level scaling
-      // Miss 1: base. Miss 2: base + (1 * scaling). Miss 3: base + (2 * scaling).
       final rawPenalty = basePenalty + ((_missesThisLevel - 1) * levelScaling);
-
-      // 4. THE LIMIT: Max penalty is strictly 30 seconds
       final finalPenalty = rawPenalty.clamp(3, 30);
 
       final newTime = (_timeRemaining - finalPenalty).clamp(0, 999);
@@ -1349,7 +1246,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       }
     }
 
-
     if (widget.gameMode == GameMode.timeAttack) {
       setState(() {
         _timeRemaining = (_timeRemaining + 15).clamp(0, 99);
@@ -1373,7 +1269,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
         }
       });
     } else if (widget.gameMode == GameMode.timeBlitz) {
-      // No dialog — just advance. Score is already tracked per arrow.
       Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted) _goToNextLevelInPlace();
       });
@@ -1384,11 +1279,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-
   Future<void> _showZenResultDialog() async {
     if (!mounted) return;
 
-    // Calculate time played for this session
     final durationSec = _runStartTime != null
         ? DateTime.now().difference(_runStartTime!).inSeconds
         : 0;
@@ -1419,7 +1312,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 Icon(Icons.self_improvement_rounded, color: accent, size: 52),
                 const SizedBox(height: 12),
                 Text(
-                  strings.zenModeTitle, // "Zen Mode"
+                  strings.zenModeTitle,
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
                 ),
                 const SizedBox(height: 24),
@@ -1431,17 +1324,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   ),
                   child: Column(
                     children: [
-                      const Text('TIME PLAYED', style: TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 2)),
+                      Text(strings.zenTimePlayed, style: const TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 2)),
                       const SizedBox(height: 8),
                       Text(timeStr, style: TextStyle(color: accent, fontSize: 44, fontWeight: FontWeight.w900)),
                     ],
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // ── NEXT BUTTON ──
                 GameDialogButton(
-                  label: strings.levelCompleteNextLevel, // "Next Level"
+                  label: strings.levelCompleteNextLevel,
                   icon: Icons.skip_next_rounded,
                   textColor: Colors.white,
                   onTap: () {
@@ -1450,8 +1341,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   },
                 ),
                 const SizedBox(height: 12),
-
-                // ── HOME BUTTON ──
                 GameDialogButton(
                   label: strings.homeButton,
                   icon: Icons.home_rounded,
@@ -1473,18 +1362,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
   Future<void> _handleBlitzStageComplete() async {
     if (!mounted) return;
 
-    // ── FIX: Freeze the time immediately before doing any math ──
     _levelTimer?.cancel();
     final frozenTime = _timeRemaining;
 
-    // Score: base × progression multiplier + time bonus.
-    final multiplier = 1.0 + (_blitzStage * 0.15);
-    final base = (1000 * multiplier).round();
-    final timeBonus = frozenTime * 25; // Use frozen time here
+    final int arrowsInLevel = _level.arrows.length;
+    final int arrowPoints = arrowsInLevel * 5;
+    final int stageBonus = 50 + (_blitzStage * 25);
+    final int timeBonus = frozenTime * 50;
 
-    _blitzScore += base + timeBonus;
+    _blitzScore += arrowPoints + stageBonus + timeBonus;
+    _blitzArrowsCleared += arrowsInLevel;
 
-    // Last stage cleared → done.
     if (_blitzStage >= _blitzStageCount - 1) {
       _levelTimer?.cancel();
       await _showDailyRunResult(
@@ -1494,7 +1382,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
 
-    // Show splash for ~1.1s, then advance.
     setState(() {
       _blitzStage++;
       _blitzSplashStage = _blitzStage + 1;
@@ -1505,7 +1392,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     if (!mounted) return;
 
     setState(() => _blitzShowingSplash = false);
-    await _loadLevelAsync(0); // argument ignored for Blitz
+    await _loadLevelAsync(0);
   }
 
   void _handleTimeBlitzStageComplete() {
@@ -1526,26 +1413,26 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
-  /// Unified end-of-run popup for the three daily LC challenges.
-  /// Shows time elapsed, arrows cleared, and total LC earned.
   Future<void> _showDailyRunResult({
     required bool completed,
     required String modeName,
   }) async {
     if (!mounted) return;
 
-    // Mark as showing — prevents duplicate dialogs
     if (completed) {
       setState(() => _showingComplete = true);
     } else {
       setState(() => _showingGameOver = true);
     }
 
-    // Compute stats
     final durationSec = _runStartTime != null
         ? DateTime.now().difference(_runStartTime!).inSeconds
         : 0;
     final cleared = _gameState?.clearedRushArrows ?? 0;
+
+    final progressRepo = ref.read(progressRepositoryProvider);
+    final playerLevel = progressRepo.currentLevel;
+    final double progressionMultiplier = (1.0 + (playerLevel / 200.0)).clamp(1.0, 3.0);
 
     final int arrows;
     final int lcRaw;
@@ -1562,7 +1449,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         );
         break;
       case GameMode.blitz:
-        arrows = _blitzScore ~/ 100;
+        arrows = _blitzArrowsCleared;
         lcRaw = LeaderCoins.forBlitz(
           blitzScore: _blitzScore,
           failedTaps: _runFailedTaps,
@@ -1583,17 +1470,22 @@ class _GameScreenState extends ConsumerState<GameScreen>
         lcRaw = 0;
     }
 
+    final int scaledLcRaw = (lcRaw * progressionMultiplier).round();
     final lc = LeaderCoins.applyRunCap(
-      lcRaw,
+      scaledLcRaw,
       mode: widget.gameMode,
       difficultyIndex: widget.rushDifficulty.index,
     );
+    final wasCapped = lc < scaledLcRaw;
 
-    final wasCapped = lc < lcRaw;
+    _awardLc(
+      lc: lc,
+      arrowsCleared: arrows,
+      failedTaps: _runFailedTaps,
+      itemsUsed: _runTotalItemsUsed,
+      durationSeconds: durationSec,
+    );
 
-    _awardLc(lc);
-
-    // Format time as mm:ss
     final minutes = durationSec ~/ 60;
     final seconds = durationSec % 60;
     final timeStr = '$minutes:${seconds.toString().padLeft(2, '0')}';
@@ -1645,8 +1537,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // ── LC hero panel ──
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -1684,7 +1574,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                       if (wasCapped) ...[
                         const SizedBox(height: 6),
                         Text(
-                          '(capped · ${_difficultyLabel()})',
+                          strings.gameCapped(_difficultyLabel()),
                           style: TextStyle(
                             color: textSecondary,
                             fontSize: 11,
@@ -1696,10 +1586,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                // ── Stats row ──
                 Row(
                   children: [
                     Expanded(
@@ -1721,9 +1608,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
-
                 GameDialogButton(
                   label: strings.homeButton,
                   icon: Icons.home_rounded,
@@ -1782,8 +1667,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     );
   }
 
-
-
   Future<void> _checkForUnlocks({required VoidCallback after}) async {
     final progress = ref.read(progressRepositoryProvider);
     final pending = progress.getPendingCelebration();
@@ -1838,6 +1721,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     if (widget.gameMode == GameMode.blitz) {
       _levelTimer?.cancel();
+
+      final int remaining = _gameState?.arrows.length ?? 0;
+      final int clearedInStage = _level.arrows.length - remaining;
+
+      _blitzScore += clearedInStage * 5;
+      _blitzArrowsCleared += clearedInStage;
+
+      if (_blitzStage == 0 && remaining == 1) {
+        _blitzScore += 50;
+      }
+
       _showDailyRunResult(
         completed: false,
         modeName: AppStrings.of(context).blitzTitle,
@@ -1869,6 +1763,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _showingComplete = false;
         _blitzStage = 0;
         _blitzScore = 0;
+        _blitzArrowsCleared = 0;
         _loadedLevelNum = 1;
         _lastFitKey = null;
         _blitzRunSeed = DateTime.now().microsecondsSinceEpoch;
@@ -1878,11 +1773,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
 
-
     if (!mounted) return;
 
-    // Endless rush must fully rebuild — gridSize can grow, so resetLevel()
-    // alone would leave the board expanded.
     if (widget.gameMode == GameMode.endlessRush) {
       _endlessSpawnTimer?.cancel();
       setState(() {
@@ -1898,7 +1790,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return;
     }
 
-    // Classic / zen / time-attack: resetLevel is enough.
     final isLifeFree = widget.gameMode == GameMode.zen ||
         widget.gameMode == GameMode.timeAttack ||
         ref.read(progressRepositoryProvider).heartRemover;
@@ -1914,10 +1805,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _lastFitKey = null;
       _transformationController.value = Matrix4.identity();
     });
+
+    // ── ADD THIS ──
+    // Re-seed the leaving arrows for Classic mode after a restart
+    if (widget.gameMode == GameMode.classic) {
+      final count = _leavingArrowsForLevel(_level.levelNumber);
+      if (count > 0) {
+        _gameState!.seedLeavingArrows(count: count);
+      }
+    }
+    // ──────────────
   }
 
   Future<void> _useItem(ItemType item) async {
-    // Zen and Time Blitz have no item mechanics at all.
     if (widget.gameMode == GameMode.zen ||
         widget.gameMode == GameMode.timeBlitz) {
       return;
@@ -1935,14 +1835,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
     int maxUses;
     switch (item) {
       case ItemType.hint:
-        maxUses = 999;
-        break;
       case ItemType.undo:
         maxUses = 999;
         break;
       case ItemType.bomb:
-        maxUses = 1;
-        break;
       case ItemType.heartFlask:
       case ItemType.timeFreeze:
         maxUses = 1;
@@ -1982,9 +1878,18 @@ class _GameScreenState extends ConsumerState<GameScreen>
         break;
 
       case ItemType.bomb:
+        if (_gameState!.isBombArmed) {
+          _gameState!.setBombArmed(false);
+          _rocksBeforeBomb = 0;
+          StatusFlash.fail(context, strings.bombDeselected, true);
+          return;
+        }
+        if (_gameState!.rocks.isEmpty) {
+          StatusFlash.fail(context, strings.noMinesToDestroy, true);
+          return;
+        }
         _rocksBeforeBomb = _gameState!.rocks.length;
         _gameState!.setBombArmed(true);
-        StatusFlash.success(context, strings.tapRockToDestroy);
         return;
 
       case ItemType.hint:
@@ -1999,9 +1904,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         });
         break;
 
-    // ── Endless Rush: block undo once the spawn loop has entered last stand ──
-      case ItemType.undo when widget.gameMode == GameMode.endlessRush
-          && _endlessLastStandLocked:
+      case ItemType.undo when widget.gameMode == GameMode.endlessRush && _endlessLastStandLocked:
         StatusFlash.fail(context, strings.nothingToUndo);
         return;
 
@@ -2043,14 +1946,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
       SnackBar(content: Text(AppStrings.of(context).gameSolverCalculating)),
     );
 
-    // Run the solver on the current board
     final solution = LevelSolver.solve(gs.level, 200000);
 
     if (solution == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Color(0xFFFF5252),
+          backgroundColor: const Color(0xFFFF5252),
           content: Text(AppStrings.of(context).gameSolverUnsolvable),
         ),
       );
@@ -2060,25 +1962,20 @@ class _GameScreenState extends ConsumerState<GameScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-    // Visually clear the arrows one by one
     for (final arrowId in solution) {
       if (!mounted) return;
 
       final arrowIndex = gs.arrows.indexWhere((a) => a.id == arrowId);
       if (arrowIndex == -1) continue;
 
-      // Remove the arrow from the game state (GridComponent will animate it out)
       gs.arrows.removeAt(arrowIndex);
       gs.refresh();
 
-      // Small delay so you can see them disappear
       await Future.delayed(const Duration(milliseconds: 30));
     }
 
-    // Trigger the win condition
     _onLevelComplete();
   }
-
 
   void _debugWinLevel() {
     if (!mounted) return;
@@ -2117,7 +2014,31 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _handlePauseMainMenu() {
     setState(() => _isPaused = false);
     _game.resumeEngine();
-    Navigator.popUntil(context, (route) => route.isFirst);
+
+    if (_isLcMode) {
+      _levelTimer?.cancel();
+      _endlessSpawnTimer?.cancel();
+
+      _showDailyRunResult(
+        completed: false,
+        modeName: _getLcModeName(),
+      );
+    } else {
+      Navigator.popUntil(context, (route) => route.isFirst);
+    }
+  }
+
+  String _getLcModeName() {
+    switch (widget.gameMode) {
+      case GameMode.endlessRush:
+        return AppStrings.of(context).arrowRushTitle;
+      case GameMode.blitz:
+        return AppStrings.of(context).blitzTitle;
+      case GameMode.timeBlitz:
+        return AppStrings.of(context).gameModeTimeBlitz;
+      default:
+        return '';
+    }
   }
 
   void _handleNextLevel() {
@@ -2141,7 +2062,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         level: _gameState?.level ?? _level,
         stars: stars,
         isRandom: widget.isRandom,
-        gameMode: widget.gameMode,          // ← new
+        gameMode: widget.gameMode,
         baseCoins: coinsEarned,
         baseItems: _pendingMilestoneItems,
         onNextLevel: _handleNextLevel,
@@ -2175,10 +2096,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       final effectiveLevel = widget.gameMode == GameMode.endlessRush
           ? progress.currentLevel
           : _level.levelNumber;
-
-      // Refill to the level's actual max — 2 for early levels, 3 once the
-      // Survivalist trophy is unlocked. Same source of truth as the top
-      // bar's LivesBar, so the ad reward can never exceed the cap.
       heartReward = progress.getMaxLivesForLevel(effectiveLevel);
     }
 
@@ -2212,14 +2129,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
           });
 
           if (widget.gameMode == GameMode.endlessRush) {
-            // The ad likely left the app in a backgrounded state; reset it so
-            // the scheduler doesn't hit the soft-pause guard.
             _isAppBackgrounded = false;
-
             _gameState!.resumeFromTimeout();
             _clearArrowsForAdContinue();
             _lastSeenArrowCount = -1;
-
             _tickEndlessRush();
           }
         },
@@ -2263,37 +2176,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-  /// Duration for a recurring timed Classic level.
-  ///
-  /// Formula scales with both level and board size, staying fair at all tiers:
-  ///
-  ///   Level 30  (progress ~0.06):  ~85s base + ~3.4s per arrow
-  ///   Level 60  (progress ~0.12):  ~82s base + ~3.3s per arrow
-  ///   Level 100 (progress ~0.20):  ~78s base + ~3.1s per arrow
-  ///   Level 250 (progress ~0.50):  ~65s base + ~2.6s per arrow
-  ///   Level 500 (progress ~1.00):  ~50s base + ~2.0s per arrow
-  ///
-  /// A competent player should finish with ~15-25% of the clock remaining on
-  /// the first try. Using a Time Freeze adds +30s, which is 30-40% more time
-  /// on early-mid timed levels — meaningful enough to justify the item.
   int _calculateTimedLevelDuration(int levelNum, int totalArrows) {
-    // Progress from 0.0 (level 1) to 1.0 (level 500+).
     final progress = (levelNum / 500.0).clamp(0.0, 1.0);
-
-    // ── THE FIX ──
-    // Base buffer: 12s at low levels → 6s at high levels (was 18→8).
     final baseSeconds = 12.0 - progress * 6.0;
-
-    // Per-arrow budget: 2.2s at low levels → 1.3s at high levels (was 3.5→2.0).
     final perArrow = 2.2 - progress * 0.9;
-
     return (baseSeconds + perArrow * totalArrows).round();
   }
 
   void _resetTimerForLevel() {
     if (widget.gameMode == GameMode.blitz) return;
 
-    // ── Time Blitz: survival timer keeps running across levels ──
     if (widget.gameMode == GameMode.timeBlitz) {
       if (!_timeBlitzStarted) {
         _timeBlitzStarted = true;
@@ -2332,12 +2224,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
   }
 
-  /// Timed Classic levels:
-  ///   - Start at level 30 (players learn the base game first)
-  ///   - Repeat every 5 levels: 30, 35, 40, 45, 50, ...
-  ///
-  /// Gives a predictable rhythm — every 5th level is a "checkpoint challenge"
-  /// and rewards using the Time Freeze item (~20% of levels have a timer).
   bool _isTimedClassicLevel(int levelNum) {
     if (levelNum < 30) return false;
     return levelNum % 5 == 0;
@@ -2401,6 +2287,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final clearedArrows = totalArrows - activeArrows;
     final progressVal =
     totalArrows > 0 ? (clearedArrows / totalArrows).clamp(0.0, 1.0) : 0.0;
+    final strings = AppStrings.of(context);
 
     return PopScope(
       canPop: false,
@@ -2420,16 +2307,38 @@ class _GameScreenState extends ConsumerState<GameScreen>
               child: SafeArea(
                 child: Column(
                   children: [
-                    GameTopBar(
-                      level: _gameState?.level ?? _level,
-                      isRandom: widget.isRandom,
-                      onPause: _togglePause,
-                      gameMode: widget.gameMode,
-                      score: widget.gameMode == GameMode.timeBlitz
-                          ? _timeBlitzScore
-                          : _timeAttackScore,
-                      lives: _lives,
-                      heartRemover: progressState.heartRemover,
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        // Semi-transparent background so the board shows through slightly
+                        color: AppColors.surface(context).withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(20),
+                        // Subtle border to separate it from the board
+                        border: Border.all(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          width: 1.5,
+                        ),
+                        // Drop shadow to make it float above the board
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: GameTopBar(
+                        level: _gameState?.level ?? _level,
+                        isRandom: widget.isRandom,
+                        onPause: _togglePause,
+                        gameMode: widget.gameMode,
+                        score: widget.gameMode == GameMode.timeBlitz
+                            ? _timeBlitzScore
+                            : _timeAttackScore,
+                        lives: _lives,
+                        heartRemover: progressState.heartRemover,
+                      ),
                     ),
                     if (_totalTime > 0 ||
                         widget.gameMode == GameMode.timeAttack ||
@@ -2441,17 +2350,79 @@ class _GameScreenState extends ConsumerState<GameScreen>
                             clipBehavior: Clip.none,
                             alignment: Alignment.topCenter,
                             children: [
-                              TimerDisplay(
-                                timeRemaining: _timeRemaining,
-                                totalTime:
-                                widget.gameMode == GameMode.timeAttack
-                                    ? 99
-                                    : widget.gameMode == GameMode.timeBlitz
-                                    ? 90
-                                    : _totalTime,
-                              ),
+                              if (widget.gameMode == GameMode.timeBlitz)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E1E1E),
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: _timeRemaining <= 10
+                                          ? Colors.redAccent
+                                          : Colors.orangeAccent,
+                                      width: 2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: (_timeRemaining <= 10
+                                            ? Colors.redAccent
+                                            : Colors.orangeAccent)
+                                            .withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.timer_rounded,
+                                        color: _timeRemaining <= 10
+                                            ? Colors.redAccent
+                                            : Colors.orangeAccent,
+                                        size: 22,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '$_timeRemaining',
+                                        style: TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                          height: 1,
+                                          shadows: [
+                                            Shadow(
+                                              color: Colors.black.withValues(alpha: 0.5),
+                                              blurRadius: 4,
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        strings.unitSeconds,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                TimerDisplay(
+                                  timeRemaining: _timeRemaining,
+                                  totalTime: widget.gameMode == GameMode.timeAttack
+                                      ? 99
+                                      : _totalTime,
+                                ),
                               Positioned(
-                                top: 44,
+                                top: 50,
                                 left: 0,
                                 right: 0,
                                 child: SizedBox(
@@ -2482,10 +2453,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               final contentSize = _contentSize;
 
                               final paddedW =
-                              (viewportSize.width - _kBoardPadding * 2)
+                              (viewportSize.width - _kBoardPadding * 2.0)
                                   .clamp(1.0, double.infinity);
                               final paddedH =
-                              (viewportSize.height - _kBoardPadding * 2)
+                              (viewportSize.height - _kBoardPadding * 2.0)
                                   .clamp(1.0, double.infinity);
                               final fitScale = min(
                                 paddedW / contentSize,
@@ -2525,11 +2496,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                   children: [
                                     RepaintBoundary(
                                       child: InteractiveViewer(
-                                        transformationController: _transformationController,
+                                        transformationController:
+                                        _transformationController,
                                         constrained: false,
                                         minScale: minScale,
                                         maxScale: maxScale,
-                                        boundaryMargin: EdgeInsets.all(contentSize),
+                                        boundaryMargin:
+                                        EdgeInsets.all(contentSize),
                                         clipBehavior: Clip.hardEdge,
                                         onInteractionStart: (_) {
                                           _fitAnimController.stop();
@@ -2601,10 +2574,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               );
                             },
                           ),
-
-                          // ── Item bar (bottom-left) ──
-// Hidden in Zen and Time Blitz — both modes are pure-arrow gameplay
-// with no lives, no timers, and no item mechanics.
                           if (widget.gameMode != GameMode.zen &&
                               widget.gameMode != GameMode.timeBlitz)
                             PositionedDirectional(
@@ -2613,18 +2582,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               child: GameItemBar(
                                 isTimedLevel: _totalTime > 0 ||
                                     widget.gameMode == GameMode.timeAttack,
-                                hasRocks: (_gameState?.rocks.isNotEmpty) ?? false,
+                                hasRocks:
+                                (_gameState?.rocks.isNotEmpty) ?? false,
                                 usesThisLevel: _itemUsesThisLevel,
+                                isBombArmed: _gameState?.isBombArmed ?? false,
                                 onUseItem: _useItem,
                               ),
                             ),
-
-                          // ── DEBUG: SOLVE & WIN buttons (bottom-right) ──
                           if (kDebugMode) ...[
-                            // NEW: SOLVE Button (Auto-clears using LevelSolver)
                             PositionedDirectional(
                               end: 12,
-                              bottom: 52, // Placed above the WIN button
+                              bottom: 52,
                               child: GestureDetector(
                                 onTap: _debugSolveLevel,
                                 child: Container(
@@ -2633,7 +2601,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF00C853) // Green
+                                    color: const Color(0xFF00C853)
                                         .withValues(alpha: 0.85),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
@@ -2647,15 +2615,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                       ),
                                     ],
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.check_circle_outline_rounded,
+                                      const Icon(Icons.check_circle_outline_rounded,
                                           color: Colors.white, size: 14),
-                                      SizedBox(width: 3),
+                                      const SizedBox(width: 3),
                                       Text(
-                                        'SOLVE',
-                                        style: TextStyle(
+                                        strings.gameBtnSolve,
+                                        style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,
                                           fontWeight: FontWeight.w900,
@@ -2667,8 +2635,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                 ),
                               ),
                             ),
-
-                            // Existing WIN Button
                             PositionedDirectional(
                               end: 12,
                               bottom: 12,
@@ -2694,15 +2660,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                       ),
                                     ],
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.bolt_rounded,
+                                      const Icon(Icons.bolt_rounded,
                                           color: Colors.white, size: 14),
-                                      SizedBox(width: 3),
+                                      const SizedBox(width: 3),
                                       Text(
-                                        'WIN',
-                                        style: TextStyle(
+                                        strings.gameBtnWin,
+                                        style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,
                                           fontWeight: FontWeight.w900,
@@ -2715,10 +2681,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               ),
                             ),
                           ],
-
-                          // ── Leaving arrow counter (top-left) ──
                           if (_gameState?.hasActiveLeavingArrow == true)
-                          // Leaving-arrow counter
                             PositionedDirectional(
                               top: 8,
                               start: 12,
@@ -2751,6 +2714,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     ? null
                     : _handlePauseRestart,
                 onMainMenu: _handlePauseMainMenu,
+                mainMenuLabel: _isLcMode
+                    ? 'Retire'
+                    : AppStrings.of(context).homeButton,
               ),
             if (_blitzShowingSplash)
               Positioned.fill(
@@ -2780,9 +2746,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // ── Time left over from the completed stage ──
                       Text(
-                        AppStrings.of(context).blitzTimeLeftLabel,   // "TIME LEFT"
+                        AppStrings.of(context).blitzTimeLeftLabel,
                         style: const TextStyle(
                           color: Colors.white54,
                           fontSize: 12,
@@ -2828,24 +2793,27 @@ class _GameScreenState extends ConsumerState<GameScreen>
       ),
     );
   }
+
   String _difficultyLabel() {
+    final strings = AppStrings.of(context);
     switch (widget.rushDifficulty) {
-      case RushDifficulty.easy:       return 'Easy';
-      case RushDifficulty.hard:       return 'Hard';
-      case RushDifficulty.impossible: return 'Impossible';
+      case RushDifficulty.easy:
+        return strings.difficultyEasy;
+      case RushDifficulty.hard:
+        return strings.difficultyHard;
+      case RushDifficulty.impossible:
+        return strings.difficultyImpossible;
     }
   }
 
   bool get _isLevelReady => _gameState != null;
 }
 
-/// One floating time pulse (e.g. "+2s" or "-3s") tied to a specific
-/// horizontal slot under the timer.
 class _TimerPulse {
   final int id;
   final String text;
   final Color color;
-  final int slot; // 0 = left, 1 = center, 2 = right
+  final int slot;
 
   const _TimerPulse({
     required this.id,
@@ -2854,4 +2822,3 @@ class _TimerPulse {
     required this.slot,
   });
 }
-

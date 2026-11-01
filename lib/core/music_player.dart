@@ -25,9 +25,9 @@ class MusicPlayer with WidgetsBindingObserver { // <-- Added mixin
   // ── THE FIX: Max volume is 50% of the raw audio file ──
   static const double _maxVolumeMultiplier = 0.5;
 
-  static const String trackMenu = 'audio/music/caller_main_menu.WAV';
-  static const String trackClassic = 'audio/music/Cleyton RX_Underwater_main_level.WAV';
-  static const String trackRush = 'audio/music/austeritys_friend_-_06_groove_of_timeatk_rushmode.WAV';
+  static const String trackMenu = 'audio/music/caller_main_menu.m4a';
+  static const String trackClassic = 'audio/music/Cleyton RX_Underwater_main_level.m4a';
+  static const String trackRush = 'audio/music/austeritys_friend_-_06_groove_of_timeatk_rushmode.m4a';
 
   Future<void> init() async {
     await _player.setReleaseMode(ReleaseMode.loop);

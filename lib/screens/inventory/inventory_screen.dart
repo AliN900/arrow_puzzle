@@ -8,6 +8,7 @@ import '../../core/items.dart';
 import '../../core/store_prices.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../../widgets/animated_coin_counter.dart';
 import '../../widgets/coin_icon.dart';
 import '../../widgets/pop_dialog.dart';
 import '../../widgets/status_flash.dart';
@@ -64,13 +65,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       children: [
                         const CoinIcon(size: 20),
                         const SizedBox(width: 8),
-                        Text(
-                          '$coins',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: textPrimary,
-                          ),
+                        AnimatedCoinCounter(
+                          value: coins,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          color: Colors.white,
                         ),
                       ],
                     ),
@@ -164,9 +162,10 @@ class _ArrowsGrid extends ConsumerWidget {
       ) async {
     final progress = ref.read(progressRepositoryProvider);
     final coinsRepo = ref.read(coinsRepositoryProvider);
-    final price = StorePrices.arrowPrice;
+    final price = StorePrices.priceForArrow(theme);
 
-    if (progress.isArrowPurchased(theme)) return;
+    if (progress.isArrowPurchased(theme) || price == null) return;
+
     if (coinsRepo.coins < price) {
       _showNotEnough(context, price, coinsRepo.coins);
       return;
@@ -174,7 +173,7 @@ class _ArrowsGrid extends ConsumerWidget {
 
     final confirmed = await _showConfirmDialog(
       context,
-      title: theme.name[0].toUpperCase() + theme.name.substring(1),
+      title: _getLocalizedThemeName(theme, AppStrings.of(context)),
       price: price,
     );
     if (confirmed != true) return;
@@ -211,14 +210,14 @@ class _ArrowsGrid extends ConsumerWidget {
               final isUnlocked = progress.isArrowUnlocked(theme);
               final isSelected = selectedTheme == theme;
               final previewColors = AppThemes.getThemeColors(theme);
-              final price = StorePrices.arrowPrice;
+              final price = StorePrices.priceForArrow(theme);
 
               return GestureDetector(
                 onTap: () {
                   AudioHapticHelper.playClick();
                   if (isUnlocked) {
                     ref.read(progressRepositoryProvider).setTheme(theme);
-                  } else {
+                  } else if (price != null) {
                     _buyArrow(context, ref, theme);
                   }
                 },
@@ -278,8 +277,7 @@ class _ArrowsGrid extends ConsumerWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      theme.name[0].toUpperCase() +
-                                          theme.name.substring(1),
+                                      _getLocalizedThemeName(theme, strings),
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
@@ -305,7 +303,7 @@ class _ArrowsGrid extends ConsumerWidget {
                                     color: isSelected ? accent : textSecondary,
                                   ),
                                 )
-                              else
+                              else if (price != null)
                                 Row(
                                   children: [
                                     const CoinIcon(size: 12),
@@ -361,7 +359,7 @@ class _BoardsGrid extends ConsumerWidget {
 
     final confirmed = await _showConfirmDialog(
       context,
-      title: board.name[0].toUpperCase() + board.name.substring(1),
+      title: _getLocalizedBoardName(board, AppStrings.of(context)),
       price: price,
     );
     if (confirmed != true) return;
@@ -500,8 +498,7 @@ class _BoardsGrid extends ConsumerWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      board.name[0].toUpperCase() +
-                                          board.name.substring(1),
+                                      _getLocalizedBoardName(board, strings),
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
@@ -600,6 +597,7 @@ class _ItemsGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final coinsRepo = ref.watch(coinsRepositoryProvider);
     final cardColor = AppColors.surface(context);
     final accent = AppColors.accent(context);
@@ -644,7 +642,7 @@ class _ItemsGrid extends ConsumerWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            item.displayName,
+                            _getLocalizedItemName(item, strings),
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w900,
@@ -676,7 +674,7 @@ class _ItemsGrid extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.description,
+                      _getLocalizedItemDesc(item, strings),
                       style: TextStyle(fontSize: 11.5, color: textSecondary),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -752,9 +750,7 @@ class _ItemsGrid extends ConsumerWidget {
       ) {
     final strings = AppStrings.of(context);
     final accent = AppColors.accent(context);
-    final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
-    const coinYellow = Color(0xFFFFD54F);
 
     return showDialog<bool>(
       context: context,
@@ -770,17 +766,10 @@ class _ItemsGrid extends ConsumerWidget {
             children: [
               Icon(item.icon, color: accent, size: 48),
               const SizedBox(height: 12),
-              Text(
-                'Buy ${item.displayName}?',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: textPrimary,
-                ),
-              ),
+              Text(strings.inventoryBuyItem(_getLocalizedItemName(item, strings))),
               const SizedBox(height: 6),
               Text(
-                item.description,
+                _getLocalizedItemDesc(item, strings),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: textSecondary),
               ),
@@ -790,14 +779,7 @@ class _ItemsGrid extends ConsumerWidget {
                 children: [
                   const CoinIcon(size: 16),
                   const SizedBox(width: 6),
-                  Text(
-                    '${bundle.price} coins',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: coinYellow,
-                    ),
-                  ),
+                  Text(strings.inventoryPriceCoins(bundle.price)),
                 ],
               ),
               const SizedBox(height: 20),
@@ -832,9 +814,9 @@ class _ItemsGrid extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Buy',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                      child: Text(
+                        strings.inventoryBtnBuy,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -859,9 +841,7 @@ Future<bool?> _showConfirmDialog(
     }) {
   final strings = AppStrings.of(context);
   final accent = AppColors.accent(context);
-  final textPrimary = AppColors.textPrimary(context);
   final textSecondary = AppColors.textSecondary(context);
-  const coinYellow = Color(0xFFFFD54F);
 
   return showDialog<bool>(
     context: context,
@@ -875,28 +855,14 @@ Future<bool?> _showConfirmDialog(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Unlock $title?',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: textPrimary,
-              ),
-            ),
+            Text(strings.inventoryUnlockItem(title)),
             const SizedBox(height: 12),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const CoinIcon(size: 16),
                 const SizedBox(width: 6),
-                Text(
-                  '$price coins',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: coinYellow,
-                  ),
-                ),
+                Text(strings.inventoryPriceCoins(price)),
               ],
             ),
             const SizedBox(height: 20),
@@ -928,10 +894,7 @@ Future<bool?> _showConfirmDialog(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Buy',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
+                    child: Text(strings.inventoryBtnBuy),
                   ),
                 ),
               ],
@@ -946,6 +909,73 @@ Future<bool?> _showConfirmDialog(
 void _showNotEnough(BuildContext context, int price, int balance) {
   final strings = AppStrings.of(context);
   StatusFlash.fail(context, strings.inventoryNeedMoreCoins(price - balance));
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOCALIZATION HELPERS FOR ENUMS
+// ══════════════════════════════════════════════════════════════
+
+String _getLocalizedThemeName(GameTheme theme, AppStrings strings) {
+  switch (theme) {
+    case GameTheme.neon: return strings.themeNeon;
+    case GameTheme.classic: return strings.themeClassic;
+    case GameTheme.retro: return strings.themeRetro;
+    case GameTheme.cyber: return strings.themeCyber;
+    case GameTheme.hacker: return strings.themeHacker;
+    case GameTheme.aurora: return strings.themeAurora;
+    case GameTheme.blueprint: return strings.themeBlueprint;
+    case GameTheme.forest: return strings.themeForest;
+    case GameTheme.pastel: return strings.themePastel;
+    case GameTheme.sunset: return strings.themeSunset;
+    case GameTheme.rainbow: return strings.themeRainbow;
+    case GameTheme.ruby: return strings.themeRuby;
+    case GameTheme.rainbowStatic: return strings.themeRainbowStatic;
+  }
+}
+
+String _getLocalizedBoardName(BoardTheme board, AppStrings strings) {
+  switch (board) {
+    case BoardTheme.minimal: return strings.boardMinimal;
+    case BoardTheme.nebula: return strings.boardNebula;
+    case BoardTheme.blueprint: return strings.boardBlueprint;
+    case BoardTheme.forest: return strings.boardForest;
+    case BoardTheme.ocean: return strings.boardOcean;
+    case BoardTheme.ember: return strings.boardEmber;
+    case BoardTheme.cosmic: return strings.boardCosmic;
+    case BoardTheme.geometric: return strings.boardGeometric;
+    case BoardTheme.gold: return strings.boardGold;
+    case BoardTheme.hacker: return strings.boardHacker;
+    case BoardTheme.paper: return strings.boardPaper;
+    case BoardTheme.ice: return strings.boardIce;
+    case BoardTheme.sand: return strings.boardSand;
+    case BoardTheme.cloud: return strings.boardCloud;
+    case BoardTheme.mint: return strings.boardMint;
+    case BoardTheme.rose: return strings.boardRose;
+    case BoardTheme.lavender: return strings.boardLavender;
+    case BoardTheme.sky: return strings.boardSky;
+    case BoardTheme.pearl: return strings.boardPearl;
+    case BoardTheme.honey: return strings.boardHoney;
+  }
+}
+
+String _getLocalizedItemName(ItemType item, AppStrings strings) {
+  switch (item) {
+    case ItemType.bomb: return strings.itemBombName;
+    case ItemType.hint: return strings.itemHintName;
+    case ItemType.undo: return strings.itemUndoName;
+    case ItemType.heartFlask: return strings.itemHeartFlaskName;
+    case ItemType.timeFreeze: return strings.itemTimeFreezeName;
+  }
+}
+
+String _getLocalizedItemDesc(ItemType item, AppStrings strings) {
+  switch (item) {
+    case ItemType.bomb: return strings.itemBombDesc;
+    case ItemType.hint: return strings.itemHintDesc;
+    case ItemType.undo: return strings.itemUndoDesc;
+    case ItemType.heartFlask: return strings.itemHeartFlaskDesc;
+    case ItemType.timeFreeze: return strings.itemTimeFreezeDesc;
+  }
 }
 
 class _BoardPatternPainter extends CustomPainter {

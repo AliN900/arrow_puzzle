@@ -5,7 +5,12 @@ enum OrphanDotType { up, down, left, right, neutral }
 class OrphanDot {
   final int row, col;
   final OrphanDotType type;
-  const OrphanDot({required this.row, required this.col, required this.type});
+
+  const OrphanDot({
+    required this.row,
+    required this.col,
+    required this.type,
+  });
 
   String get key => '$row,$col';
 
@@ -22,7 +27,7 @@ class OrphanDot {
   );
 }
 
-/// NEW — a permanent wall that can only be destroyed by its paired bomb arrow.
+/// Permanent wall that can only be destroyed by its paired slash/bomb arrow.
 class RockModel {
   final String id;
   final int row;
@@ -91,10 +96,7 @@ class LevelModel {
   final int levelNumber;
   final int gridSize;
   final List<ArrowModel> arrows;
-
-  /// NEW — rocks currently on the board.
   final List<RockModel> rocks;
-
   final MaskShape maskShape;
   final Set<String> mask;
   final List<OrphanDot> orphanDots;
@@ -120,16 +122,17 @@ class LevelModel {
     Set<String>? mask,
     List<OrphanDot>? orphanDots,
     int? version,
-  }) => LevelModel(
-    levelNumber: levelNumber ?? this.levelNumber,
-    gridSize: gridSize ?? this.gridSize,
-    arrows: arrows ?? this.arrows,
-    rocks: rocks ?? this.rocks,
-    maskShape: maskShape ?? this.maskShape,
-    mask: mask ?? this.mask,
-    orphanDots: orphanDots ?? this.orphanDots,
-    version: version ?? this.version,
-  );
+  }) =>
+      LevelModel(
+        levelNumber: levelNumber ?? this.levelNumber,
+        gridSize: gridSize ?? this.gridSize,
+        arrows: arrows ?? this.arrows,
+        rocks: rocks ?? this.rocks,
+        maskShape: maskShape ?? this.maskShape,
+        mask: mask ?? this.mask,
+        orphanDots: orphanDots ?? this.orphanDots,
+        version: version ?? this.version,
+      );
 
   Map<String, dynamic> toJson() => {
     'levelNumber': levelNumber,

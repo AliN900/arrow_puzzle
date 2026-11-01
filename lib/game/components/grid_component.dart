@@ -64,20 +64,41 @@ class GridComponent extends PositionComponent with TapCallbacks {
 
   @override
   void onTapUp(TapUpEvent event) {
+    final localPos = event.localPosition;
+    final gridSize = gameState.level.gridSize;
+    final c = (localPos.x / cellSize).floor();
+    final r = (localPos.y / cellSize).floor();
+    final isWithinGrid = r >= 0 && r < gridSize && c >= 0 && c < gridSize;
+
+    // ── 1. BOMB LOGIC ──
     if (gameState.isBombArmed) {
-      // ... existing bomb logic ...
+      if (isWithinGrid) {
+        // Did they tap a rock? (Success, no X)
+        final rock = gameState.rocks.where((rk) => rk.row == r && rk.col == c).firstOrNull;
+        if (rock != null) {
+          gameState.destroyRock(rock.id);
+          gameState.setBombArmed(false);
+          return;
+        }
+
+        // Did they tap an arrow? (Fail, show X)
+        final arrow = gameState.arrows.where((a) => a.path.any((pt) => pt[0] == r && pt[1] == c)).firstOrNull;
+        if (arrow != null) {
+          gameState.tapArrow(arrow.id); // This triggers the X inside GameState
+          return;
+        }
+      }
+
+      // Tapped empty space (Fail, show X)
+      gameState.cancelBombSelection(); // This triggers the X inside GameState
       return;
     }
 
+    // ── 2. ASSIST MODE LOGIC ──
     if (!gameState.assistMode) return;
 
-    final localPos = event.localPosition;
-    final c = (localPos.x / cellSize).floor();
-    final r = (localPos.y / cellSize).floor();
-    final gridSize = gameState.level.gridSize;
-
     // ── FIX: Instant exact tap check ──
-    if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
+    if (isWithinGrid) {
       for (final arrow in gameState.arrows) {
         if (arrow.path.any((pt) => pt[0] == r && pt[1] == c)) {
           final arrowComp = _arrowComponents[arrow.id];
@@ -222,6 +243,32 @@ class GridComponent extends PositionComponent with TapCallbacks {
     final outR = inR * 0.55;
 
     final boardColors = BoardThemes.get(gameState.boardTheme);
+
+    // ── COSMIC STARFIELD SPECIAL BOARD ──
+    if (gameState.boardTheme == BoardTheme.cosmic) {
+      final rng = math.Random(42); // Fixed seed for stable stars
+      final starPaint = Paint()..style = PaintingStyle.fill;
+
+      // Draw 150 stars
+      for (int i = 0; i < 150; i++) {
+        final sx = rng.nextDouble() * (gridSize * cs);
+        final sy = rng.nextDouble() * (gridSize * cs);
+        final radius = rng.nextDouble() * (cs * 0.06) + 1.0;
+        final opacity = rng.nextDouble() * 0.5 + 0.1;
+
+        // Make some stars colored like nebula gas
+        if (rng.nextDouble() > 0.8) {
+          starPaint.color = const Color(0xFF00E5FF).withValues(alpha: opacity); // Cyan
+        } else if (rng.nextDouble() > 0.8) {
+          starPaint.color = const Color(0xFFFF4081).withValues(alpha: opacity); // Pink
+        } else {
+          starPaint.color = Colors.white.withValues(alpha: opacity);
+        }
+
+        canvas.drawCircle(Offset(sx, sy), radius, starPaint);
+      }
+    }
+    // ──────────────────────────────────
     final dotColor = boardColors.dotColor;
 
     // Draw the board's signature pattern first

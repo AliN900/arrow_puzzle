@@ -1,5 +1,3 @@
-// lib/data/models/minesweeper_cell.dart
-
 enum MineState { hidden, revealed, flagged }
 
 class MinesweeperCell {

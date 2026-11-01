@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:arrow_puzzle/l10n/app_localizations.dart';
 
@@ -567,7 +568,7 @@ class _ProfileHeaderState extends ConsumerState<_ProfileHeader> {
                 )
                     : null,
               ),
-              if (!auth.isGuest)
+
                 Positioned(
                   right: -2,
                   bottom: -2,
@@ -1298,6 +1299,10 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _name = TextEditingController();
+
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+
   bool _busy = false;
   String? _error;
   bool _emailExistsPrompt = false;
@@ -1305,11 +1310,26 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
 
   _EmailMode _mode = _EmailMode.signUp;
 
+  // ✅ ADD THIS initState BLOCK
+  @override
+  void initState() {
+    super.initState();
+    // Automatically pre-fill their guest name (e.g., "AHB")
+    final currentName = AuthService.instance.name ?? '';
+    if (currentName.isNotEmpty && currentName != 'Guest') {
+      _name.text = currentName;
+    }
+  }
+  // ────────────────────────────────
+
   @override
   void dispose() {
+    TextInput.finishAutofillContext();
     _email.dispose();
     _password.dispose();
     _name.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -1445,6 +1465,7 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
         ref.read(progressRepositoryProvider),
         ref.read(coinsRepositoryProvider),
       );
+      TextInput.finishAutofillContext();
       if (mounted) widget.onSuccess();
     } on AppwriteException catch (e) {
       final type = (e.type ?? '').toLowerCase();
@@ -1505,215 +1526,239 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
         constraints: BoxConstraints(maxHeight: maxSheetHeight),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _modeButton(strings.profileTabSignIn,
-                          _EmailMode.signIn, accent, textSecondary),
-                    ),
-                    Expanded(
-                      child: _modeButton(strings.profileTabCreateAccount,
-                          _EmailMode.signUp, accent, textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                isSignUp
-                    ? strings.profileCreateAccountTitle
-                    : strings.profileWelcomeBack,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                isSignUp
-                    ? strings.profileGuestProgressCarries
-                    : strings.profileSignInRestoreBody,
-                style: TextStyle(fontSize: 13, color: textSecondary),
-              ),
-              const SizedBox(height: 20),
-              if (isSignUp) ...[
-                _Field(
-                  controller: _name,
-                  hint: strings.profileNameHint,
-                  icon: Icons.person_outline,
-                ),
-                const SizedBox(height: 12),
-              ],
-              _Field(
-                controller: _email,
-                hint: strings.profileEmailHint,
-                icon: Icons.email_outlined,
-                keyboard: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 12),
-              _Field(
-                controller: _password,
-                hint: strings.profilePasswordHint,
-                icon: Icons.lock_outline,
-                obscure: _obscurePassword,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        size: 18,
-                        color: textSecondary,
-                      ),
-                      onPressed: () {
-                        AudioHapticHelper.playClick();
-                        setState(
-                                () => _obscurePassword = !_obscurePassword);
-                      },
-                      tooltip: _obscurePassword
-                          ? strings.profileShowPassword
-                          : strings.profileHidePassword,
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.casino_outlined,
-                          size: 18, color: accent),
-                      onPressed: () {
-                        AudioHapticHelper.playClick();
-                        setState(() {
-                          _password.text = _generatePassword();
-                          _obscurePassword = false;
-                        });
-                      },
-                      tooltip: strings.profileGeneratePassword,
-                    ),
-                  ],
-                ),
-              ),
-              if (isSignUp && _password.text.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _PasswordStrengthBar(
-                  strength: _passwordStrength(_password.text),
-                  strings: strings,
-                ),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: 12),
+          child: AutofillGroup(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: _emailExistsPrompt
-                        ? accent.withValues(alpha: 0.1)
-                        : const Color(0xFFFF5252).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: _emailExistsPrompt
-                          ? accent.withValues(alpha: 0.4)
-                          : const Color(0xFFFF5252)
-                          .withValues(alpha: 0.4),
-                    ),
+                    color: accent.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        _emailExistsPrompt
-                            ? Icons.info_outline_rounded
-                            : Icons.error_outline_rounded,
-                        size: 16,
-                        color: _emailExistsPrompt
-                            ? accent
-                            : const Color(0xFFFF5252),
-                      ),
-                      const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          _error!,
-                          style: TextStyle(
-                            color: _emailExistsPrompt
-                                ? accent
-                                : const Color(0xFFFF5252),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: _modeButton(strings.profileTabSignIn,
+                            _EmailMode.signIn, accent, textSecondary),
+                      ),
+                      Expanded(
+                        child: _modeButton(strings.profileTabCreateAccount,
+                            _EmailMode.signUp, accent, textSecondary),
                       ),
                     ],
                   ),
                 ),
-              ],
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _busy ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: _busy
-                    ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-                    : Text(
+                const SizedBox(height: 20),
+                Text(
                   isSignUp
-                      ? strings.profileCreateAccountButton
-                      : strings.profileSignInButton,
-                  style: const TextStyle(
+                      ? strings.profileCreateAccountTitle
+                      : strings.profileWelcomeBack,
+                  style: TextStyle(
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
-                    fontSize: 15,
+                    color: textPrimary,
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              Center(
-                child: TextButton(
-                  onPressed: _busy
-                      ? null
-                      : () {
-                    AudioHapticHelper.playClick();
-                    setState(() {
-                      _mode = isSignUp
-                          ? _EmailMode.signIn
-                          : _EmailMode.signUp;
-                      _error = null;
-                      _emailExistsPrompt = false;
-                    });
-                  },
-                  child: Text(
+                const SizedBox(height: 6),
+                Text(
+                  isSignUp
+                      ? strings.profileGuestProgressCarries
+                      : strings.profileSignInRestoreBody,
+                  style: TextStyle(fontSize: 13, color: textSecondary),
+                ),
+                const SizedBox(height: 20),
+                if (isSignUp) ...[
+                  _Field(
+                    key: const ValueKey('name_field'),
+                    controller: _name,
+                    hint: strings.profileNameHint,
+                    icon: Icons.person_outline,
+                    autofillHints: const [AutofillHints.name],
+                    textInputAction: TextInputAction.next,
+                    onSubmitted: (_) => _emailFocus.requestFocus(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // ── THE EMAIL FIELD ──
+                _Field(
+                  key: const ValueKey('email_field'),
+                  controller: _email,
+                  focusNode: _emailFocus,
+                  hint: strings.profileEmailHint,
+                  icon: Icons.email_outlined,
+                  keyboard: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.username, AutofillHints.email],
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _passwordFocus.requestFocus(),
+                ),
+                const SizedBox(height: 12),
+
+                // ── THE PASSWORD FIELD ──
+                _Field(
+                  key: const ValueKey('password_field'),
+                  controller: _password,
+                  focusNode: _passwordFocus,
+                  hint: strings.profilePasswordHint,
+                  icon: Icons.lock_outline,
+                  obscure: _obscurePassword,
+                  autofillHints: [
+                    isSignUp ? AutofillHints.newPassword : AutofillHints.password
+                  ],
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          size: 18,
+                          color: textSecondary,
+                        ),
+                        onPressed: () {
+                          AudioHapticHelper.playClick();
+                          setState(
+                                  () => _obscurePassword = !_obscurePassword);
+                        },
+                        tooltip: _obscurePassword
+                            ? strings.profileShowPassword
+                            : strings.profileHidePassword,
+                      ),
+                      // ── ONLY SHOW THE RANDOMIZER ON SIGN UP ──
+                      if (isSignUp)
+                        IconButton(
+                          icon: Icon(Icons.casino_outlined,
+                              size: 18, color: accent),
+                          onPressed: () {
+                            AudioHapticHelper.playClick();
+                            setState(() {
+                              _password.text = _generatePassword();
+                              _obscurePassword = false;
+                            });
+                          },
+                          tooltip: strings.profileGeneratePassword,
+                        ),
+                    ],
+                  ),
+                ),
+                if (isSignUp && _password.text.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _PasswordStrengthBar(
+                    strength: _passwordStrength(_password.text),
+                    strings: strings,
+                  ),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _emailExistsPrompt
+                          ? accent.withValues(alpha: 0.1)
+                          : const Color(0xFFFF5252).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _emailExistsPrompt
+                            ? accent.withValues(alpha: 0.4)
+                            : const Color(0xFFFF5252)
+                            .withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          _emailExistsPrompt
+                              ? Icons.info_outline_rounded
+                              : Icons.error_outline_rounded,
+                          size: 16,
+                          color: _emailExistsPrompt
+                              ? accent
+                              : const Color(0xFFFF5252),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _error!,
+                            style: TextStyle(
+                              color: _emailExistsPrompt
+                                  ? accent
+                                  : const Color(0xFFFF5252),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _busy ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: _busy
+                      ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : Text(
                     isSignUp
-                        ? strings.profileAlreadyHaveAccount
-                        : strings.profileDontHaveAccount,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: accent,
+                        ? strings.profileCreateAccountButton
+                        : strings.profileSignInButton,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
                     ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                Center(
+                  child: TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () {
+                      AudioHapticHelper.playClick();
+                      setState(() {
+                        _mode = isSignUp
+                            ? _EmailMode.signIn
+                            : _EmailMode.signUp;
+                        _error = null;
+                        _emailExistsPrompt = false;
+                      });
+                    },
+                    child: Text(
+                      isSignUp
+                          ? strings.profileAlreadyHaveAccount
+                          : strings.profileDontHaveAccount,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: accent,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1758,20 +1803,29 @@ class _EmailAuthSheetState extends ConsumerState<_EmailAuthSheet> {
 
 class _Field extends StatelessWidget {
   const _Field({
+    super.key,
     required this.controller,
+    this.focusNode,
     required this.hint,
     required this.icon,
     this.keyboard,
     this.obscure = false,
     this.trailing,
+    this.autofillHints,
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String hint;
   final IconData icon;
   final TextInputType? keyboard;
   final bool obscure;
   final Widget? trailing;
+  final Iterable<String>? autofillHints;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -1780,9 +1834,16 @@ class _Field extends StatelessWidget {
     final accent = AppColors.accent(context);
 
     return TextField(
+      key: key,
       controller: controller,
+      focusNode: focusNode,
       keyboardType: keyboard,
       obscureText: obscure,
+      autofillHints: autofillHints,
+      textInputAction: textInputAction,
+      onSubmitted: onSubmitted,
+      enableSuggestions: false,
+      autocorrect: false,
       style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         hintText: hint,
@@ -1864,6 +1925,7 @@ Widget _buildGuestLockedCard(
       VoidCallback? onSignInTap,
     }) {
   final muted = textSecondary.withValues(alpha: 0.55);
+  final strings = AppStrings.of(context);
 
   final body = Container(
     padding: const EdgeInsets.all(20),
@@ -1905,7 +1967,7 @@ Widget _buildGuestLockedCard(
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Leaderboard locked',
+                    strings.profileLeaderboardLocked,
                     style: TextStyle(fontSize: 11, color: muted),
                   ),
                 ],
@@ -1923,7 +1985,7 @@ Widget _buildGuestLockedCard(
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Sign in to unlock the Leaderboard',
+                strings.profileLeaderboardSignIn,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,

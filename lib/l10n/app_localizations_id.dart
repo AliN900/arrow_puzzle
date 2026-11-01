@@ -12,6 +12,236 @@ class AppStringsId extends AppStrings {
   String get appName => 'Arrow Puzzle';
 
   @override
+  String get removeFriendQuestion => 'Hapus Teman?';
+
+  @override
+  String get buttonRemove => 'HAPUS';
+
+  @override
+  String get friendRequests => 'Permintaan Pertemanan';
+
+  @override
+  String get noPendingRequests => 'Tidak ada permintaan tertunda.';
+
+  @override
+  String invitingFriend(String name) {
+    return 'Mengundang $name...';
+  }
+
+  @override
+  String waitingForResponse(int seconds) {
+    return 'Menunggu respons (${seconds}d)';
+  }
+
+  @override
+  String unlocksIn(String time) {
+    return 'Terbuka dalam $time';
+  }
+
+  @override
+  String gameCapped(String difficulty) {
+    return '(dibatasi · $difficulty)';
+  }
+
+  @override
+  String get gameBtnSolve => 'PECAHKAN';
+
+  @override
+  String get gameBtnWin => 'MENANG';
+
+  @override
+  String get levelLoading => 'MEMUAT LEVEL...';
+
+  @override
+  String rushCleared(int count) {
+    return 'Selesai: $count';
+  }
+
+  @override
+  String get homeMpTitle => 'MULTIPEMAIN 1v1';
+
+  @override
+  String get homeMpSubtitle => 'Tantang pemain online secara real-time!';
+
+  @override
+  String inventoryBuyItem(String item) {
+    return 'Beli $item?';
+  }
+
+  @override
+  String inventoryPriceCoins(int price) {
+    return '$price koin';
+  }
+
+  @override
+  String get inventoryBtnBuy => 'Beli';
+
+  @override
+  String inventoryUnlockItem(String item) {
+    return 'Buka $item?';
+  }
+
+  @override
+  String get leaderboardYou => 'Anda';
+
+  @override
+  String get leaderboardLocked => 'Terkunci';
+
+  @override
+  String leaderboardEarnToUnlock(int target) {
+    return 'Dapatkan $target LC untuk membuka papan peringkat global.';
+  }
+
+  @override
+  String leaderboardProgress(int earned, int target) {
+    return '$earned / $target LC';
+  }
+
+  @override
+  String get mpRetire => 'PENSIUN';
+
+  @override
+  String get mpExitLobby => 'KELUAR LOBI';
+
+  @override
+  String mpCampaignLevel(int level) {
+    return 'Level Kampanye $level';
+  }
+
+  @override
+  String get mpSelectMode => 'Pilih Mode';
+
+  @override
+  String get mpGenerating => 'Menghasilkan...';
+
+  @override
+  String get mpBtnRandom => 'ACAK';
+
+  @override
+  String get mpBtnMatch => 'PERTANDINGAN';
+
+  @override
+  String get mpBtnInvite => 'UNDANG';
+
+  @override
+  String get mpMatchRules => 'Aturan Pertandingan';
+
+  @override
+  String get mpDifficultySetting => 'PENGATURAN KESULITAN';
+
+  @override
+  String get profileLeaderboardLocked => 'Papan peringkat terkunci';
+
+  @override
+  String get profileLeaderboardSignIn => 'Masuk untuk membuka Papan Peringkat';
+
+  @override
+  String get mpMatchCall => 'PANGGILAN PERTANDINGAN!';
+
+  @override
+  String mpIsChallengingYou(String name, int level) {
+    return '$name (Lvl $level) menantangmu!';
+  }
+
+  @override
+  String get levelFailedToLoad => 'Gagal memuat level';
+
+  @override
+  String get inviteExpired => 'Undangan kedaluwarsa (tidak ada respons)';
+
+  @override
+  String get friends => 'Teman';
+
+  @override
+  String get yourFriendsList => 'Daftar Teman Anda';
+
+  @override
+  String get noFriendsYet => 'Belum ada teman.';
+
+  @override
+  String get mpTitle => 'Multiplayer ';
+
+  @override
+  String get mpSubtitle => 'Bertanding langsung di papan yang identik.';
+
+  @override
+  String get mpRandomMatch => 'Pertandingan Acak';
+
+  @override
+  String get mpRandomMatchSub => 'Tantang pemain acak dari level Anda';
+
+  @override
+  String get mpChallengeFriend => 'Tantang Teman';
+
+  @override
+  String get mpChallengeFriendSub => 'Tantang teman Anda secara langsung';
+
+  @override
+  String get mpSearchTitle => 'Cari';
+
+  @override
+  String get mpSearchHint => 'Ketik nama pengguna...';
+
+  @override
+  String get mpFriendsSection => 'TEMAN';
+
+  @override
+  String get mpOtherPlayersSection => 'PEMAIN LAIN';
+
+  @override
+  String get mpChallengeBtn => 'TANTANG';
+
+  @override
+  String get mpListAsReady => 'Tandai Siap';
+
+  @override
+  String get mpVisibleLobby => 'Terlihat di lobi';
+
+  @override
+  String get mpHiddenLobby => 'Tersembunyi dari lobi';
+
+  @override
+  String get mpChallengersNearby => 'Penantang Online Terdekat';
+
+  @override
+  String get mpNoPlayersFound =>
+      'Tidak ada pemain online. Ketuk \"PERTANDINGAN ACAK\" di bawah!';
+
+  @override
+  String get mpSearching => 'Mencari Pemain...';
+
+  @override
+  String mpWaitingFor(Object name) {
+    return 'Menunggu $name...';
+  }
+
+  @override
+  String get mpWaitingAccept => 'Menunggu mereka menerima.';
+
+  @override
+  String get mpCancelLookOther => 'BATALKAN & CARI YANG LAIN';
+
+  @override
+  String get mpDecline => 'TOLAK';
+
+  @override
+  String get mpAccept => 'TERIMA';
+
+  @override
+  String get mpClose => 'TUTUP';
+
+  @override
+  String get mpCancelInvite => 'BATALKAN UNDANGAN';
+
+  @override
+  String mpChatGreeting(Object name) {
+    return 'Sapa $name! 👋';
+  }
+
+  @override
+  String get zenTimePlayed => 'WAKTU BERMAIN';
+
+  @override
   String get buttonCancel => 'Batal';
 
   @override
@@ -140,6 +370,61 @@ class AppStringsId extends AppStrings {
   String plusCoins(int count) {
     return '+$count koin';
   }
+
+  @override
+  String get trophyLeaderboardLegendTitle => '🏆 LEGENDA PAPAN PERINGKAT';
+
+  @override
+  String get trophyLeaderboardLegendDesc =>
+      'Kumpulkan 1.000 LC untuk membuka papan peringkat global dan bersaing dengan pemain di seluruh dunia!';
+
+  @override
+  String get trophiesPerkLeaderboard => 'Membuka Papan Peringkat';
+
+  @override
+  String get trophiesPerkNeonSkin => 'Membuka Skin Panah Neon';
+
+  @override
+  String get trophiesPerkRetroSkin => 'Membuka Skin Panah Retro';
+
+  @override
+  String get trophiesPerkRubySkin => 'Membuka Skin Panah Ruby';
+
+  @override
+  String get neonArrowTitle => 'Neon Awakening';
+
+  @override
+  String get neonArrowDesc => 'Reach level 10 to unlock the Neon arrow skin.';
+
+  @override
+  String get retroArrowTitle => 'Retro Wave';
+
+  @override
+  String get retroArrowDesc => 'Reach level 27 to unlock the Retro arrow skin.';
+
+  @override
+  String get rubyArrowTitle => 'Ruby Radiance';
+
+  @override
+  String get rubyArrowDesc => 'Reach level 35 to unlock the Ruby arrow skin.';
+
+  @override
+  String get bombDeselected => 'Bom tidak dipilih';
+
+  @override
+  String get noMinesToDestroy => 'Tidak ada ranjau untuk dihancurkan';
+
+  @override
+  String get difficultyEasy => 'Mudah';
+
+  @override
+  String get difficultyHard => 'Sulit';
+
+  @override
+  String get difficultyImpossible => 'Mustahil';
+
+  @override
+  String get giftEmoji => '🎁';
 
   @override
   String plusItems(int count) {
@@ -1447,6 +1732,21 @@ class AppStringsId extends AppStrings {
   String get profileSave => 'Simpan';
 
   @override
+  String get chatQuickHello => 'Halo! 👋';
+
+  @override
+  String get chatQuickChallenge => 'Siap untuk tantangan? ⚔️';
+
+  @override
+  String get chatQuickGoodGame => 'Permainan bagus! 🎮';
+
+  @override
+  String get chatQuickNice => 'Bagus sekali! 🔥';
+
+  @override
+  String get chatQuickWait => 'Tunggu sebentar... ⏳';
+
+  @override
   String get profileUpdated => 'Profil diperbarui';
 
   @override
@@ -1489,4 +1789,16 @@ class AppStringsId extends AppStrings {
 
   @override
   String get zenModeSubtitle => 'Tanpa nyawa, tanpa waktu. Hanya puzzle.';
+
+  @override
+  String get themeRuby => 'Ruby';
+
+  @override
+  String get mpVs => 'VS';
+
+  @override
+  String get unitSeconds => 'd';
+
+  @override
+  String get themeRainbowStatic => 'Pelangi Statis';
 }

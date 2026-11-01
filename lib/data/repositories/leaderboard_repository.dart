@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../main.dart';
+import '../../services/appwrite_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/leaderboard_service.dart';
 
@@ -58,6 +61,83 @@ class LeaderboardRepository {
       monthlyReachedAt: monthlyReachedAt ?? now,
     );
   }
+
+  // ── NEW: Secure LC award inside the class ──
+  Future<AwardLcResult?> awardLcRun({
+    required String mode,
+    required int difficulty,
+    required int lcDelta,
+    required int arrowsCleared,
+    required int failedTaps,
+    required int itemsUsed,
+    required int durationSeconds,
+    required int level,
+    required int totalStars,
+    required int trophies,
+  }) async {
+    try {
+      debugPrint('🏆 [LB Repo] 1. Calling Appwrite Function...');
+
+      // The Appwrite SDK automatically handles authentication headers
+      // if the user is logged in. We don't need a manual JWT.
+      final execution = await AppwriteService.functions.createExecution(
+        functionId: AppwriteService.updatePlayerDataFunctionId,
+        body: jsonEncode({
+          'mode': mode,
+          'difficulty': difficulty,
+          'lcDelta': lcDelta,
+          'arrowsCleared': arrowsCleared,
+          'failedTaps': failedTaps,
+          'itemsUsed': itemsUsed,
+          'durationSeconds': durationSeconds,
+          'level': level,
+          'totalStars': totalStars,
+          'trophies': trophies,
+        }),
+        xasync: false,
+      );
+
+      debugPrint('🏆 [LB Repo] 2. Response: ${execution.responseStatusCode}');
+
+      if (execution.responseStatusCode != 200) {
+        debugPrint('🏆 [LB Repo] FAILED: ${execution.responseBody}');
+        return null;
+      }
+
+      final body = jsonDecode(execution.responseBody) as Map<String, dynamic>;
+      if (body['rejected'] == true) {
+        debugPrint('🏆 [LB Repo] REJECTED: ${body['reason']}');
+        return null;
+      }
+
+      debugPrint('🏆 [LB Repo] 3. SUCCESS! Awarded: ${body['lcAwarded']}');
+
+      return AwardLcResult(
+        lcAwarded: body['lcAwarded'] as int,
+        weeklyScore: body['weeklyScore'] as int,
+        monthlyScore: body['monthlyScore'] as int,
+        allTimeScore: body['allTimeScore'] as int,
+      );
+    } catch (e) {
+      debugPrint('🏆 [LB Repo] EXCEPTION: $e');
+      return null;
+    }
+  }
+}
+
+// ── Data Model ──
+class AwardLcResult {
+  final int lcAwarded;
+  final int weeklyScore;
+  final int monthlyScore;
+  final int allTimeScore;
+
+  const AwardLcResult({
+    required this.lcAwarded,
+    required this.weeklyScore,
+    required this.monthlyScore,
+    required this.allTimeScore,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────

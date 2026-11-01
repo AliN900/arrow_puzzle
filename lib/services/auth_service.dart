@@ -73,6 +73,45 @@ class AuthService extends ChangeNotifier {
     return _boxCache!;
   }
 
+// Add this method inside your AuthService class:
+  Future<void> syncProfileToAppwrite() async {
+    if (_userId == null || isGuest) return; // Don't sync guests
+
+    try {
+      // Try to update the row first
+      await AppwriteService.tablesDb.updateRow(
+        databaseId: AppwriteService.databaseId,
+        tableId: '6ae356e900356fdb7ddb',
+        rowId: _userId!,  // Use the Auth ID as the row ID
+        data: {
+          'userId': _userId,
+          'userName': displayName,
+          // 'level': AppwriteService... // See Step 2 below
+        },
+      );
+    } on AppwriteException catch (e) {
+      if (e.code == 404) {
+        // Row doesn't exist yet, create it
+        try {
+          await AppwriteService.tablesDb.createRow(
+            databaseId: AppwriteService.databaseId,
+            tableId: '6ae356e900356fdb7ddb',
+            rowId: _userId!,
+            data: {
+              'userId': _userId,
+              'userName': displayName,
+              'level': 1, // Default starting level
+            },
+          );
+        } catch (createErr) {
+          debugPrint('🔴 [Auth] Failed to create users row: $createErr');
+        }
+      }
+    } catch (e) {
+      debugPrint('🔴 [Auth] Failed to sync profile: $e');
+    }
+  }
+
   /// Persist the current user's data to Hive. Called after every successful
   /// sign-in so the UI can restore state without a network round-trip.
   Future<void> _persistUserToBox(Box box) async {
@@ -125,15 +164,18 @@ class AuthService extends ChangeNotifier {
       // If we have a cached signed-in user and Appwrite returns an anonymous
       // session (cookie didn't persist), keep the cached state.
       final appwriteIsAnon = user.email.isEmpty;
-      final cacheIsSignedIn = cachedUserId != null && cachedEmail != null;
 
-      if (appwriteIsAnon && cacheIsSignedIn) {
-        // Appwrite session is guest, but cache has a signed-in user.
-        // Keep the cache. User will need to tap-sync from Profile to
-        // re-establish the Appwrite session when they want cloud sync.
-        debugPrint(
-            '🟡 [Auth] Appwrite session is guest but cache is signed-in — '
-                'keeping cached state ($cachedEmail)');
+      if (appwriteIsAnon) {
+        // ✅ FIX: If Appwrite says we are anonymous, we ARE a guest.
+        // Clear the cached email so we don't try to sync.
+        _userId = user.$id;
+        _email = null;
+        _method = AuthMethod.guest;
+        _name = user.name.isEmpty ? cachedName : user.name; // Keep local name
+
+        await box.delete(_kEmail); // Clear cached email
+        await box.put(_kMethod, AuthMethod.guest.name);
+        debugPrint('🟡 [Auth] Appwrite session is guest. Enforcing guest mode (no sync).');
       } else {
         _applyUser(user);
         if (_email != null && _method == AuthMethod.guest) {
@@ -145,31 +187,33 @@ class AuthService extends ChangeNotifier {
               : AuthMethod.email;
         }
         await _persistUserToBox(box);
+        await syncProfileToAppwrite(); // 👈 ADD THIS LINE
         debugPrint('🟢 [Auth] Verified with Appwrite: ${user.email}');
       }
     } on AppwriteException catch (e) {
       if (e.code == 401) {
-        if (cachedUserId != null) {
-          // Appwrite session died but we have a cached user — keep the UI
-          // state and let the user stay "signed in". Cloud sync will fail
-          // silently; the user can tap-to-resync from the profile header.
-          debugPrint(
-              '🟡 [Auth] Appwrite session lost — using cached user state');
-        } else {
-          // No cached user, no Appwrite session — create a fresh guest.
-          try {
-            final session =
-            await AppwriteService.account.createAnonymousSession();
-            _userId = session.userId;
-            _method = AuthMethod.guest;
-            _email = null;
-            _name = null;
-            _avatarUrl = null;
-            await box.put(_kMethod, AuthMethod.guest.name);
-            debugPrint('🟢 [Auth] Created anonymous session');
-          } catch (inner) {
-            debugPrint('🔴 [Auth] Anonymous session failed: $inner');
-          }
+        // ✅ FIX: If the session is dead, we are a GUEST. Period.
+        // We must clear the cached email to stop the sync.
+        final box = await _getBox();
+        await box.delete(_kEmail);
+        await box.delete(_kUserId);
+
+        debugPrint('🟡 [Auth] Session lost. Forcing Guest mode.');
+
+        try {
+          final session = await AppwriteService.account.createAnonymousSession();
+          _userId = session.userId;
+          _method = AuthMethod.guest;
+          _email = null;
+          _avatarUrl = null;
+          _name = cachedName ?? 'Guest';
+
+          await box.put(_kMethod, AuthMethod.guest.name);
+          await box.put(_kName, _name);
+          await box.put(_kUserId, _userId);
+          debugPrint('🟢 [Auth] Created new anonymous session after 401');
+        } catch (inner) {
+          debugPrint('🔴 [Auth] Anonymous session failed: $inner');
         }
       } else {
         debugPrint('🟡 [Auth] Bootstrap check failed: ${e.message}');
@@ -208,15 +252,30 @@ class AuthService extends ChangeNotifier {
       await AppwriteService.account.get();
     } on AppwriteException catch (e) {
       if (e.code == 401) {
+        // ── 1. DECLARE BOX FIRST & CLEAR OLD DATA ──
+        final box = await _getBox();
+        await _clearUserFromBox(box); // Clear the old session data first
+
         final session = await AppwriteService.account.createAnonymousSession();
         _userId = session.userId;
         _method = AuthMethod.guest;
         _email = null;
-        _name = null;
         _avatarUrl = null;
-        final box = await _getBox();
+
+        // ── 2. AUTO-ASSIGN A NAME ──
+        final defaultName = 'Guest';
+        try {
+          await AppwriteService.account.updateName(name: defaultName);
+          _name = defaultName;
+        } catch (_) {
+          _name = defaultName;
+        }
+
+        // ── 3. SAVE TO LOCAL BOX ──
         await box.put(_kMethod, AuthMethod.guest.name);
-        await _clearUserFromBox(box);
+        await box.put(_kName, _name);
+        await box.put(_kUserId, _userId);
+
         notifyListeners();
       }
     } catch (_) {}
@@ -238,9 +297,14 @@ class AuthService extends ChangeNotifier {
       );
       debugPrint('🟢 [Email] 2. updateEmail succeeded');
 
-      if (name != null && name.trim().isNotEmpty) {
-        await AppwriteService.account.updateName(name: name.trim());
-        debugPrint('🟢 [Email] 3. updateName succeeded');
+      // ✅ FIX: Use the typed name, OR fallback to the local guest name
+      final nameToSet = (name != null && name.trim().isNotEmpty)
+          ? name.trim()
+          : _name;
+
+      if (nameToSet != null && nameToSet.trim().isNotEmpty) {
+        await AppwriteService.account.updateName(name: nameToSet.trim());
+        debugPrint('🟢 [Email] 3. updateName succeeded: $nameToSet');
       }
 
       final user = await AppwriteService.account.get();
@@ -250,6 +314,7 @@ class AuthService extends ChangeNotifier {
       _bootstrapped = true;
       final box = await _getBox();
       await _persistUserToBox(box);
+      await syncProfileToAppwrite();
       notifyListeners();
       debugPrint('🟢 [Email] 5. done, isSignedIn=$isSignedIn');
     } catch (e, st) {
@@ -263,18 +328,38 @@ class AuthService extends ChangeNotifier {
     final trimmed = newName.trim();
     if (trimmed.isEmpty) return;
 
-    // Try Appwrite first — tolerate failure because the session may be
-    // anonymous on this device (local cache is authoritative for UI).
-    try {
-      await AppwriteService.account.updateName(name: trimmed);
-    } catch (e) {
-      debugPrint('Appwrite name update failed (using local cache): $e');
+    debugPrint('🟢 [Auth] Trying to update name to: $trimmed. Is Guest: $isGuest, Email: $_email');
+
+    if (_email != null) {
+      try {
+        // 1. Push the new name to Appwrite
+        await AppwriteService.account.updateName(name: trimmed);
+
+        // 2. Fetch the user again to VERIFY it actually saved
+        final updatedUser = await AppwriteService.account.get();
+
+        if (updatedUser.name == trimmed) {
+          debugPrint('✅ [Auth] CONFIRMED: Appwrite saved the name as ${updatedUser.name}');
+        } else {
+          debugPrint('⚠️ [Auth] Appwrite did NOT save the name. It is still: "${updatedUser.name}"');
+        }
+
+      } on AppwriteException catch (e) {
+        debugPrint('🔴 Appwrite name update failed: ${e.code} - ${e.message}');
+        if (e.code == 401) {
+          throw Exception('Session expired. Please sign out and sign in again.');
+        }
+        rethrow;
+      }
+    } else {
+      debugPrint('🟡 [Auth] Guest changed name locally. Will sync when they sign up.');
     }
 
     _name = trimmed;
     final box = await _getBox();
     await box.put(_kName, trimmed);
     await _persistUserToBox(box);
+    await syncProfileToAppwrite();
     notifyListeners();
   }
 
@@ -290,11 +375,31 @@ class AuthService extends ChangeNotifier {
       email: email,
       password: password,
     );
-    _applyUser(await AppwriteService.account.get());
+
+    final user = await AppwriteService.account.get();
+    _applyUser(user);
+
+    // ✅ FIX: If Appwrite doesn't have a name, push the local name to Appwrite!
+    if (user.name.isEmpty) {
+      final box = await _getBox();
+      final localName = box.get(_kName) as String?;
+
+      if (localName != null && localName.isNotEmpty && localName != 'Guest') {
+        try {
+          await AppwriteService.account.updateName(name: localName);
+          _name = localName; // Restore the local name in memory
+          debugPrint('🟢 [Auth] Pushed local name to Appwrite on Sign In: $localName');
+        } catch (e) {
+          debugPrint('🔴 [Auth] Failed to push name on Sign In: $e');
+        }
+      }
+    }
+
     _method = AuthMethod.email;
     _bootstrapped = true;
     final box = await _getBox();
     await _persistUserToBox(box);
+    await syncProfileToAppwrite();
     notifyListeners();
   }
 
@@ -345,6 +450,7 @@ class AuthService extends ChangeNotifier {
       _bootstrapped = true;
       final box = await _getBox();
       await _persistUserToBox(box);
+      await syncProfileToAppwrite();
       notifyListeners();
       debugPrint('🔵 [Google] 5. done, isSignedIn=$isSignedIn');
     } on GoogleSignInException catch (e) {
@@ -380,6 +486,7 @@ class AuthService extends ChangeNotifier {
       _bootstrapped = true;
       final box = await _getBox();
       await _persistUserToBox(box);
+      await syncProfileToAppwrite();
       notifyListeners();
     } on AppwriteException catch (e) {
       debugPrint('Apple OAuth failed: code=${e.code} message=${e.message}');
@@ -411,9 +518,19 @@ class AuthService extends ChangeNotifier {
       _userId = session.userId;
       _method = AuthMethod.guest;
       _email = null;
-      _name = null;
       _avatarUrl = null;
+
+      // Auto-assign name
+      final defaultName = 'Guest';
+      try {
+        await AppwriteService.account.updateName(name: defaultName);
+        _name = defaultName;
+      } catch (_) {
+        _name = defaultName;
+      }
+
       await box.put(_kMethod, AuthMethod.guest.name);
+      await box.put(_kName, _name);
     } catch (e) {
       debugPrint('Guest session after sign-out failed: $e');
       _method = AuthMethod.guest;
@@ -455,8 +572,21 @@ class AuthService extends ChangeNotifier {
 
       final session = await AppwriteService.account.createAnonymousSession();
       _userId = session.userId;
+      _method = AuthMethod.guest;
+      _email = null;
+      _avatarUrl = null;
+
+      // Auto-assign name
+      final defaultName = 'Guest';
+      try {
+        await AppwriteService.account.updateName(name: defaultName);
+        _name = defaultName;
+      } catch (_) {
+        _name = defaultName;
+      }
 
       await box.put(_kMethod, AuthMethod.guest.name);
+      await box.put(_kName, _name);
       notifyListeners();
     } catch (e) {
       debugPrint('Failed to delete account: $e');

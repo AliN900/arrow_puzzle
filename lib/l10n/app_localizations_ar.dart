@@ -12,6 +12,236 @@ class AppStringsAr extends AppStrings {
   String get appName => 'أرو بزل';
 
   @override
+  String get removeFriendQuestion => 'إزالة صديق؟';
+
+  @override
+  String get buttonRemove => 'إزالة';
+
+  @override
+  String get friendRequests => 'طلبات الصداقة';
+
+  @override
+  String get noPendingRequests => 'لا توجد طلبات معلقة.';
+
+  @override
+  String invitingFriend(String name) {
+    return 'جاري دعوة $name...';
+  }
+
+  @override
+  String waitingForResponse(int seconds) {
+    return 'في انتظار الرد ($seconds ث)';
+  }
+
+  @override
+  String unlocksIn(String time) {
+    return 'تفتح في $time';
+  }
+
+  @override
+  String gameCapped(String difficulty) {
+    return '(محدود · $difficulty)';
+  }
+
+  @override
+  String get gameBtnSolve => 'حل';
+
+  @override
+  String get gameBtnWin => 'فوز';
+
+  @override
+  String get levelLoading => 'جاري تحميل المستوى...';
+
+  @override
+  String rushCleared(int count) {
+    return 'تم التطهير: $count';
+  }
+
+  @override
+  String get homeMpTitle => 'لعب جماعي 1v1';
+
+  @override
+  String get homeMpSubtitle => 'تحدى اللاعبين عبر الإنترنت في الوقت الفعلي!';
+
+  @override
+  String inventoryBuyItem(String item) {
+    return 'شراء $item؟';
+  }
+
+  @override
+  String inventoryPriceCoins(int price) {
+    return '$price عملة';
+  }
+
+  @override
+  String get inventoryBtnBuy => 'شراء';
+
+  @override
+  String inventoryUnlockItem(String item) {
+    return 'فتح $item؟';
+  }
+
+  @override
+  String get leaderboardYou => 'أنت';
+
+  @override
+  String get leaderboardLocked => 'مقفل';
+
+  @override
+  String leaderboardEarnToUnlock(int target) {
+    return 'اربح $target LC لفتح لوحة الصدارة العالمية.';
+  }
+
+  @override
+  String leaderboardProgress(int earned, int target) {
+    return '$earned / $target LC';
+  }
+
+  @override
+  String get mpRetire => 'انسحاب';
+
+  @override
+  String get mpExitLobby => 'الخروج إلى الردهة';
+
+  @override
+  String mpCampaignLevel(int level) {
+    return 'مستوى الحملة $level';
+  }
+
+  @override
+  String get mpSelectMode => 'اختر الوضع';
+
+  @override
+  String get mpGenerating => 'جاري الإنشاء...';
+
+  @override
+  String get mpBtnRandom => 'عشوائي';
+
+  @override
+  String get mpBtnMatch => 'مباراة';
+
+  @override
+  String get mpBtnInvite => 'دعوة';
+
+  @override
+  String get mpMatchRules => 'قواعد المباراة';
+
+  @override
+  String get mpDifficultySetting => 'إعداد الصعوبة';
+
+  @override
+  String get profileLeaderboardLocked => 'لوحة الصدارة مقفلة';
+
+  @override
+  String get profileLeaderboardSignIn => 'سجل الدخول لفتح لوحة الصدارة';
+
+  @override
+  String get mpMatchCall => 'طلب مباراة!';
+
+  @override
+  String mpIsChallengingYou(String name, int level) {
+    return '$name (مستوى $level) يتحداك!';
+  }
+
+  @override
+  String get levelFailedToLoad => 'فشل تحميل المستوى';
+
+  @override
+  String get inviteExpired => 'انتهت صلاحية الدعوة (لا يوجد رد)';
+
+  @override
+  String get friends => 'الأصدقاء';
+
+  @override
+  String get yourFriendsList => 'قائمة أصدقائك';
+
+  @override
+  String get noFriendsYet => 'لا يوجد أصدقاء بعد.';
+
+  @override
+  String get mpTitle => 'اللعب الجماعي';
+
+  @override
+  String get mpSubtitle => 'تنافس وجهًا لوجه في أجهزة لعب متطابقة.';
+
+  @override
+  String get mpRandomMatch => 'عشوائية';
+
+  @override
+  String get mpRandomMatchSub => 'تحدَّ لاعبًا عشوائيًا من مستواك';
+
+  @override
+  String get mpChallengeFriend => 'تحدَّ صديقًا';
+
+  @override
+  String get mpChallengeFriendSub => 'تحدَّ صديقك مباشرةً';
+
+  @override
+  String get mpSearchTitle => 'بحث';
+
+  @override
+  String get mpSearchHint => 'اكتب اسم المستخدم...';
+
+  @override
+  String get mpFriendsSection => 'الأصدقاء';
+
+  @override
+  String get mpOtherPlayersSection => 'لاعبون آخرون';
+
+  @override
+  String get mpChallengeBtn => 'تحدٍّ';
+
+  @override
+  String get mpListAsReady => 'التسجيل كجاهز';
+
+  @override
+  String get mpVisibleLobby => 'مرئي في صالة الانتظار';
+
+  @override
+  String get mpHiddenLobby => 'مخفي عن صالة الانتظار';
+
+  @override
+  String get mpChallengersNearby => 'المتحدون المتصلون بالقرب منك';
+
+  @override
+  String get mpNoPlayersFound =>
+      'لا يوجد لاعبون متصلون. انقر على \"عشوائية\" أدناه!';
+
+  @override
+  String get mpSearching => 'جاري البحث عن لاعبين...';
+
+  @override
+  String mpWaitingFor(Object name) {
+    return 'في انتظار $name...';
+  }
+
+  @override
+  String get mpWaitingAccept => 'في انتظار قبول التحدي.';
+
+  @override
+  String get mpCancelLookOther => 'إلغاء والبحث عن آخر';
+
+  @override
+  String get mpDecline => 'رفض';
+
+  @override
+  String get mpAccept => 'قبول';
+
+  @override
+  String get mpClose => 'إغلاق';
+
+  @override
+  String get mpCancelInvite => 'إلغاء الدعوة';
+
+  @override
+  String mpChatGreeting(Object name) {
+    return 'قل مرحبًا لـ $name! 👋';
+  }
+
+  @override
+  String get zenTimePlayed => 'وقت اللعب';
+
+  @override
   String get buttonCancel => 'إلغاء';
 
   @override
@@ -138,6 +368,61 @@ class AppStringsAr extends AppStrings {
   String plusCoins(int count) {
     return '+$count عملة';
   }
+
+  @override
+  String get trophyLeaderboardLegendTitle => '🏆 أسطورة المتصدرين';
+
+  @override
+  String get trophyLeaderboardLegendDesc =>
+      'اجمع 1,000 قطعة LC لفتح لوحة المتصدرين العالمية والتنافس مع اللاعبين حول العالم!';
+
+  @override
+  String get trophiesPerkLeaderboard => 'يفتح لوحة المتصدرين';
+
+  @override
+  String get trophiesPerkNeonSkin => 'يفتح مظهر أسهم النيون';
+
+  @override
+  String get trophiesPerkRetroSkin => 'يفتح مظهر أسهم الريترو';
+
+  @override
+  String get trophiesPerkRubySkin => 'يفتح مظهر الأسهم الياقوتية';
+
+  @override
+  String get neonArrowTitle => 'Neon Awakening';
+
+  @override
+  String get neonArrowDesc => 'Reach level 10 to unlock the Neon arrow skin.';
+
+  @override
+  String get retroArrowTitle => 'Retro Wave';
+
+  @override
+  String get retroArrowDesc => 'Reach level 27 to unlock the Retro arrow skin.';
+
+  @override
+  String get rubyArrowTitle => 'Ruby Radiance';
+
+  @override
+  String get rubyArrowDesc => 'Reach level 35 to unlock the Ruby arrow skin.';
+
+  @override
+  String get bombDeselected => 'تم إلغاء تحديد القنبلة';
+
+  @override
+  String get noMinesToDestroy => 'لا توجد ألغام لتدميرها';
+
+  @override
+  String get difficultyEasy => 'سهل';
+
+  @override
+  String get difficultyHard => 'صعب';
+
+  @override
+  String get difficultyImpossible => 'مستحيل';
+
+  @override
+  String get giftEmoji => '🎁';
 
   @override
   String plusItems(int count) {
@@ -1434,6 +1719,21 @@ class AppStringsAr extends AppStrings {
   String get profileSave => 'حفظ';
 
   @override
+  String get chatQuickHello => 'مرحباً! 👋';
+
+  @override
+  String get chatQuickChallenge => 'هل أنت مستعد للتحدي؟ ⚔️';
+
+  @override
+  String get chatQuickGoodGame => 'لعبة رائعة! 🎮';
+
+  @override
+  String get chatQuickNice => 'عمل رائع! 🔥';
+
+  @override
+  String get chatQuickWait => 'انتظر لحظة... ⏳';
+
+  @override
   String get profileUpdated => 'تم تحديث الملف الشخصي';
 
   @override
@@ -1476,4 +1776,16 @@ class AppStringsAr extends AppStrings {
 
   @override
   String get zenModeSubtitle => 'بدون قلوب أو مؤقتات. فقط الألغاز.';
+
+  @override
+  String get themeRuby => 'ياقوت';
+
+  @override
+  String get mpVs => 'ضد';
+
+  @override
+  String get unitSeconds => 'ث';
+
+  @override
+  String get themeRainbowStatic => 'قوس قزح ثابت';
 }

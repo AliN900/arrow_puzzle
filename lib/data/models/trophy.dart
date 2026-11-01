@@ -1,9 +1,16 @@
-import 'package:flutter/cupertino.dart';
-
+import 'package:flutter/widgets.dart';
 import '../../l10n/app_localizations.dart';
 
 enum TrophyType { benefit, monumental }
-enum TrophyBenefit { extraHeart, leaderboard, none }   // ← added `leaderboard`
+
+enum TrophyBenefit {
+  extraHeart,
+  leaderboard,
+  arrowSkinNeon,
+  arrowSkinRetro,
+  arrowSkinRuby,
+  none,
+}
 
 class TrophyModel {
   final int index;
@@ -15,8 +22,7 @@ class TrophyModel {
   final int unlockLevel;
 
   /// If non-null, this trophy is LC-gated instead of level-gated.
-  /// [unlockLevel] is ignored when this is set.
-  final int? requiredLc;   // ← new
+  final int? requiredLc;
 
   const TrophyModel({
     required this.index,
@@ -26,7 +32,7 @@ class TrophyModel {
     required this.type,
     required this.benefit,
     required this.unlockLevel,
-    this.requiredLc,       // ← new (optional)
+    this.requiredLc,
   });
 }
 
@@ -37,7 +43,8 @@ class TrophyConstants {
       index: 1,
       id: 'first_escape',
       title: '🌟 THE FIRST AWAKENING',
-      description: 'Your very first maze escaped! You have unlocked the gateway to the Trophy System. Welcome to ahb.Dev\'s ultimate puzzle journey!',
+      description:
+      'Your very first maze escaped! You have unlocked the gateway to the Trophy System. Welcome to ahb.Dev\'s ultimate puzzle journey!',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 1,
@@ -46,7 +53,8 @@ class TrophyConstants {
       index: 2,
       id: 'point_blank',
       title: 'Point Blank',
-      description: 'Successfully clear your first puzzle layout with precision.',
+      description:
+      'Successfully clear your first puzzle layout with precision.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 1,
@@ -55,7 +63,8 @@ class TrophyConstants {
       index: 4,
       id: 'quick_thinker',
       title: 'Quick Thinker',
-      description: 'Complete any level swiftly under a stretched 20-second threshold.',
+      description:
+      'Complete any level swiftly under a stretched 20-second threshold.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 3,
@@ -64,16 +73,48 @@ class TrophyConstants {
       index: 7,
       id: 'spark_of_genius',
       title: 'Spark of Genius',
-      description: 'Use your first hint item to find a path through a sticky situation.',
+      description:
+      'Use your first hint item to find a path through a sticky situation.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 12,
     ),
+
+    // ── Arrow Skins (Benefit Perks) ───────────────────────────
+    const TrophyModel(
+      index: 53,
+      id: 'neon_arrow_trophy',
+      title: 'Neon Awakening',
+      description: 'Reach level 10 to unlock the Neon arrow skin.',
+      type: TrophyType.benefit,
+      benefit: TrophyBenefit.arrowSkinNeon,
+      unlockLevel: 10,
+    ),
+    const TrophyModel(
+      index: 54,
+      id: 'retro_arrow_trophy',
+      title: 'Retro Wave',
+      description: 'Reach level 27 to unlock the Retro arrow skin.',
+      type: TrophyType.benefit,
+      benefit: TrophyBenefit.arrowSkinRetro,
+      unlockLevel: 27,
+    ),
+    const TrophyModel(
+      index: 55,
+      id: 'ruby_arrow_trophy',
+      title: 'Ruby Radiance',
+      description: 'Reach level 35 to unlock the Ruby arrow skin.',
+      type: TrophyType.benefit,
+      benefit: TrophyBenefit.arrowSkinRuby,
+      unlockLevel: 35,
+    ),
+
     const TrophyModel(
       index: 3,
       id: 'trial_of_two',
       title: 'Trial of Two',
-      description: 'Conquer the intense two-heart restriction of the early trials.',
+      description:
+      'Conquer the intense two-heart restriction of the early trials.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 22,
@@ -82,7 +123,8 @@ class TrophyConstants {
       index: 10,
       id: 'survivalist_badge',
       title: 'The Survivalist',
-      description: 'Conquered the first 25 trials! Permanently upgrades your max hearts from 2 to 3.',
+      description:
+      'Conquered the first 25 trials! Permanently upgrades your max hearts from 2 to 3.',
       type: TrophyType.benefit,
       benefit: TrophyBenefit.extraHeart,
       unlockLevel: 25,
@@ -138,7 +180,8 @@ class TrophyConstants {
       index: 21,
       id: 'the_strategist',
       title: 'The Strategist',
-      description: 'Utilize all available inventory items at least once during a single session.',
+      description:
+      'Utilize all available inventory items at least once during a single session.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 75,
@@ -147,7 +190,8 @@ class TrophyConstants {
       index: 9,
       id: 'rock_breaker',
       title: 'Rock Breaker',
-      description: 'Successfully blast away your first rock obstacle using a tactical bomb arrow.',
+      description:
+      'Successfully blast away your first rock obstacle using a tactical bomb arrow.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 85,
@@ -167,7 +211,8 @@ class TrophyConstants {
       index: 12,
       id: 'tangle_tamer',
       title: 'Tangle Tamer',
-      description: 'Clear 10 levels in a row without making a single directional error.',
+      description:
+      'Clear 10 levels in a row without making a single directional error.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 115,
@@ -185,7 +230,8 @@ class TrophyConstants {
       index: 19,
       id: 'master_of_angles',
       title: 'Master of Angles',
-      description: 'Complete a complex puzzle heavily featuring orphan redirector dots.',
+      description:
+      'Complete a complex puzzle heavily featuring orphan redirector dots.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 135,
@@ -194,7 +240,8 @@ class TrophyConstants {
       index: 26,
       id: 'deep_diver',
       title: 'Deep Diver',
-      description: 'Reach level 150 as the labyrinth grows exponentially complex.',
+      description:
+      'Reach level 150 as the labyrinth grows exponentially complex.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 150,
@@ -205,7 +252,8 @@ class TrophyConstants {
       index: 17,
       id: 'untouchable',
       title: 'Untouchable',
-      description: 'Complete 5 levels consecutively without losing a single heart.',
+      description:
+      'Complete 5 levels consecutively without losing a single heart.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 165,
@@ -214,7 +262,8 @@ class TrophyConstants {
       index: 22,
       id: 'quick_silver',
       title: 'Quick Silver',
-      description: 'Accumulate 5 minutes of active high-speed play in Time Attack mode.',
+      description:
+      'Accumulate 5 minutes of active high-speed play in Time Attack mode.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 175,
@@ -232,7 +281,8 @@ class TrophyConstants {
       index: 34,
       id: 'resilient_spirit',
       title: 'Resilient Spirit',
-      description: 'Recover from a game-over state using an ad continuation reward.',
+      description:
+      'Recover from a game-over state using an ad continuation reward.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 195,
@@ -241,7 +291,8 @@ class TrophyConstants {
       index: 31,
       id: 'milestone_master',
       title: 'Milestone Master',
-      description: 'Reach level 200 — two-fifths of the way to the 500 max level.',
+      description:
+      'Reach level 200 — two-fifths of the way to the 500 max level.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 200,
@@ -252,7 +303,8 @@ class TrophyConstants {
       index: 23,
       id: 'iron_will',
       title: 'Iron Will',
-      description: 'Win a boss level after dropping down to your absolute final heart.',
+      description:
+      'Win a boss level after dropping down to your absolute final heart.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 215,
@@ -261,7 +313,8 @@ class TrophyConstants {
       index: 16,
       id: 'bomb_technician',
       title: 'Bomb Technician',
-      description: 'Clear 25 rock obstacles across your campaign using tactical bombs.',
+      description:
+      'Clear 25 rock obstacles across your campaign using tactical bombs.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 230,
@@ -270,7 +323,8 @@ class TrophyConstants {
       index: 30,
       id: 'vault_keeper',
       title: 'Vault Keeper',
-      description: 'Accumulate a massive total of 500 coins from gameplay and ad rewards.',
+      description:
+      'Accumulate a massive total of 500 coins from gameplay and ad rewards.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 245,
@@ -279,7 +333,8 @@ class TrophyConstants {
       index: 36,
       id: 'apex_predator',
       title: 'Apex Predator',
-      description: 'Reach level 250 — the halfway summit of the current puzzle campaign.',
+      description:
+      'Reach level 250 — the halfway summit of the current puzzle campaign.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 250,
@@ -290,7 +345,8 @@ class TrophyConstants {
       index: 27,
       id: 'the_puzzler',
       title: 'The Puzzler',
-      description: 'Complete 50 randomly generated procedural puzzle boards.',
+      description:
+      'Complete 50 randomly generated procedural puzzle boards.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 265,
@@ -299,7 +355,8 @@ class TrophyConstants {
       index: 39,
       id: 'daily_devotee',
       title: 'Daily Devotee',
-      description: 'Maintain a 7-day login streak on your daily rewards tracker.',
+      description:
+      'Maintain a 7-day login streak on your daily rewards tracker.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 280,
@@ -308,7 +365,8 @@ class TrophyConstants {
       index: 13,
       id: 'time_lord',
       title: 'Time Lord',
-      description: 'Survive a timed God-level trial with countdown seconds to spare.',
+      description:
+      'Survive a timed God-level trial with countdown seconds to spare.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 290,
@@ -317,7 +375,8 @@ class TrophyConstants {
       index: 41,
       id: 'high_climber',
       title: 'The High Climber',
-      description: 'Reach level 300 — three-fifths of the way to the 500 summit.',
+      description:
+      'Reach level 300 — three-fifths of the way to the 500 summit.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 300,
@@ -337,7 +396,8 @@ class TrophyConstants {
       index: 32,
       id: 'boss_slayer',
       title: 'Boss Slayer',
-      description: 'Defeat 8 boss levels consecutively without a single defeat.',
+      description:
+      'Defeat 8 boss levels consecutively without a single defeat.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 325,
@@ -346,7 +406,8 @@ class TrophyConstants {
       index: 35,
       id: 'board_collector',
       title: 'Board Collector',
-      description: 'Unlock 5 different custom board themes for your collection.',
+      description:
+      'Unlock 5 different custom board themes for your collection.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 340,
@@ -355,7 +416,8 @@ class TrophyConstants {
       index: 42,
       id: 'grandmaster',
       title: 'Grandmaster',
-      description: 'Reach level 350, conquering the most complex grid tangles.',
+      description:
+      'Reach level 350, conquering the most complex grid tangles.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 350,
@@ -366,7 +428,8 @@ class TrophyConstants {
       index: 40,
       id: 'monumental_pioneer',
       title: 'Monumental Pioneer',
-      description: 'Unlock your first purely decorative, prestige monumental trophy.',
+      description:
+      'Unlock your first purely decorative, prestige monumental trophy.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 360,
@@ -384,7 +447,8 @@ class TrophyConstants {
       index: 33,
       id: 'time_bender',
       title: 'Time Bender',
-      description: 'Freeze time successfully 10 times on intense countdown levels.',
+      description:
+      'Freeze time successfully 10 times on intense countdown levels.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 390,
@@ -393,7 +457,8 @@ class TrophyConstants {
       index: 44,
       id: 'ironclad',
       title: 'Ironclad',
-      description: 'Reach level 400 — four-fifths of the way to the ultimate summit.',
+      description:
+      'Reach level 400 — four-fifths of the way to the ultimate summit.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 400,
@@ -433,7 +498,8 @@ class TrophyConstants {
       index: 49,
       id: 'monument_of_time',
       title: 'Monument of Time',
-      description: 'A prestige monumental artifact for dedicating over 10 active hours to escaping mazes.',
+      description:
+      'A prestige monumental artifact for dedicating over 10 active hours to escaping mazes.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 465,
@@ -451,7 +517,8 @@ class TrophyConstants {
       index: 50,
       id: 'absolute_void',
       title: 'The Absolute Void',
-      description: 'A pitch-black monumental prestige trophy awarded for maxing out key progression features.',
+      description:
+      'A pitch-black monumental prestige trophy awarded for maxing out key progression features.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 495,
@@ -460,7 +527,8 @@ class TrophyConstants {
       index: 47,
       id: 'the_500_club',
       title: 'The 500 Club',
-      description: 'Reach level 500, hitting the current maximum summit of the puzzle grid!',
+      description:
+      'Reach level 500, hitting the current maximum summit of the puzzle grid!',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 500,
@@ -478,7 +546,8 @@ class TrophyConstants {
       index: 51,
       id: 'infinite_horizon',
       title: 'Infinite Horizon',
-      description: 'A monumental placeholder trophy acknowledging that the journey beyond level 500 never ends.',
+      description:
+      'A monumental placeholder trophy acknowledging that the journey beyond level 500 never ends.',
       type: TrophyType.monumental,
       benefit: TrophyBenefit.none,
       unlockLevel: 500,
@@ -488,24 +557,24 @@ class TrophyConstants {
       id: 'leaderboard_legend',
       title: '🏆 LEADERBOARD LEGEND',
       description:
-      'Accumulate 1,000 LC to unlock the global leaderboard. '
-          'Compete with players worldwide for the top spot!',
+      'Accumulate 1,000 LC to unlock the global leaderboard. Compete with players worldwide for the top spot!',
       type: TrophyType.benefit,
       benefit: TrophyBenefit.leaderboard,
-      unlockLevel: 0,          // not level-gated
+      unlockLevel: 0,
       requiredLc: 1000,
     ),
   ];
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Localization extension
-// ─────────────────────────────────────────────────────────────────────────
+// ── Localization Extension ───────────────────────────────────────────────────
 
 extension TrophyLocalization on TrophyModel {
   String localizedTitle(BuildContext context) {
     final s = AppStrings.of(context);
     switch (id) {
+      case 'neon_arrow_trophy':   return s.neonArrowTitle;
+      case 'retro_arrow_trophy':  return s.retroArrowTitle;
+      case 'ruby_arrow_trophy':   return s.rubyArrowTitle;
       case 'first_escape':        return s.trophyFirstEscapeTitle;
       case 'point_blank':         return s.trophyPointBlankTitle;
       case 'trial_of_two':        return s.trophyTrialOfTwoTitle;
@@ -554,6 +623,7 @@ extension TrophyLocalization on TrophyModel {
       case 'monument_of_time':    return s.trophyMonumentOfTimeTitle;
       case 'absolute_void':       return s.trophyAbsoluteVoidTitle;
       case 'infinite_horizon':    return s.trophyInfiniteHorizonTitle;
+      case 'leaderboard_legend':  return s.trophyLeaderboardLegendTitle;
       default:                    return title;
     }
   }
@@ -561,6 +631,9 @@ extension TrophyLocalization on TrophyModel {
   String localizedDescription(BuildContext context) {
     final s = AppStrings.of(context);
     switch (id) {
+      case 'neon_arrow_trophy':   return s.neonArrowDesc;
+      case 'retro_arrow_trophy':  return s.retroArrowDesc;
+      case 'ruby_arrow_trophy':   return s.rubyArrowDesc;
       case 'first_escape':        return s.trophyFirstEscapeDesc;
       case 'point_blank':         return s.trophyPointBlankDesc;
       case 'trial_of_two':        return s.trophyTrialOfTwoDesc;
@@ -609,7 +682,27 @@ extension TrophyLocalization on TrophyModel {
       case 'monument_of_time':    return s.trophyMonumentOfTimeDesc;
       case 'absolute_void':       return s.trophyAbsoluteVoidDesc;
       case 'infinite_horizon':    return s.trophyInfiniteHorizonDesc;
+      case 'leaderboard_legend':  return s.trophyLeaderboardLegendDesc;
       default:                    return description;
+    }
+  }
+
+  /// Returns localized badge text for specific perk benefits.
+  String? localizedPerk(BuildContext context) {
+    final s = AppStrings.of(context);
+    switch (benefit) {
+      case TrophyBenefit.extraHeart:
+        return s.trophiesPerkHeart; // "+1 Heart"
+      case TrophyBenefit.leaderboard:
+        return s.trophiesPerkLeaderboard; // "Unlocks Leaderboard"
+      case TrophyBenefit.arrowSkinNeon:
+        return s.trophiesPerkNeonSkin; // "Unlocks Neon Skin"
+      case TrophyBenefit.arrowSkinRetro:
+        return s.trophiesPerkRetroSkin; // "Unlocks Retro Skin"
+      case TrophyBenefit.arrowSkinRuby:
+        return s.trophiesPerkRubySkin; // "Unlocks Ruby Skin"
+      case TrophyBenefit.none:
+        return null;
     }
   }
 }

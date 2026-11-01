@@ -8,12 +8,14 @@ class PauseOverlay extends StatelessWidget {
   final VoidCallback onResume;
   final VoidCallback? onRestart;
   final VoidCallback onMainMenu;
+  final String? mainMenuLabel; // <── ADDED THIS
 
   const PauseOverlay({
     super.key,
     required this.onResume,
     this.onRestart,
     required this.onMainMenu,
+    this.mainMenuLabel, // <── ADDED THIS
   });
 
   @override
@@ -77,7 +79,8 @@ class PauseOverlay extends StatelessWidget {
                 ],
                 const SizedBox(height: 10),
                 GameDialogButton(
-                  label: strings.pauseMainMenu,
+                  // Use mainMenuLabel if provided, otherwise fallback to default
+                  label: mainMenuLabel ?? strings.pauseMainMenu, // <── FIXED
                   icon: Icons.home_rounded,
                   textColor: Colors.white70,
                   onTap: onMainMenu,

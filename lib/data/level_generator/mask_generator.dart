@@ -5,41 +5,72 @@ class MaskGenerator {
 
   static Set<String> shapeByName(String name, int side, Random rng) {
     switch (name) {
-      case 'cat':       return catMask(side);
-      case 'dog':       return dogMask(side);
-      case 'frog':      return frogMask(side);
-      case 'fox':       return foxMask(side);
-      case 'tiger':     return tigerMask(side);
-      case 'panda':     return pandaMask(side);
-      case 'fish':      return fishMask(side);
-      case 'bird':      return birdMask(side);
-      case 'butterfly': return butterflyMask(side);
-      case 'guitar':    return guitarMask(side);
-      case 'tree':      return treeMask(side);
-      case 'house':     return houseMask(side);
-      case 'crown':     return crownMask(side);
-      case 'heart':     return heartMask(side);
-      case 'star':      return starMask(side, 5);
-      case 'diamond':   return diamondMask(side);
-      case 'hexagon':   return hexagonMask(side);
-      case 'blob':      return blobMask(side, rng.nextInt(9999));
-      case 'circle':    return circleMask(side);
-      case 'pyramid':             return pyramidMask(side);
-      case 'rectangleHorizontal': return rectangleHorizontalMask(side);
-      case 'rectangleVertical':   return rectangleVerticalMask(side);
-      default:          return squareMask(side);
+      case 'cat':
+        return catMask(side);
+      case 'dog':
+        return dogMask(side);
+      case 'frog':
+        return frogMask(side);
+      case 'fox':
+        return foxMask(side);
+      case 'tiger':
+        return tigerMask(side);
+      case 'panda':
+        return pandaMask(side);
+      case 'fish':
+        return fishMask(side);
+      case 'bird':
+        return birdMask(side);
+      case 'butterfly':
+        return butterflyMask(side);
+      case 'guitar':
+        return guitarMask(side);
+      case 'tree':
+        return treeMask(side);
+      case 'house':
+        return houseMask(side);
+      case 'crown':
+        return crownMask(side);
+      case 'heart':
+        return heartMask(side);
+      case 'star':
+        return starMask(side, 5);
+      case 'diamond':
+        return diamondMask(side);
+      case 'hexagon':
+        return hexagonMask(side);
+      case 'blob':
+        return blobMask(side, rng.nextInt(9999));
+      case 'circle':
+        return circleMask(side);
+      case 'pyramid':
+        return pyramidMask(side);
+      case 'rectangleHorizontal':
+        return rectangleHorizontalMask(side);
+      case 'rectangleVertical':
+        return rectangleVerticalMask(side);
+      default:
+        return squareMask(side);
     }
   }
 
   static bool _inEllipse(
-      double x, double y, double cx, double cy, double rx, double ry) {
+    double x,
+    double y,
+    double cx,
+    double cy,
+    double rx,
+    double ry,
+  ) {
     final dx = (x - cx) / rx;
     final dy = (y - cy) / ry;
     return dx * dx + dy * dy <= 1.0;
   }
 
   static Set<String> _fromPredicate(
-      int side, bool Function(double x, double y, double absDx) predicate) {
+    int side,
+    bool Function(double x, double y, double absDx) predicate,
+  ) {
     final mask = <String>{};
     final s = side.toDouble();
     for (int r = 0; r < side; r++) {
@@ -74,7 +105,7 @@ class MaskGenerator {
           [-1, 0],
           [1, 0],
           [0, -1],
-          [0, 1]
+          [0, 1],
         ]) {
           final nk = '${r + d[0]},${c + d[1]}';
           if (mask.contains(nk) && !visited.contains(nk)) stack.add(nk);
@@ -195,7 +226,9 @@ class MaskGenerator {
         final wingSpan = 0.12 + sin(t * pi) * 0.36;
         if (absDx <= wingSpan) return true;
       }
-      if (y >= 0.72 && y <= 0.92 && absDx <= (0.92 - y) * 0.6 + 0.06) return true;
+      if (y >= 0.72 && y <= 0.92 && absDx <= (0.92 - y) * 0.6 + 0.06) {
+        return true;
+      }
       return false;
     });
   }
@@ -233,7 +266,9 @@ class MaskGenerator {
 
   static Set<String> houseMask(int side) {
     return _fromPredicate(side, (x, y, absDx) {
-      if (y >= 0.12 && y <= 0.46 && absDx <= (y - 0.12) / 0.34 * 0.46) return true;
+      if (y >= 0.12 && y <= 0.46 && absDx <= (y - 0.12) / 0.34 * 0.46) {
+        return true;
+      }
       if (absDx <= 0.38 && y >= 0.44 && y <= 0.88) return true;
       if (x >= 0.64 && x <= 0.76 && y >= 0.18 && y <= 0.44) return true;
       return false;
@@ -243,8 +278,14 @@ class MaskGenerator {
   static Set<String> crownMask(int side) {
     return _fromPredicate(side, (x, y, absDx) {
       if (absDx <= 0.42 && y >= 0.62 && y <= 0.84) return true;
-      if (y >= 0.18 && y <= 0.64 && absDx <= (y - 0.18) / 0.46 * 0.16) return true;
-      if (y >= 0.28 && y <= 0.64 && (absDx - 0.34).abs() <= (y - 0.28) / 0.36 * 0.12) return true;
+      if (y >= 0.18 && y <= 0.64 && absDx <= (y - 0.18) / 0.46 * 0.16) {
+        return true;
+      }
+      if (y >= 0.28 &&
+          y <= 0.64 &&
+          (absDx - 0.34).abs() <= (y - 0.28) / 0.36 * 0.12) {
+        return true;
+      }
       if (y >= 0.48 && y <= 0.64 && absDx <= 0.38) return true;
       return false;
     });
@@ -253,7 +294,9 @@ class MaskGenerator {
   static Set<String> heartMask(int side) {
     return _fromPredicate(side, (x, y, absDx) {
       if (_inEllipse(absDx, y, 0.22, 0.36, 0.22, 0.22)) return true;
-      if (y >= 0.36 && y <= 0.90 && absDx <= 0.44 * (1.0 - (y - 0.36) / 0.54)) return true;
+      if (y >= 0.36 && y <= 0.90 && absDx <= 0.44 * (1.0 - (y - 0.36) / 0.54)) {
+        return true;
+      }
       if (absDx <= 0.22 && y >= 0.24 && y <= 0.50) return true;
       return false;
     });
@@ -313,18 +356,18 @@ class MaskGenerator {
     });
   }
 
-  /// Isoceles triangle — narrow tip at the top, wide base at the bottom.
-  /// Centered horizontally. Good for Blitz stages because the tip is easy
-  /// to fill (few cells, clear exits) while the base provides body mass.
+  /// Vertical isoceles triangle — wide vertical base on the left side,
+  /// narrow apex pointing right. Better for portrait phone screens
+  /// because the base runs the full grid height instead of just the width.
   static Set<String> pyramidMask(int side) {
     final mask = <String>{};
-    for (int r = 0; r < side; r++) {
-      final t = (r + 0.5) / side;          // 0 at top → 1 at bottom
-      final halfWidth = 0.5 * t;           // fraction of side
-      final centerC = (side - 1) / 2.0;
-      final left  = (centerC - halfWidth * side).round().clamp(0, side - 1);
-      final right = (centerC + halfWidth * side).round().clamp(0, side - 1);
-      for (int c = left; c <= right; c++) {
+    for (int c = 0; c < side; c++) {
+      final t = (side - 1 - c + 0.5) / side;
+      final halfHeight = 0.5 * t;
+      final centerR = (side - 1) / 2.0;
+      final top = (centerR - halfHeight * side).round().clamp(0, side - 1);
+      final bottom = (centerR + halfHeight * side).round().clamp(0, side - 1);
+      for (int r = top; r <= bottom; r++) {
         mask.add('$r,$c');
       }
     }
@@ -335,7 +378,7 @@ class MaskGenerator {
   static Set<String> rectangleHorizontalMask(int side) {
     final mask = <String>{};
     final startRow = (side * 0.22).round().clamp(0, side - 2);
-    final endRow   = (side * 0.78).round().clamp(startRow + 1, side);
+    final endRow = (side * 0.78).round().clamp(startRow + 1, side);
     for (int r = startRow; r < endRow; r++) {
       for (int c = 0; c < side; c++) {
         mask.add('$r,$c');
@@ -348,7 +391,7 @@ class MaskGenerator {
   static Set<String> rectangleVerticalMask(int side) {
     final mask = <String>{};
     final startCol = (side * 0.22).round().clamp(0, side - 2);
-    final endCol   = (side * 0.78).round().clamp(startCol + 1, side);
+    final endCol = (side * 0.78).round().clamp(startCol + 1, side);
     for (int r = 0; r < side; r++) {
       for (int c = startCol; c < endCol; c++) {
         mask.add('$r,$c');

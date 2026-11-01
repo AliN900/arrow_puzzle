@@ -1,3 +1,5 @@
+import 'game_mode.dart';
+
 class AppConstants {
   AppConstants._();
 
@@ -59,6 +61,33 @@ class AppConstants {
       return 29 + ((level - 300) * 0.01).round();
     } else {
       return 32;
+    }
+  }
+
+  /// Returns true if the given mode is available today.
+  /// Friday (weekday 5) unlocks all modes.
+  static bool isDailyModeAvailableToday(GameMode mode) {
+    final weekday = DateTime.now().weekday; // 1 = Mon, 7 = Sun
+
+    // Friday: All modes are unlocked
+    if (weekday == 5) return true;
+
+    // Monday to Thursday, Saturday, Sunday: Rotate
+    switch (weekday) {
+      case 1: // Monday
+        return mode == GameMode.endlessRush;
+      case 2: // Tuesday
+        return mode == GameMode.blitz;
+      case 3: // Wednesday
+        return mode == GameMode.timeBlitz;
+      case 4: // Thursday
+        return mode == GameMode.endlessRush;
+      case 6: // Saturday
+        return mode == GameMode.blitz;
+      case 7: // Sunday
+        return mode == GameMode.timeBlitz;
+      default:
+        return false;
     }
   }
 

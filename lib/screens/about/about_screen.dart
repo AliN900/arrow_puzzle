@@ -131,7 +131,7 @@ class AboutScreen extends ConsumerWidget {
             const SizedBox(height: 32),
 
             // ── Developer Credits ──
-            SettingsSectionHeader(title: 'DEVELOPER', color: textSecondary),
+            SettingsSectionHeader(title: strings.aboutDeveloper, color: textSecondary),
             SettingsCard(
               cardColor: cardColor,
               children: [

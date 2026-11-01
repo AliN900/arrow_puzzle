@@ -5,8 +5,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
+import '../../core/constants.dart';
 import '../level_generator/mask_generator.dart';
-import '../level_generator/shape_generator.dart';
 import '../level_generator/solver.dart';
 import '../levels/art_shapes.dart';
 import '../models/level.dart';
@@ -15,19 +15,12 @@ import '../level_generator/level_generator.dart';
 
 @pragma('vm:entry-point')
 LevelModel generateArtLevelIsolate(Map<String, dynamic> args) {
-  // We recreate the necessary logic inside the isolate so it doesn't touch the UI thread
-  final rawMask = args['mask'] as Set<String>;
-  final gridSize = args['gridSize'] as int;
-  final levelNumber = args['levelNumber'] as int;
-  final avgLen = args['avgLen'] as int;
-
-  return LevelGenerator.generateFromMask(
-    levelNumber: levelNumber,
-    mask: rawMask,
-    gridSize: gridSize,
+  return LevelGenerator.generateLongFromMask(
+    levelNumber: args['levelNumber'] as int,
+    mask: args['mask'] as Set<String>,
+    gridSize: args['gridSize'] as int,
     maskShape: MaskShape.silhouette,
-    seed: levelNumber * 7919,
-    avgLengthOverride: avgLen,
+    seed: (args['levelNumber'] as int) * 7919,
   );
 }
 
@@ -62,21 +55,10 @@ LevelModel? generateBlitzLevelIsolate(Map<String, dynamic> args) {
 
 @pragma('vm:entry-point')
 LevelModel generateLevelIsolate(int levelNumber) {
-  // 1. Figure out the grid size
-  int gridSize = 8 + (levelNumber ~/ 10);
-  if (gridSize > 16) gridSize = 16;
-
-  // 2. Generate the shape mask
-  final shapeData = LevelShapeGenerator.generateMask(levelNumber, gridSize);
-
-  // 3. Generate the level with the mask
-  return LevelGenerator.generateFromMask(
-    levelNumber: levelNumber,
-    mask: shapeData.mask,
-    gridSize: gridSize,
-    maskShape: shapeData.shape,
-    seed: levelNumber * 1337,
-  );
+  final isPlain = AppConstants.levelTypeFor(levelNumber) == LevelType.normal;
+  return isPlain
+      ? LevelGenerator.generateBoardLevel(levelNumber)
+      : LevelGenerator.generateLevel(levelNumber);
 }
 
 @pragma('vm:entry-point')
@@ -156,20 +138,11 @@ class LevelRepository {
     if (shouldBeArtLevel(levelNumber)) {
       level = buildArtLevel(levelNumber);
     } else {
-      // Generate the shape (Square, Rectangle, Pyramid, Circle...)
-      // We assume a base grid size here. Adjust `10` if your LevelGenerator scales differently.
-      int gridSize = 8 + (levelNumber ~/ 10);
-      if (gridSize > 16) gridSize = 16;
-
-      final shapeData = LevelShapeGenerator.generateMask(levelNumber, gridSize);
-
-      level = LevelGenerator.generateFromMask(
-        levelNumber: levelNumber,
-        mask: shapeData.mask,
-        gridSize: gridSize,
-        maskShape: shapeData.shape,
-        seed: levelNumber * 1337,
-      );
+      final isPlain =
+          AppConstants.levelTypeFor(levelNumber) == LevelType.normal;
+      level = isPlain
+          ? LevelGenerator.generateBoardLevel(levelNumber)
+          : LevelGenerator.generateLevel(levelNumber);
     }
 
     _cache[levelNumber] = level;
@@ -189,16 +162,16 @@ class LevelRepository {
       // Art levels build on the main isolate (fast, no need for compute).
       // In preGenerateAsync:
       if (shouldBeArtLevel(levelNumber)) {
-        final shapeIndex = ((levelNumber - 20) ~/ 10) % ArtShapes.all.length;
+        final shapeIndex = ((levelNumber - 25) ~/ 5) % ArtShapes.all.length;
         final shape = ArtShapes.all[shapeIndex];
         final croppedMask = _cropMask(shape.toMask());
         final bounds = _maskBounds(croppedMask);
         final maxDim = math.max(bounds.width, bounds.height);
-        final t = ((levelNumber - 20) / 180).clamp(0.0, 1.0);
-        final maxGrid = (24 + (t * 14)).round();
-        final targetGrid = math.min(maxDim, maxGrid) + 4;
+        final t = ((levelNumber - 25) / 180).clamp(0.0, 1.0);
+        final maxGrid = (40 + (t * 20)).round();
+        final targetGrid = math.min(maxDim, maxGrid) + 2;
         final scaledMask = _scaleMask(croppedMask, bounds.width, bounds.height, targetGrid);
-        final avgLen = (8 - (t * 3)).round().clamp(5, 8);
+        final avgLen = (4 - t).round().clamp(2, 4);
 
         final level = await compute(generateArtLevelIsolate, {
           'mask': scaledMask,
@@ -246,16 +219,16 @@ class LevelRepository {
     // In getLevelAsync:
     if (shouldBeArtLevel(levelNumber)) {
       // Generate the mask setup on the main thread (it's fast)
-      final shapeIndex = ((levelNumber - 20) ~/ 10) % ArtShapes.all.length;
+      final shapeIndex = ((levelNumber - 25) ~/ 5) % ArtShapes.all.length;
       final shape = ArtShapes.all[shapeIndex];
       final croppedMask = _cropMask(shape.toMask());
       final bounds = _maskBounds(croppedMask);
       final maxDim = math.max(bounds.width, bounds.height);
-      final t = ((levelNumber - 20) / 180).clamp(0.0, 1.0);
-      final maxGrid = (24 + (t * 14)).round();
-      final targetGrid = math.min(maxDim, maxGrid) + 4;
+      final t = ((levelNumber - 25) / 180).clamp(0.0, 1.0);
+      final maxGrid = (40 + (t * 20)).round();
+      final targetGrid = math.min(maxDim, maxGrid) + 2;
       final scaledMask = _scaleMask(croppedMask, bounds.width, bounds.height, targetGrid);
-      final avgLen = (8 - (t * 3)).round().clamp(5, 8);
+      final avgLen = (4 - t).round().clamp(2, 4);
 
       // ── FIX: Move the heavy solver logic to an Isolate ──
       final level = await compute(generateArtLevelIsolate, {
@@ -352,42 +325,37 @@ class LevelRepository {
 
   /// Art levels start at level 20, and appear every 10 levels: 20, 30, 40...
   bool shouldBeArtLevel(int levelNumber) {
-    if (levelNumber < 20) return false;
-    return (levelNumber - 20) % 10 == 0;
+    if (levelNumber < 25) return false;
+    return (levelNumber - 25) % 5 == 0;
   }
 
   LevelModel buildArtLevel(int levelNumber) {
-    final shapeIndex = ((levelNumber - 20) ~/ 10) % ArtShapes.all.length;
+    final shapeIndex = ((levelNumber - 25) ~/ 5) % ArtShapes.all.length;
     final shape = ArtShapes.all[shapeIndex];
 
     final rawMask = shape.toMask();
     final croppedMask = _cropMask(rawMask);
     final bounds = _maskBounds(croppedMask);
-
     final maxDim = math.max(bounds.width, bounds.height);
 
-    // 1. INCREASE THE GRID SIZE (Up to 38x38)
-    // This gives the generator enough room to trace the curves perfectly.
-    final t = ((levelNumber - 20) / 180).clamp(0.0, 1.0);
-    final maxGrid = (24 + (t * 14)).round(); // Starts at 24, grows to 38
+    // Silhouettes scale BIGGER than normal levels. Starts at 26, grows to 42.
+    final t = ((levelNumber - 25) / 180).clamp(0.0, 1.0);
+    final maxGrid = (26 + (t * 16)).round();
 
-    final targetGrid = math.min(maxDim, maxGrid) + 4;
+    // Small padding so shape fills more of the screen.
+    final targetGrid = math.min(maxDim, maxGrid) + 2;
 
     final scaledMask = _scaleMask(
       croppedMask, bounds.width, bounds.height, targetGrid,
     );
 
-    // 2. INCREASE ARROW LENGTH (From 5->3 to 8->5)
-    // Longer arrows = better tracing of the outline.
-    final avgLen = (8 - (t * 3)).round().clamp(5, 8);
 
-    final level = LevelGenerator.generateFromMask(
+    final level = LevelGenerator.generateLongFromMask(
       levelNumber: levelNumber,
       mask: scaledMask,
       gridSize: targetGrid,
       maskShape: MaskShape.silhouette,
       seed: levelNumber * 7919,
-      avgLengthOverride: avgLen,
     );
 
     return level;
@@ -437,13 +405,12 @@ class LevelRepository {
       shape.toMask(), shape.width, shape.height, targetGrid,
     );
 
-    return LevelGenerator.generateFromMask(
+    return LevelGenerator.generateLongFromMask(
       levelNumber: 9000 + seed,
       mask: scaledMask,
       gridSize: targetGrid,
       maskShape: MaskShape.silhouette,
       seed: seed * 7919,
-      avgLengthOverride: 4,
     );
   }
 

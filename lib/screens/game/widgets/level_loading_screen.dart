@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import 'loader_animation.dart';
 
 class LevelLoadingScreen extends StatelessWidget {
@@ -7,6 +8,7 @@ class LevelLoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       body: Center(
@@ -16,7 +18,7 @@ class LevelLoadingScreen extends StatelessWidget {
             LoaderAnimation(color: AppColors.accent(context)),
             const SizedBox(height: 24),
             Text(
-              'LOADING LEVEL...',
+              strings.levelLoading,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,

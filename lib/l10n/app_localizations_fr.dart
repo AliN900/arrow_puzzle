@@ -12,6 +12,238 @@ class AppStringsFr extends AppStrings {
   String get appName => 'Arrow Puzzle';
 
   @override
+  String get removeFriendQuestion => 'Supprimer l\'ami ?';
+
+  @override
+  String get buttonRemove => 'SUPPRIMER';
+
+  @override
+  String get friendRequests => 'Demandes d\'ami';
+
+  @override
+  String get noPendingRequests => 'Aucune demande en attente.';
+
+  @override
+  String invitingFriend(String name) {
+    return 'Invitation de $name...';
+  }
+
+  @override
+  String waitingForResponse(int seconds) {
+    return 'En attente de réponse (${seconds}s)';
+  }
+
+  @override
+  String unlocksIn(String time) {
+    return 'Se débloque dans $time';
+  }
+
+  @override
+  String gameCapped(String difficulty) {
+    return '(limité · $difficulty)';
+  }
+
+  @override
+  String get gameBtnSolve => 'RÉSOUDRE';
+
+  @override
+  String get gameBtnWin => 'GAGNER';
+
+  @override
+  String get levelLoading => 'CHARGEMENT DU NIVEAU...';
+
+  @override
+  String rushCleared(int count) {
+    return 'Terminés : $count';
+  }
+
+  @override
+  String get homeMpTitle => 'MULTIJOUEUR 1v1';
+
+  @override
+  String get homeMpSubtitle => 'Défiez des joueurs en ligne en temps réel !';
+
+  @override
+  String inventoryBuyItem(String item) {
+    return 'Acheter $item ?';
+  }
+
+  @override
+  String inventoryPriceCoins(int price) {
+    return '$price pièces';
+  }
+
+  @override
+  String get inventoryBtnBuy => 'Acheter';
+
+  @override
+  String inventoryUnlockItem(String item) {
+    return 'Débloquer $item ?';
+  }
+
+  @override
+  String get leaderboardYou => 'Vous';
+
+  @override
+  String get leaderboardLocked => 'Verrouillé';
+
+  @override
+  String leaderboardEarnToUnlock(int target) {
+    return 'Gagnez $target LC pour débloquer le classement mondial.';
+  }
+
+  @override
+  String leaderboardProgress(int earned, int target) {
+    return '$earned / $target LC';
+  }
+
+  @override
+  String get mpRetire => 'ABANDONNER';
+
+  @override
+  String get mpExitLobby => 'QUITTER LE SALON';
+
+  @override
+  String mpCampaignLevel(int level) {
+    return 'Niveau de campagne $level';
+  }
+
+  @override
+  String get mpSelectMode => 'Choisir le mode';
+
+  @override
+  String get mpGenerating => 'Génération...';
+
+  @override
+  String get mpBtnRandom => 'ALÉATOIRE';
+
+  @override
+  String get mpBtnMatch => 'MATCH';
+
+  @override
+  String get mpBtnInvite => 'INVITER';
+
+  @override
+  String get mpMatchRules => 'Règles du match';
+
+  @override
+  String get mpDifficultySetting => 'RÉGLAGE DE LA DIFFICULTÉ';
+
+  @override
+  String get profileLeaderboardLocked => 'Classement verrouillé';
+
+  @override
+  String get profileLeaderboardSignIn =>
+      'Connectez-vous pour débloquer le classement';
+
+  @override
+  String get mpMatchCall => 'APPEL DE MATCH !';
+
+  @override
+  String mpIsChallengingYou(String name, int level) {
+    return '$name (Nvl $level) vous défie !';
+  }
+
+  @override
+  String get levelFailedToLoad => 'Échec du chargement du niveau';
+
+  @override
+  String get inviteExpired => 'Invitation expirée (sans réponse)';
+
+  @override
+  String get friends => 'Amis';
+
+  @override
+  String get yourFriendsList => 'Votre liste d\'amis';
+
+  @override
+  String get noFriendsYet => 'Pas encore d\'amis.';
+
+  @override
+  String get mpTitle => 'Multijoueur ';
+
+  @override
+  String get mpSubtitle =>
+      'Afrontez-vous en direct sur des plateaux identiques.';
+
+  @override
+  String get mpRandomMatch => 'Partie aléatoire';
+
+  @override
+  String get mpRandomMatchSub => 'Défiez un joueur aléatoire de votre niveau';
+
+  @override
+  String get mpChallengeFriend => 'Défier un ami';
+
+  @override
+  String get mpChallengeFriendSub => 'Défiez directement un ami';
+
+  @override
+  String get mpSearchTitle => 'Rechercher';
+
+  @override
+  String get mpSearchHint => 'Nom d\'utilisateur...';
+
+  @override
+  String get mpFriendsSection => 'AMIS';
+
+  @override
+  String get mpOtherPlayersSection => 'AUTRES JOUEURS';
+
+  @override
+  String get mpChallengeBtn => 'DÉFIER';
+
+  @override
+  String get mpListAsReady => 'Se marquer Prêt';
+
+  @override
+  String get mpVisibleLobby => 'Visible dans le salon';
+
+  @override
+  String get mpHiddenLobby => 'Masqué du salon';
+
+  @override
+  String get mpChallengersNearby => 'Challengers en ligne à proximité';
+
+  @override
+  String get mpNoPlayersFound =>
+      'Aucun joueur en ligne. Appuyez sur \"PARTIE ALÉATOIRE\" ci-dessous !';
+
+  @override
+  String get mpSearching => 'Recherche de joueurs...';
+
+  @override
+  String mpWaitingFor(Object name) {
+    return 'En attente de $name...';
+  }
+
+  @override
+  String get mpWaitingAccept => 'En attente de son acceptation.';
+
+  @override
+  String get mpCancelLookOther => 'ANNULER ET CHERCHER UN AUTRE';
+
+  @override
+  String get mpDecline => 'REFUSER';
+
+  @override
+  String get mpAccept => 'ACCEPTER';
+
+  @override
+  String get mpClose => 'FERMER';
+
+  @override
+  String get mpCancelInvite => 'ANNULER L\'INVITATION';
+
+  @override
+  String mpChatGreeting(Object name) {
+    return 'Dites bonjour à $name ! 👋';
+  }
+
+  @override
+  String get zenTimePlayed => 'TEMPS DE JEU';
+
+  @override
   String get buttonCancel => 'Annuler';
 
   @override
@@ -140,6 +372,64 @@ class AppStringsFr extends AppStrings {
   String plusCoins(int count) {
     return '+$count pièces';
   }
+
+  @override
+  String get trophyLeaderboardLegendTitle => '🏆 LÉGENDE DU CLASSEMENT';
+
+  @override
+  String get trophyLeaderboardLegendDesc =>
+      'Accumulez 1 000 LC pour débloquer le classement mondial et affronter des joueurs du monde entier !';
+
+  @override
+  String get trophiesPerkLeaderboard => 'Débloque le Classement';
+
+  @override
+  String get trophiesPerkNeonSkin => 'Débloque l\'Apparence Néon';
+
+  @override
+  String get trophiesPerkRetroSkin => 'Débloque l\'Apparence Rétro';
+
+  @override
+  String get trophiesPerkRubySkin => 'Débloque l\'Apparence Rubis';
+
+  @override
+  String get neonArrowTitle => 'Éveil Néon';
+
+  @override
+  String get neonArrowDesc =>
+      'Atteignez le niveau 10 pour débloquer l\'apparence de flèche Néon.';
+
+  @override
+  String get retroArrowTitle => 'Vague Rétro';
+
+  @override
+  String get retroArrowDesc =>
+      'Atteignez le niveau 27 pour débloquer l\'apparence de flèche Rétro.';
+
+  @override
+  String get rubyArrowTitle => 'Éclat Rubis';
+
+  @override
+  String get rubyArrowDesc =>
+      'Atteignez le niveau 35 pour débloquer l\'apparence de flèche Rubis.';
+
+  @override
+  String get bombDeselected => 'Bombe désélectionnée';
+
+  @override
+  String get noMinesToDestroy => 'Aucune mine à détruire';
+
+  @override
+  String get difficultyEasy => 'Facile';
+
+  @override
+  String get difficultyHard => 'Difficile';
+
+  @override
+  String get difficultyImpossible => 'Impossible';
+
+  @override
+  String get giftEmoji => '🎁';
 
   @override
   String plusItems(int count) {
@@ -1449,6 +1739,21 @@ class AppStringsFr extends AppStrings {
   String get profileSave => 'Enregistrer';
 
   @override
+  String get chatQuickHello => 'Salut ! 👋';
+
+  @override
+  String get chatQuickChallenge => 'Prêt pour un défi ? ⚔️';
+
+  @override
+  String get chatQuickGoodGame => 'Bonne partie ! 🎮';
+
+  @override
+  String get chatQuickNice => 'Bien joué ! 🔥';
+
+  @override
+  String get chatQuickWait => 'Attends une minute... ⏳';
+
+  @override
   String get profileUpdated => 'Profil mis à jour';
 
   @override
@@ -1493,4 +1798,16 @@ class AppStringsFr extends AppStrings {
   @override
   String get zenModeSubtitle =>
       'Pas de cœurs, pas de minuteur. Juste des puzzles.';
+
+  @override
+  String get themeRuby => 'Rubis';
+
+  @override
+  String get mpVs => 'VS';
+
+  @override
+  String get unitSeconds => 's';
+
+  @override
+  String get themeRainbowStatic => 'Arc-en-ciel Statique';
 }

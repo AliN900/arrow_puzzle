@@ -17,14 +17,19 @@ class LevelSelectScreen extends ConsumerStatefulWidget {
 }
 
 class _LevelSelectScreenState extends ConsumerState<LevelSelectScreen> {
-  static const int _crossAxisCount = 4;
-  static const double _crossSpacing = 10;
-  static const double _mainSpacing = 10;
+  static const double _crossSpacing = 12;
+  static const double _mainSpacing = 12;
   static const double _hPadding = 16;
-  static const double _aspectRatio = 0.85;
+  static const double _aspectRatio = 0.82;
 
   final ScrollController _scrollController = ScrollController();
   bool _didAutoScroll = false;
+
+  int _getCrossAxisCount(double screenWidth) {
+    if (screenWidth >= 900) return 6; // Large Tablets / Desktop
+    if (screenWidth >= 600) return 5; // Small Tablets / Foldables
+    return 4; // Phones
+  }
 
   @override
   void dispose() {
@@ -51,11 +56,10 @@ class _LevelSelectScreenState extends ConsumerState<LevelSelectScreen> {
 
   double _offsetForLevel(int levelNumber) {
     final viewportWidth = MediaQuery.of(context).size.width;
-    final cellWidth =
-        (viewportWidth - _hPadding * 2 - _crossSpacing * (_crossAxisCount - 1)) /
-            _crossAxisCount;
+    final crossAxisCount = _getCrossAxisCount(viewportWidth);
+    final cellWidth = (viewportWidth - (_hPadding * 2) - (_crossSpacing * (crossAxisCount - 1))) / crossAxisCount;
     final cellHeight = cellWidth / _aspectRatio;
-    final row = (levelNumber - 1) ~/ _crossAxisCount;
+    final row = (levelNumber - 1) ~/ crossAxisCount;
     final rowOffset = row * (cellHeight + _mainSpacing);
     final viewportHeight = _scrollController.position.viewportDimension;
     final centered = rowOffset - viewportHeight / 2 + cellHeight / 2;
@@ -83,8 +87,7 @@ class _LevelSelectScreenState extends ConsumerState<LevelSelectScreen> {
     }
   }
 
-  static int _calculateTotalVisible(int highestUnlocked) =>
-      highestUnlocked + 10;
+  static int _calculateTotalVisible(int highestUnlocked) => highestUnlocked + 10;
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +97,9 @@ class _LevelSelectScreenState extends ConsumerState<LevelSelectScreen> {
     final bgColor = AppColors.background(context);
     final textPrimary = AppColors.textPrimary(context);
     final accent = AppColors.accent(context);
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = _getCrossAxisCount(screenWidth);
 
     _scheduleAutoScroll();
 
@@ -124,7 +130,7 @@ class _LevelSelectScreenState extends ConsumerState<LevelSelectScreen> {
                   Text(
                     strings.levelSelectButton,
                     style: TextStyle(
-                      fontSize: 22,
+                      fontSize: screenWidth >= 600 ? 28 : 22,
                       fontWeight: FontWeight.w900,
                       color: textPrimary,
                     ),
@@ -150,9 +156,8 @@ class _LevelSelectScreenState extends ConsumerState<LevelSelectScreen> {
                   horizontal: _hPadding,
                   vertical: 8,
                 ),
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: _crossAxisCount,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
                   mainAxisSpacing: _mainSpacing,
                   crossAxisSpacing: _crossSpacing,
                   childAspectRatio: _aspectRatio,
@@ -163,22 +168,22 @@ class _LevelSelectScreenState extends ConsumerState<LevelSelectScreen> {
                   final isUnlocked = progress.isLevelUnlocked(levelNum);
                   final isCompleted = progress.isLevelCompleted(levelNum);
                   final isCurrentLevel = levelNum == progress.currentLevel;
+                  final stars = progress.getStarsForLevel(levelNum);
 
                   return _LevelCell(
                     levelNumber: levelNum,
                     isUnlocked: isUnlocked,
                     isCompleted: isCompleted,
                     isCurrentLevel: isCurrentLevel,
-                    onTap: isUnlocked
-                        ? () => _openLevelDetails(levelNum)
-                        : null,
+                    stars: stars,
+                    onTap: isUnlocked ? () => _openLevelDetails(levelNum) : null,
                   )
                       .animate(
-                    delay: Duration(milliseconds: (index % 20) * 20),
+                    delay: Duration(milliseconds: (index % 20) * 15),
                   )
-                      .fadeIn(duration: 200.ms)
+                      .fadeIn(duration: 180.ms)
                       .scale(
-                    begin: const Offset(0.7, 0.7),
+                    begin: const Offset(0.85, 0.85),
                     end: const Offset(1, 1),
                   );
                 },
@@ -228,6 +233,7 @@ class _LevelCell extends StatelessWidget {
   final bool isUnlocked;
   final bool isCompleted;
   final bool isCurrentLevel;
+  final int stars; // 0 to 3
   final VoidCallback? onTap;
 
   const _LevelCell({
@@ -235,42 +241,21 @@ class _LevelCell extends StatelessWidget {
     required this.isUnlocked,
     required this.isCompleted,
     required this.isCurrentLevel,
+    required this.stars,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final accent = AppColors.accent(context);
-    final textPrimary = AppColors.textPrimary(context);
-    final textMuted = AppColors.textMuted(context);
-    final surface = AppColors.surface(context);
+    final themeAccent = AppColors.accent(context);
 
-    Color bgColor;
-    Color borderColor;
-    Color shadowColor;
-    Color textColor;
+    final Color cardBgColor = isUnlocked ? themeAccent : const Color(0xFF8E8E93);
 
-    if (isCurrentLevel) {
-      bgColor = surface;
-      borderColor = accent;
-      shadowColor = accent.withValues(alpha: 0.45);
-      textColor = accent;
-    } else if (isCompleted) {
-      bgColor = accent;
-      borderColor = accent;
-      shadowColor = accent.withValues(alpha: 0.45);
-      textColor = Colors.white;
-    } else if (isUnlocked) {
-      bgColor = surface;
-      borderColor = accent.withValues(alpha: 0.25);
-      shadowColor = surface.withValues(alpha: 0.8);
-      textColor = textPrimary;
-    } else {
-      bgColor = surface.withValues(alpha: 0.4);
-      borderColor = Colors.transparent;
-      shadowColor = Colors.transparent;
-      textColor = textMuted;
-    }
+    final Color strokeColor = isUnlocked
+        ? HSLColor.fromColor(themeAccent)
+        .withLightness((HSLColor.fromColor(themeAccent).lightness - 0.18).clamp(0.0, 1.0))
+        .toColor()
+        : const Color(0xFF505054);
 
     return GestureDetector(
       onTap: () {
@@ -279,40 +264,141 @@ class _LevelCell extends StatelessWidget {
           onTap!();
         }
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(10),
-          border:
-          isUnlocked ? Border.all(color: borderColor, width: 1.5) : null,
-          boxShadow: isUnlocked
-              ? [
-            BoxShadow(
-              color: shadowColor,
-              offset: const Offset(0, 3),
-              blurRadius: 0,
-            ),
-          ]
-              : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (!isUnlocked)
-              Icon(Icons.lock_outline_rounded, color: textMuted, size: 20)
-            else
-              Text(
-                '$levelNumber',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: textColor,
-                ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tileWidth = constraints.maxWidth;
+          final tileHeight = constraints.maxHeight;
+
+          // Proportional Sizing to guarantee zero UI breakage across screen sizes
+          final centerStarSize = (tileHeight * 0.22).clamp(14.0, 32.0);
+          final sideStarSize = centerStarSize * 0.78;
+          final maxLevelFontSize = (tileHeight * 0.38).clamp(24.0, 52.0);
+
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            decoration: BoxDecoration(
+              color: cardBgColor,
+              borderRadius: BorderRadius.circular(tileWidth * 0.2),
+              border: Border.all(
+                color: isCurrentLevel ? Colors.white : strokeColor,
+                width: isCurrentLevel ? 3.0 : 2.0,
               ),
-          ],
-        ),
+              boxShadow: [
+                BoxShadow(
+                  color: strokeColor,
+                  offset: const Offset(0, 4),
+                  blurRadius: 0,
+                ),
+                if (isCurrentLevel)
+                  BoxShadow(
+                    color: themeAccent.withValues(alpha: 0.5),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+              ],
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: tileWidth * 0.04,
+              vertical: tileHeight * 0.05,
+            ),
+            child: Center(
+              child: !isUnlocked
+                  ? Icon(
+                Icons.lock_rounded,
+                color: const Color(0xFF48484A),
+                size: tileHeight * 0.32,
+              )
+                  : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // ── TOP: Dynamic Curved Arch Stars ─────────────────
+                  _buildArchStars(
+                    centerSize: centerStarSize,
+                    sideSize: sideStarSize,
+                    tileWidth: tileWidth,
+                    tileHeight: tileHeight,
+                  ),
+                  SizedBox(height: tileHeight * 0.02),
+
+                  // ── BOTTOM: Fluid Level Number ──────────────────────
+                  Expanded(
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '$levelNumber',
+                          style: TextStyle(
+                            fontSize: maxLevelFontSize,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            height: 1.0,
+                            shadows: const [
+                              Shadow(
+                                color: Colors.black38,
+                                offset: Offset(0, 1.5),
+                                blurRadius: 2,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildArchStars({
+    required double centerSize,
+    required double sideSize,
+    required double tileWidth,
+    required double tileHeight,
+  }) {
+    final horizontalShift = (tileWidth * 0.03).clamp(2.0, 6.0);
+    final verticalShift = (tileHeight * 0.03).clamp(2.0, 6.0);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Left Star (tilted left & lowered)
+        Transform.translate(
+          offset: Offset(horizontalShift, verticalShift),
+          child: Transform.rotate(
+            angle: -0.35,
+            child: _buildStarIcon(0, size: sideSize),
+          ),
+        ),
+        // Center Star (raised arch apex)
+        Transform.translate(
+          offset: Offset(0, -verticalShift),
+          child: _buildStarIcon(1, size: centerSize),
+        ),
+        // Right Star (tilted right & lowered)
+        Transform.translate(
+          offset: Offset(-horizontalShift, verticalShift),
+          child: Transform.rotate(
+            angle: 0.35,
+            child: _buildStarIcon(2, size: sideSize),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStarIcon(int index, {required double size}) {
+    final bool isStarEarned = isUnlocked && (index < stars);
+    return Icon(
+      Icons.star_rounded,
+      size: size,
+      color: isStarEarned
+          ? const Color(0xFFFFC107) // Vibrant Amber Gold
+          : Colors.black.withValues(alpha: 0.22), // Recessed dark star outline
     );
   }
 }

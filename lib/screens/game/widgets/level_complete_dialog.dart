@@ -192,7 +192,7 @@ class _LevelCompleteDialogState extends ConsumerState<LevelCompleteDialog> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('🎁', style: TextStyle(fontSize: 16)),
+                          Text(strings.giftEmoji, style: const TextStyle(fontSize: 16)),
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(

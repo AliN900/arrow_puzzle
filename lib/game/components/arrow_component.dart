@@ -20,6 +20,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   bool _isAnimating = false;
   bool _isBlockedAnimating = false;
 
+  double _animTime = 0.0;
+
   // ── Block shake state ──
   double _blockShakeTime = 0.0;
   double _blockShakeOffset = 0.0;
@@ -41,7 +43,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   List<Offset>? _previewPath;
   double _previewPulseTime = 0.0;
   double _leavingPulseTime = 0.0;
-  final double _hintPulseTime = 0.0;
 
   bool _isExiting = false;
   double _exitProgress = 0.0;
@@ -86,10 +87,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round;
 
-  static final Paint _glowPaintOuter = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round;
+
 
   static final Paint _glowPaintInner = Paint()
     ..style = PaintingStyle.stroke
@@ -184,18 +182,14 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     return arrowModel.path.any((pt) => pt[0] == row && pt[1] == col);
   }
 
-  double _pressScale = 1.0;
-
   @override
   void onTapDown(TapDownEvent event) {
     _isTouchDown = true;
     _longPressAccum = 0.0;
-    _pressScale = 0.93;
   }
 
   @override
   void onTapUp(TapUpEvent event) {
-    _pressScale = 1.0;
     final wasPreview = _isPreviewMode;
     _isTouchDown = false;
     _longPressAccum = 0.0;
@@ -208,7 +202,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
   @override
   void onTapCancel(TapCancelEvent event) {
-    _pressScale = 1.0;
     _isTouchDown = false;
     _longPressAccum = 0.0;
     _isPreviewMode = false;
@@ -309,29 +302,31 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     var d = currentDir.delta;
     int nr = head[0] + d[0];
     int nc = head[1] + d[1];
-    final visited = <String>{};
+
+    // ── FIX 1: Seed visited set with the arrow's own body to prevent self-collision ──
+    final visited = <String>{
+      for (final pt in arrowModel.path) '${pt[0]},${pt[1]}'
+    };
     bool hasDeflection = false;
 
     while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
       final key = '$nr,$nc';
-      if (visited.contains(key)) break;
+      if (visited.contains(key)) break; // Stops if it hits its own tail/body
       visited.add(key);
       pts.add(Offset((nc + 0.5) * cellSize, (nr + 0.5) * cellSize));
 
       if (orphanDots.containsKey(key)) {
         final dotType = orphanDots[key]!;
-        if (dotType == OrphanDotType.up) {
+        ArrowDirection? newDir;
+        if (dotType == OrphanDotType.up) newDir = ArrowDirection.up;
+        if (dotType == OrphanDotType.down) newDir = ArrowDirection.down;
+        if (dotType == OrphanDotType.left) newDir = ArrowDirection.left;
+        if (dotType == OrphanDotType.right) newDir = ArrowDirection.right;
+
+        // ── FIX 2: Prevent 180° U-turns onto itself ──
+        if (newDir != null && newDir != currentDir.opposite) {
           hasDeflection = true;
-          currentDir = ArrowDirection.up;
-        } else if (dotType == OrphanDotType.down) {
-          hasDeflection = true;
-          currentDir = ArrowDirection.down;
-        } else if (dotType == OrphanDotType.left) {
-          hasDeflection = true;
-          currentDir = ArrowDirection.left;
-        } else if (dotType == OrphanDotType.right) {
-          hasDeflection = true;
-          currentDir = ArrowDirection.right;
+          currentDir = newDir;
         }
       }
 
@@ -349,6 +344,71 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     }
 
     return pts.reversed.toList();
+  }
+
+  List<Offset>? _buildPreviewPath() {
+    final orphanDots = gameState.orphanDots;
+    ArrowDirection currentDir = arrowModel.direction;
+    final head = arrowModel.path[0];
+    final gridSize = gameState.level.gridSize;
+    final pts = <Offset>[];
+
+    final headPx =
+    Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
+    pts.add(headPx);
+
+    var d = currentDir.delta;
+    int nr = head[0] + d[0];
+    int nc = head[1] + d[1];
+
+    // ── FIX 1: Seed visited set with the arrow's own body ──
+    final visited = <String>{
+      for (final pt in arrowModel.path) '${pt[0]},${pt[1]}'
+    };
+
+    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+      final key = '$nr,$nc';
+      if (visited.contains(key)) break; // Stops preview from cutting through body
+      visited.add(key);
+      pts.add(Offset((nc + 0.5) * cellSize, (nr + 0.5) * cellSize));
+
+      if (orphanDots.containsKey(key)) {
+        final dotType = orphanDots[key]!;
+        ArrowDirection? newDir;
+        switch (dotType) {
+          case OrphanDotType.up:
+            newDir = ArrowDirection.up;
+            break;
+          case OrphanDotType.down:
+            newDir = ArrowDirection.down;
+            break;
+          case OrphanDotType.left:
+            newDir = ArrowDirection.left;
+            break;
+          case OrphanDotType.right:
+            newDir = ArrowDirection.right;
+            break;
+          default:
+            break;
+        }
+
+        // ── FIX 2: Prevent 180° U-turns ──
+        if (newDir != null && newDir != currentDir.opposite) {
+          currentDir = newDir;
+        }
+      }
+
+      d = currentDir.delta;
+      nr += d[0];
+      nc += d[1];
+    }
+
+    for (int i = 1; i <= 2; i++) {
+      pts.add(Offset((nc + d[1] * i + 0.5) * cellSize,
+          (nr + d[0] * i + 0.5) * cellSize));
+    }
+
+    return pts.isEmpty ? null : pts;
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -379,6 +439,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   @override
   void update(double dt) {
     super.update(dt);
+    _animTime += dt;
 
     if (gameState.pendingForceLaunch.contains(arrowModel.id) &&
         !_isAnimating &&
@@ -473,20 +534,10 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     if (arrowModel.path.isEmpty) return;
 
     final bool isSlashArrow = arrowModel.type == ArrowType.slash;
-    final bool hasPressScale = _pressScale != 1.0;
-    final bool needsTransform = hasPressScale || _isBlockedAnimating;
+    final bool needsTransform = _isBlockedAnimating;
 
     if (needsTransform) {
       canvas.save();
-
-      if (hasPressScale) {
-        final head = arrowModel.path[0];
-        final center =
-        Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
-        canvas.translate(center.dx, center.dy);
-        canvas.scale(_pressScale, _pressScale);
-        canvas.translate(-center.dx, -center.dy);
-      }
 
       if (_isBlockedAnimating) {
         final axis = _blockShakeAxis(arrowModel.direction);
@@ -534,7 +585,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     }
 
     if (_isBlockedAnimating) {
-      // No travel — the shake is applied via the canvas transform above.
       pts = pathPx;
     } else if (_isRestoring) {
       final track = _cachedTrack!;
@@ -650,18 +700,52 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     }
 
     final themeColors = AppThemes.getThemeColors(gameState.theme);
+    final theme = gameState.theme;
 
+    // ── 1. DEFINE THE SPECIAL SHADERS ──
+    Shader? specialShader;
 
+    if (theme == GameTheme.rainbow && !_isBlockedAnimating) {
+      // Flowing Rainbow Prism
+      final rect = bodyPath.getBounds();
+      specialShader = SweepGradient(
+        colors: const [
+          Color(0xFFFF0055), Color(0xFFFFCC00), Color(0xFF00FF88),
+          Color(0xFF00CCFF), Color(0xFF9900FF), Color(0xFFFF0055)
+        ],
+        transform: GradientRotation(_animTime * 2.0),
+      ).createShader(rect);
+    } else if (theme == GameTheme.cyber && !_isBlockedAnimating) {
+      // Flowing Cyberpunk Magenta/Cyan
+      final rect = bodyPath.getBounds();
+      specialShader = SweepGradient(
+        colors: const [
+          Color(0xFFFF007F), Color(0xFF9D00FF), Color(0xFF00E5FF), Color(0xFFFF007F)
+        ],
+        transform: GradientRotation(-_animTime * 1.5),
+      ).createShader(rect);
+    }
+
+    // ── 2. APPLY TO BODY ──
     if (themeColors.hasGlow && !_isBlockedAnimating) {
-      _glowPaintOuter
-        ..color = mainColor.withValues(alpha: 0.15)
-        ..strokeWidth = sw * 2.2;
-      canvas.drawPath(bodyPath, _glowPaintOuter);
+      final glowPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = sw * 2.2
+        ..color = mainColor.withValues(alpha: 0.15);
+
+      if (specialShader != null) glowPaint.shader = specialShader;
+
+      canvas.drawPath(bodyPath, glowPaint);
 
       _glowPaintInner
         ..color = mainColor.withValues(alpha: 0.25)
         ..strokeWidth = sw * 1.5;
+      if (specialShader != null) _glowPaintInner.shader = specialShader;
       canvas.drawPath(bodyPath, _glowPaintInner);
+
+      _glowPaintInner.shader = null;
     }
 
     if (_isExiting || _isBlockedAnimating || _isRestoring) {
@@ -671,12 +755,15 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       canvas.drawPath(bodyPath, _trailPaint);
     }
 
+    // Draw the main body with the shader if it exists
     _bodyPaint
       ..color = mainColor
-      ..strokeWidth = sw;
+      ..strokeWidth = sw
+      ..shader = specialShader;
     canvas.drawPath(bodyPath, _bodyPaint);
+    _bodyPaint.shader = null;
 
-    // ── Slash arrow: white "blade" down the centre ──
+    // Slash arrow: white "blade" down the centre
     if (isSlashArrow && !_isBlockedAnimating) {
       _bladePaint
         ..color = Colors.white.withValues(alpha: 0.85)
@@ -684,40 +771,15 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       canvas.drawPath(bodyPath, _bladePaint);
     }
 
-    // ── Slash arrow: periodic steel shine sweep ──
+    // Slash arrow: periodic steel shine sweep
     if (isSlashArrow && !_isBlockedAnimating && !isAnimatingNow) {
       _drawSlashShine(canvas, bodyPath, sw);
     }
 
-    // ── FIX: Draw a subtle dark outline behind the head to separate it from the tail ──
-    final caretPath = _buildCaretPath(pts, sw);
-    canvas.drawPath(
-      caretPath,
-      Paint()
-        ..color = const Color(0xFF1E1E1E) // Matches the board surface
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = sw * 1.5
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-    _drawHead(canvas, pts, mainColor, sw);
+    // ── 3. APPLY TO HEAD (Caret) ──
+    _drawHeadWithShader(canvas, pts, mainColor, sw, specialShader);
 
-    if (gameState.isArrowLeaving(arrowModel.id) &&
-        arrowModel.state == ArrowState.idle) {
-      final pulse = 0.5 + 0.5 * math.sin(_leavingPulseTime);
-      canvas.drawPath(
-        bodyPath,
-        Paint()
-          ..color = const Color(0xFFFF9800)
-              .withValues(alpha: 0.35 + pulse * 0.45)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = sw * 4.5
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
-      );
-    }
-
+    // ── 4. LONG-PRESS PREVIEW ──
     if (_isPreviewMode) {
       final preview = _previewPath;
       if (preview != null && preview.length >= 2) {
@@ -726,22 +788,76 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       }
     }
 
-    if (gameState.hintArrowId == arrowModel.id) {
-      final pulse = 0.5 + 0.5 * math.sin(_hintPulseTime * 6);
+    // ── 5. LEAVING ARROW GLOW ──
+    if (gameState.isArrowLeaving(arrowModel.id) && arrowModel.state == ArrowState.idle) {
+      final pulse = 0.5 + 0.5 * math.sin(_leavingPulseTime);
       canvas.drawPath(
         bodyPath,
         Paint()
-          ..color =
-          const Color(0xFFFFEB3B).withValues(alpha: 0.5 + pulse * 0.4)
+          ..color = const Color(0xFFFF9800).withValues(alpha: 0.35 + pulse * 0.45)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = sw * 3.5
+          ..strokeWidth = sw * 4.5
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
       );
     }
 
     if (needsTransform) canvas.restore();
+  }
+
+  void _drawHeadWithShader(Canvas canvas, List<Offset> pts, Color mainColor, double sw, Shader? shader) {
+    final Path caretPath;
+    final bool isAnimatingNow = _isExiting || _isBlockedAnimating || _isRestoring || _isEntering;
+
+    if (isAnimatingNow) {
+      caretPath = _buildCaretPath(pts, sw);
+    } else {
+      _cachedCaretPath ??= _buildCaretPath(pts, sw);
+      caretPath = _cachedCaretPath!;
+    }
+
+    _headPaint
+      ..color = mainColor
+      ..strokeWidth = sw
+      ..shader = shader; // Apply the gradient to the head too
+
+    canvas.drawPath(caretPath, _headPaint);
+    _headPaint.shader = null; // Reset
+  }
+
+  void _drawPreviewPath(Canvas canvas, List<Offset> preview, bool isBlocked) {
+    if (preview.length < 2) return;
+
+    final rawPath = Path()..moveTo(preview.first.dx, preview.first.dy);
+    for (int i = 1; i < preview.length; i++) {
+      rawPath.lineTo(preview[i].dx, preview[i].dy);
+    }
+
+    final Color shadowColor = isBlocked ? const Color(0xFF808080) : Colors.white;
+    final Color coreColor = isBlocked ? const Color(0xFF606060) : Colors.white;
+
+    final double pulse = 0.85 + 0.15 * (1.0 + (0.5 * _previewPulseTime).abs());
+
+    canvas.drawPath(
+      rawPath,
+      Paint()
+        ..color = shadowColor.withValues(alpha: (0.25 * pulse).clamp(0.05, 0.4))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = cellSize * 0.45 * pulse
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    canvas.drawPath(
+      rawPath,
+      Paint()
+        ..color = coreColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = cellSize * 0.08
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
   }
 
   /// Draws a bright highlight that travels from the arrow's head toward
@@ -835,25 +951,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     }
   }
 
-  void _drawHead(Canvas canvas, List<Offset> pts, Color mainColor, double sw) {
-    final Path caretPath;
-    final bool isAnimatingNow = _isExiting ||
-        _isBlockedAnimating ||
-        _isRestoring ||
-        _isEntering;
-
-    if (isAnimatingNow) {
-      caretPath = _buildCaretPath(pts, sw);
-    } else {
-      _cachedCaretPath ??= _buildCaretPath(pts, sw);
-      caretPath = _cachedCaretPath!;
-    }
-
-    _headPaint
-      ..color = mainColor
-      ..strokeWidth = sw;
-    canvas.drawPath(caretPath, _headPaint);
-  }
 
   Path _buildCaretPath(List<Offset> pts, double sw) {
     final prev = pts.length > 1 ? pts[1] : pts.first;
@@ -878,97 +975,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       ..lineTo(base.dx - px * hw, base.dy - py * hw);
   }
 
-  List<Offset>? _buildPreviewPath() {
-    final orphanDots = gameState.orphanDots;
-    ArrowDirection currentDir = arrowModel.direction;
-    final head = arrowModel.path[0];
-    final gridSize = gameState.level.gridSize;
-    final pts = <Offset>[];
-
-    final headPx =
-    Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
-    pts.add(headPx);
-
-    var d = currentDir.delta;
-    int nr = head[0] + d[0];
-    int nc = head[1] + d[1];
-    final visited = <String>{};
-
-    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
-      final key = '$nr,$nc';
-      if (visited.contains(key)) break;
-      visited.add(key);
-      pts.add(Offset((nc + 0.5) * cellSize, (nr + 0.5) * cellSize));
-
-      if (orphanDots.containsKey(key)) {
-        final dotType = orphanDots[key]!;
-        switch (dotType) {
-          case OrphanDotType.up:
-            currentDir = ArrowDirection.up;
-            break;
-          case OrphanDotType.down:
-            currentDir = ArrowDirection.down;
-            break;
-          case OrphanDotType.left:
-            currentDir = ArrowDirection.left;
-            break;
-          case OrphanDotType.right:
-            currentDir = ArrowDirection.right;
-            break;
-          default:
-            break;
-        }
-      }
-
-      d = currentDir.delta;
-      nr += d[0];
-      nc += d[1];
-    }
-
-    for (int i = 1; i <= 2; i++) {
-      pts.add(Offset((nc + d[1] * i + 0.5) * cellSize,
-          (nr + d[0] * i + 0.5) * cellSize));
-    }
-
-    return pts.isEmpty ? null : pts;
-  }
-
-  void _drawPreviewPath(Canvas canvas, List<Offset> preview, bool isBlocked) {
-    if (preview.length < 2) return;
-
-    final rawPath = Path()..moveTo(preview.first.dx, preview.first.dy);
-    for (int i = 1; i < preview.length; i++) {
-      rawPath.lineTo(preview[i].dx, preview[i].dy);
-    }
-
-    final Color shadowColor =
-    isBlocked ? const Color(0xFF808080) : Colors.white;
-    final Color coreColor =
-    isBlocked ? const Color(0xFF606060) : Colors.white;
-
-    final double pulse = 0.85 + 0.15 * (1.0 + (0.5 * _previewPulseTime).abs());
-
-    canvas.drawPath(
-      rawPath,
-      Paint()
-        ..color =
-        shadowColor.withValues(alpha: (0.25 * pulse).clamp(0.05, 0.4))
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = cellSize * 0.45 * pulse
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    canvas.drawPath(
-      rawPath,
-      Paint()
-        ..color = coreColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = cellSize * 0.08
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-  }
 
   Color _color() {
     // Block animation: red for 0.5 s, then back to normal.

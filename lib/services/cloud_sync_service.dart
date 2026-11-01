@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 
 import 'appwrite_service.dart';
+import 'auth_service.dart';
 
 /// Read/write the single `player_saves` row for the current user.
 class CloudSyncService {
@@ -30,6 +31,8 @@ class CloudSyncService {
       return null;
     }
   }
+
+
 
   /// Legacy flat push — kept for backwards compat, not called by main().
   Future<void> pushSave({
@@ -98,6 +101,8 @@ class CloudSyncService {
     required int currentLevel,
     required int coins,
   }) async {
+    if (AuthService.instance.isGuest) return;
+
     final encoded = _encodeBlob(blob);
     debugPrint('☁️ pushFullSave blob=${encoded.length} chars');
 
@@ -136,9 +141,29 @@ class CloudSyncService {
     } catch (e) {
       debugPrint('🔴 pushFullSave error: $e');
     }
+    try {
+      await AppwriteService.tablesDb.updateRow(
+        databaseId: AppwriteService.databaseId,
+        tableId: '6ae356e900356fdb7ddb',
+        rowId: userId,
+        data: {
+          'level': currentLevel,
+          'userName': AuthService.instance.displayName,
+        },
+      );
+    } catch (e) {
+      // If the user hasn't been created in the users table yet, ignore or create
+      debugPrint('Failed to update level in users table: $e');
+    }
   }
 
   Future<Map<String, dynamic>?> fetchFullSave(String userId) async {
+    // 🛑 ADD THIS: Stop guests from fetching from the cloud
+    if (AuthService.instance.isGuest) {
+      debugPrint('🛑 [CloudSync] Guest account — skipping cloud fetch.');
+      return null;
+    }
+
     final row = await fetchSave(userId);
     if (row == null) {
       debugPrint('☁️ fetchFullSave: no row');

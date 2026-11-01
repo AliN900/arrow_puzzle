@@ -114,6 +114,408 @@ abstract class AppStrings {
   /// **'Arrow Puzzle'**
   String get appName;
 
+  /// No description provided for @removeFriendQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Friend?'**
+  String get removeFriendQuestion;
+
+  /// No description provided for @buttonRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'REMOVE'**
+  String get buttonRemove;
+
+  /// No description provided for @friendRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend Requests'**
+  String get friendRequests;
+
+  /// No description provided for @noPendingRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending requests.'**
+  String get noPendingRequests;
+
+  /// No description provided for @invitingFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'Inviting {name}...'**
+  String invitingFriend(String name);
+
+  /// No description provided for @waitingForResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for response ({seconds}s)'**
+  String waitingForResponse(int seconds);
+
+  /// No description provided for @unlocksIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocks in {time}'**
+  String unlocksIn(String time);
+
+  /// No description provided for @gameCapped.
+  ///
+  /// In en, this message translates to:
+  /// **'(capped · {difficulty})'**
+  String gameCapped(String difficulty);
+
+  /// No description provided for @gameBtnSolve.
+  ///
+  /// In en, this message translates to:
+  /// **'SOLVE'**
+  String get gameBtnSolve;
+
+  /// No description provided for @gameBtnWin.
+  ///
+  /// In en, this message translates to:
+  /// **'WIN'**
+  String get gameBtnWin;
+
+  /// No description provided for @levelLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'LOADING LEVEL...'**
+  String get levelLoading;
+
+  /// No description provided for @rushCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared: {count}'**
+  String rushCleared(int count);
+
+  /// No description provided for @homeMpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'1v1 MULTIPLAYER'**
+  String get homeMpTitle;
+
+  /// No description provided for @homeMpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Challenge online players in real-time!'**
+  String get homeMpSubtitle;
+
+  /// No description provided for @inventoryBuyItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy {item}?'**
+  String inventoryBuyItem(String item);
+
+  /// No description provided for @inventoryPriceCoins.
+  ///
+  /// In en, this message translates to:
+  /// **'{price} coins'**
+  String inventoryPriceCoins(int price);
+
+  /// No description provided for @inventoryBtnBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy'**
+  String get inventoryBtnBuy;
+
+  /// No description provided for @inventoryUnlockItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock {item}?'**
+  String inventoryUnlockItem(String item);
+
+  /// No description provided for @leaderboardYou.
+  ///
+  /// In en, this message translates to:
+  /// **'YOU'**
+  String get leaderboardYou;
+
+  /// No description provided for @leaderboardLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get leaderboardLocked;
+
+  /// No description provided for @leaderboardEarnToUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Earn {target} LC to unlock the global leaderboard.'**
+  String leaderboardEarnToUnlock(int target);
+
+  /// No description provided for @leaderboardProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{earned} / {target} LC'**
+  String leaderboardProgress(int earned, int target);
+
+  /// No description provided for @mpRetire.
+  ///
+  /// In en, this message translates to:
+  /// **'RETIRE'**
+  String get mpRetire;
+
+  /// No description provided for @mpExitLobby.
+  ///
+  /// In en, this message translates to:
+  /// **'EXIT TO LOBBY'**
+  String get mpExitLobby;
+
+  /// No description provided for @mpCampaignLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Campaign Level {level}'**
+  String mpCampaignLevel(int level);
+
+  /// No description provided for @mpSelectMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Mode'**
+  String get mpSelectMode;
+
+  /// No description provided for @mpGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating...'**
+  String get mpGenerating;
+
+  /// No description provided for @mpBtnRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'RANDOM'**
+  String get mpBtnRandom;
+
+  /// No description provided for @mpBtnMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'MATCH'**
+  String get mpBtnMatch;
+
+  /// No description provided for @mpBtnInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'INVITE'**
+  String get mpBtnInvite;
+
+  /// No description provided for @mpMatchRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Match Rules'**
+  String get mpMatchRules;
+
+  /// No description provided for @mpDifficultySetting.
+  ///
+  /// In en, this message translates to:
+  /// **'DIFFICULTY SETTING'**
+  String get mpDifficultySetting;
+
+  /// No description provided for @profileLeaderboardLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboard locked'**
+  String get profileLeaderboardLocked;
+
+  /// No description provided for @profileLeaderboardSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to unlock the Leaderboard'**
+  String get profileLeaderboardSignIn;
+
+  /// No description provided for @mpMatchCall.
+  ///
+  /// In en, this message translates to:
+  /// **'MATCH CALL!'**
+  String get mpMatchCall;
+
+  /// No description provided for @mpIsChallengingYou.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (Lvl {level}) is challenging you!'**
+  String mpIsChallengingYou(String name, int level);
+
+  /// No description provided for @levelFailedToLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load level'**
+  String get levelFailedToLoad;
+
+  /// No description provided for @inviteExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite expired (no response)'**
+  String get inviteExpired;
+
+  /// No description provided for @friends.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends'**
+  String get friends;
+
+  /// No description provided for @yourFriendsList.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Friends List'**
+  String get yourFriendsList;
+
+  /// No description provided for @noFriendsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No friends yet.'**
+  String get noFriendsYet;
+
+  /// No description provided for @mpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiplayer'**
+  String get mpTitle;
+
+  /// No description provided for @mpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Race head-to-head on identical board seeds.'**
+  String get mpSubtitle;
+
+  /// No description provided for @mpRandomMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Random'**
+  String get mpRandomMatch;
+
+  /// No description provided for @mpRandomMatchSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Challenge a random player from your level'**
+  String get mpRandomMatchSub;
+
+  /// No description provided for @mpChallengeFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'Challenge a Friend'**
+  String get mpChallengeFriend;
+
+  /// No description provided for @mpChallengeFriendSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Challenge a friend directly'**
+  String get mpChallengeFriendSub;
+
+  /// No description provided for @mpSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get mpSearchTitle;
+
+  /// No description provided for @mpSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type username...'**
+  String get mpSearchHint;
+
+  /// No description provided for @mpFriendsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'FRIENDS'**
+  String get mpFriendsSection;
+
+  /// No description provided for @mpOtherPlayersSection.
+  ///
+  /// In en, this message translates to:
+  /// **'OTHER PLAYERS'**
+  String get mpOtherPlayersSection;
+
+  /// No description provided for @mpChallengeBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'CHALLENGE'**
+  String get mpChallengeBtn;
+
+  /// No description provided for @mpListAsReady.
+  ///
+  /// In en, this message translates to:
+  /// **'List as Ready'**
+  String get mpListAsReady;
+
+  /// No description provided for @mpVisibleLobby.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible in lobby'**
+  String get mpVisibleLobby;
+
+  /// No description provided for @mpHiddenLobby.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden from lobby'**
+  String get mpHiddenLobby;
+
+  /// No description provided for @mpChallengersNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Online Challengers Nearby'**
+  String get mpChallengersNearby;
+
+  /// No description provided for @mpNoPlayersFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No online players listed. Tap \"RANDOM\" below!'**
+  String get mpNoPlayersFound;
+
+  /// No description provided for @mpSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for Players...'**
+  String get mpSearching;
+
+  /// No description provided for @mpWaitingFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {name}...'**
+  String mpWaitingFor(Object name);
+
+  /// No description provided for @mpWaitingAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for them to accept.'**
+  String get mpWaitingAccept;
+
+  /// No description provided for @mpCancelLookOther.
+  ///
+  /// In en, this message translates to:
+  /// **'CANCEL & LOOK FOR OTHER'**
+  String get mpCancelLookOther;
+
+  /// No description provided for @mpDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'DECLINE'**
+  String get mpDecline;
+
+  /// No description provided for @mpAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'ACCEPT'**
+  String get mpAccept;
+
+  /// No description provided for @mpClose.
+  ///
+  /// In en, this message translates to:
+  /// **'CLOSE'**
+  String get mpClose;
+
+  /// No description provided for @mpCancelInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'CANCEL INVITE'**
+  String get mpCancelInvite;
+
+  /// No description provided for @mpChatGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Say hi to {name}! 👋'**
+  String mpChatGreeting(Object name);
+
+  /// No description provided for @zenTimePlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'TIME PLAYED'**
+  String get zenTimePlayed;
+
   /// No description provided for @buttonCancel.
   ///
   /// In en, this message translates to:
@@ -353,6 +755,114 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'+{count} coins'**
   String plusCoins(int count);
+
+  /// No description provided for @trophyLeaderboardLegendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'🏆 LEADERBOARD LEGEND'**
+  String get trophyLeaderboardLegendTitle;
+
+  /// No description provided for @trophyLeaderboardLegendDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Accumulate 1,000 LC to unlock the global leaderboard. Compete with players worldwide for the top spot!'**
+  String get trophyLeaderboardLegendDesc;
+
+  /// No description provided for @trophiesPerkLeaderboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocks Leaderboard'**
+  String get trophiesPerkLeaderboard;
+
+  /// No description provided for @trophiesPerkNeonSkin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocks Neon Arrow Skin'**
+  String get trophiesPerkNeonSkin;
+
+  /// No description provided for @trophiesPerkRetroSkin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocks Retro Arrow Skin'**
+  String get trophiesPerkRetroSkin;
+
+  /// No description provided for @trophiesPerkRubySkin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocks Ruby Arrow Skin'**
+  String get trophiesPerkRubySkin;
+
+  /// No description provided for @neonArrowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Neon Awakening'**
+  String get neonArrowTitle;
+
+  /// No description provided for @neonArrowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach level 10 to unlock the Neon arrow skin.'**
+  String get neonArrowDesc;
+
+  /// No description provided for @retroArrowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Retro Wave'**
+  String get retroArrowTitle;
+
+  /// No description provided for @retroArrowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach level 27 to unlock the Retro arrow skin.'**
+  String get retroArrowDesc;
+
+  /// No description provided for @rubyArrowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ruby Radiance'**
+  String get rubyArrowTitle;
+
+  /// No description provided for @rubyArrowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach level 35 to unlock the Ruby arrow skin.'**
+  String get rubyArrowDesc;
+
+  /// No description provided for @bombDeselected.
+  ///
+  /// In en, this message translates to:
+  /// **'Bomb deselected'**
+  String get bombDeselected;
+
+  /// No description provided for @noMinesToDestroy.
+  ///
+  /// In en, this message translates to:
+  /// **'No mines to destroy'**
+  String get noMinesToDestroy;
+
+  /// No description provided for @difficultyEasy.
+  ///
+  /// In en, this message translates to:
+  /// **'Easy'**
+  String get difficultyEasy;
+
+  /// No description provided for @difficultyHard.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard'**
+  String get difficultyHard;
+
+  /// No description provided for @difficultyImpossible.
+  ///
+  /// In en, this message translates to:
+  /// **'Impossible'**
+  String get difficultyImpossible;
+
+  /// No description provided for @giftEmoji.
+  ///
+  /// In en, this message translates to:
+  /// **'🎁'**
+  String get giftEmoji;
 
   /// No description provided for @plusItems.
   ///
@@ -2634,6 +3144,36 @@ abstract class AppStrings {
   /// **'Save'**
   String get profileSave;
 
+  /// No description provided for @chatQuickHello.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello there! 👋'**
+  String get chatQuickHello;
+
+  /// No description provided for @chatQuickChallenge.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for a challenge? ⚔️'**
+  String get chatQuickChallenge;
+
+  /// No description provided for @chatQuickGoodGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Good game! 🎮'**
+  String get chatQuickGoodGame;
+
+  /// No description provided for @chatQuickNice.
+  ///
+  /// In en, this message translates to:
+  /// **'Nice one! 🔥'**
+  String get chatQuickNice;
+
+  /// No description provided for @chatQuickWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait a minute... ⏳'**
+  String get chatQuickWait;
+
   /// No description provided for @profileUpdated.
   ///
   /// In en, this message translates to:
@@ -2717,6 +3257,30 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'No hearts, no timers. Just puzzles.'**
   String get zenModeSubtitle;
+
+  /// No description provided for @themeRuby.
+  ///
+  /// In en, this message translates to:
+  /// **'Ruby'**
+  String get themeRuby;
+
+  /// No description provided for @mpVs.
+  ///
+  /// In en, this message translates to:
+  /// **'VS'**
+  String get mpVs;
+
+  /// No description provided for @unitSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'s'**
+  String get unitSeconds;
+
+  /// No description provided for @themeRainbowStatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Static Rainbow'**
+  String get themeRainbowStatic;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

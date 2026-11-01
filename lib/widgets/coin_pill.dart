@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/app_colors.dart';
 import '../core/audio_haptic_helper.dart';
 import '../main.dart';
+import 'animated_coin_counter.dart';
 import 'coin_icon.dart';
 
 class CoinPill extends ConsumerWidget {
@@ -37,13 +37,10 @@ class CoinPill extends ConsumerWidget {
           children: [
             const CoinIcon(size: 20),
             const SizedBox(width: 8),
-            Text(
-              '$coins',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textPrimary(context),
-              ),
+            AnimatedCoinCounter(
+              value: coins,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              color: Colors.white, // or your textPrimary color
             ),
           ],
         ),

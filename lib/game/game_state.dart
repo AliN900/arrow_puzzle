@@ -45,6 +45,7 @@ class GameState extends ChangeNotifier {
   final void Function()? onCombo;
   final void Function(Offset globalPos, Color color)? onParticleBurst;
   final void Function()? onCameraShake;
+  final void Function()? onBombMissed;
 
   DateTime? _lastExitTime;
   int _comboCount = 0;
@@ -65,8 +66,10 @@ class GameState extends ChangeNotifier {
     this.onCombo,
     this.onParticleBurst,
     this.onCameraShake,
+    this.onBombMissed,
     this.arrowSpeed = 1,
     this.rushSpeedMultiplier = 1.0,
+
     this.boardTheme = BoardTheme.minimal,
   })  : maxLives = initialLives,
         _lives = (gameMode == GameMode.zen ||
@@ -135,6 +138,7 @@ class GameState extends ChangeNotifier {
       _escapedHistory.add(_arrows[idx]);
     }
     _arrows.removeWhere((a) => a.id == arrowId);
+    _clearsSinceLastLeavingArrow++;
     _consumedDotsByArrow.remove(arrowId);
 
     if (gameMode == GameMode.endlessRush) {
@@ -251,6 +255,17 @@ class GameState extends ChangeNotifier {
 
   TapResult tapArrow(String arrowId, {bool isForced = false}) {
     if (_isComplete || _isGameOver) return TapResult.ignored;
+
+    // ── BOMB INTERCEPT ──
+    // If they tapped an arrow while holding the bomb, cancel the bomb and show X.
+    if (_isBombArmed) {
+      setBombArmed(false);
+      _comboCount = 0;
+      onBombMissed?.call();      // <── ADD THIS (Triggers the X)
+      onCameraShake?.call();     // (Triggers the shake)
+      return TapResult.blocked;
+    }
+    // ────────────────────
 
     final index = _arrows.indexWhere((a) => a.id == arrowId);
     if (index == -1) return TapResult.ignored;
@@ -525,6 +540,18 @@ class GameState extends ChangeNotifier {
     _isComplete = false;
     _isGameOver = false;
     _isDeadlocked = false;
+
+    // ── RESET LEAVING ARROW STATE COMPLETELY ──
+    _clearsSinceLastLeavingArrow = 0;
+    _requiredLeavingArrowGap = 0;
+    _leavingArrowTapLimit = 10;
+    _leavingArrowTapCount = 10;
+    _activeLeavingArrowId = null;
+    _leavingArrowsRemaining = 0;
+    _pendingForceLaunch.clear();
+    _isSearchingForLeavingArrow = false;
+    // ─────────────────────────────────────────
+
     notifyListeners();
   }
 
@@ -543,6 +570,8 @@ class GameState extends ChangeNotifier {
   /// The dynamic per-arrow limit. Computed at promotion time from the
   /// number of arrows that must clear before the target becomes solvable,
   /// plus a difficulty-based buffer.
+  int _clearsSinceLastLeavingArrow = 0;
+  int _requiredLeavingArrowGap = 0;
   int _leavingArrowTapLimit = 10;
   int _leavingArrowTapCount = 10;
   String? _activeLeavingArrowId;
@@ -565,12 +594,46 @@ class GameState extends ChangeNotifier {
     _isSearchingForLeavingArrow = false;
   }
 
+  int _computeNextGap() {
+    if (_leavingArrowsRemaining <= 0) return 0;
+
+    final levelNum = _currentLevel.levelNumber;
+    final type = AppConstants.levelTypeFor(levelNum);
+
+    // Chain mode — god/boss/milestone levels still fire back-to-back.
+    if (type == LevelType.god || type == LevelType.boss) return 0;
+    if (levelNum % 10 == 0) return 0;
+
+    // Spaced mode — auto-distribute remaining leaving arrows across the
+    // clears we have left before the 26% endgame gate.
+    final total = _currentLevel.arrows.length;
+    final minArrowsToKeep = (total * 0.26).ceil();
+    final availableClears = _arrows.length - minArrowsToKeep;
+    if (availableClears <= 0) return 0;
+
+    final rawGap = availableClears / _leavingArrowsRemaining;
+    final baseGap = rawGap.clamp(2, 12).round();
+    return (baseGap - 1) + Random().nextInt(3); // ±1 variance
+  }
+
   Future<void> _startAsyncLeavingArrowSearch() async {
     if (_leavingArrowsRemaining <= 0) return;
     if (_isComplete || _isGameOver || _activeLeavingArrowId != null) return;
     if (_isSearchingForLeavingArrow) return;
+    if (_clearsSinceLastLeavingArrow < _requiredLeavingArrowGap) return;
+
+    // ── NEW: stop spawning leaving arrows once the level is 74%+ cleared
+    //    (remaining < 26% of original arrow count). Prevents forcing a
+    //    near-endgame player to tap a locked arrow when only a few are left.
+    final total = _currentLevel.arrows.length;
+    final remaining = _arrows.length;
+    if (total > 0 && remaining * 100 < total * 26) {
+      return;
+    }
+    // ──────────────────────────────────────────────────────────────────────
 
     _isSearchingForLeavingArrow = true;
+
 
     final args = {
       'arrows': _arrows.map((a) => a.toJson()).toList(),
@@ -623,7 +686,7 @@ class GameState extends ChangeNotifier {
         // required = absolute minimum moves to clear blockers
         // + 1 = tap the target
         // + margin = extra tries based on player level
-        final limit = (required + 1 + margin).clamp(4, 15);
+        final limit = (required + 1 + margin).clamp(4, 17);
 
         _leavingArrowTapLimit = limit;
         _leavingArrowTapCount = limit;
@@ -633,7 +696,6 @@ class GameState extends ChangeNotifier {
         notifyListeners();
       } else {
         debugPrint('🏹 No fair leaving arrow found async. Skipping.');
-        _leavingArrowsRemaining = 0;
         _activeLeavingArrowId = null;
         notifyListeners();
       }
@@ -649,8 +711,9 @@ class GameState extends ChangeNotifier {
     _pendingForceLaunch.remove(arrowId);
     _activeLeavingArrowId = null;
 
-    // Spin up the search for the NEXT leaving arrow in the background
-    _startAsyncLeavingArrowSearch();
+    _clearsSinceLastLeavingArrow = 0;
+    _requiredLeavingArrowGap = _computeNextGap();
+
   }
 
 
@@ -659,14 +722,23 @@ class GameState extends ChangeNotifier {
     final activeId = _activeLeavingArrowId;
     if (activeId == null) return;
 
+    // If the arrow is already queued to force launch, ignore extra taps
+    // so the counter doesn't go into the negative while the animation plays.
+    if (_pendingForceLaunch.contains(activeId)) return;
+
     final stillAlive = _arrows
         .any((a) => a.id == activeId && a.state == ArrowState.idle);
     if (!stillAlive) return;
 
-    _leavingArrowTapCount--;
+    // Only decrement if above 0
+    if (_leavingArrowTapCount > 0) {
+      _leavingArrowTapCount--;
+    }
+
     if (_leavingArrowTapCount <= 0) {
+      // ── THE FIX: Reset to half the original moves given ──
+      _leavingArrowTapCount = (_leavingArrowTapLimit / 2).ceil();
       _pendingForceLaunch.add(activeId);
-      _leavingArrowTapCount = _leavingArrowTapLimit; // Reset to prevent negative
     }
     notifyListeners();
   }
@@ -687,6 +759,17 @@ class GameState extends ChangeNotifier {
     _isGameOver = false;
     notifyListeners();
   }
+
+  void cancelBombSelection() {
+    if (_isBombArmed) {
+      setBombArmed(false);
+      onBombMissed?.call();    // <── ADD THIS (Triggers the X)
+      onCameraShake?.call();   // (Triggers the shake)
+      notifyListeners();
+    }
+  }
+
+
 }
 
 enum TapResult { exited, blocked, ignored }
