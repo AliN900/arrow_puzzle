@@ -325,8 +325,8 @@ class LevelRepository {
 
   /// Art levels start at level 20, and appear every 10 levels: 20, 30, 40...
   bool shouldBeArtLevel(int levelNumber) {
-    if (levelNumber < 25) return false;
-    return (levelNumber - 25) % 5 == 0;
+    if (levelNumber < 10) return false;
+    return levelNumber % 5 == 0;
   }
 
   LevelModel buildArtLevel(int levelNumber) {

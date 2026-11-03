@@ -289,56 +289,7 @@ class LevelGenerator {
   }
 
 
-  /// Simulates a greedy playthrough to measure how many choices the player
-  /// has at each step. Returns the peak choices and the average choices.
-  static ({int maxChoice, double avgChoice}) _analyzeLevel(LevelModel level) {
-    final active = List<ArrowModel>.from(level.arrows);
-    int maxChoice = 0;
-    int totalChoice = 0;
-    int steps = 0;
 
-    while (active.isNotEmpty && steps < 200) {
-      int freeCount = 0;
-      ArrowModel? firstClearable;
-
-      // Count how many arrows can exit right now
-      for (final a in active) {
-        if (_isArrowClearable(a, active, level)) {
-          freeCount++;
-          firstClearable ??= a;
-        }
-      }
-
-      if (firstClearable == null) break; // Deadlock
-
-      maxChoice = max(maxChoice, freeCount);
-      totalChoice += freeCount;
-      steps++;
-
-      active.remove(firstClearable);
-    }
-
-    final avg = steps > 0 ? totalChoice / steps : 0.0;
-    return (maxChoice: maxChoice, avgChoice: avg);
-  }
-
-  static bool _isArrowClearable(ArrowModel arrow, List<ArrowModel> active, LevelModel level) {
-    final head = arrow.path[0];
-    final d = arrow.direction.delta;
-    int nr = head[0] + d[0];
-    int nc = head[1] + d[1];
-    while (nr >= 0 && nr < level.gridSize && nc >= 0 && nc < level.gridSize) {
-      if (level.rocks.any((r) => r.row == nr && r.col == nc) && arrow.type != ArrowType.slash) {
-        return false;
-      }
-      if (active.any((other) => other.id != arrow.id && other.path.any((pt) => pt[0] == nr && pt[1] == nc))) {
-        return false;
-      }
-      nr += d[0];
-      nc += d[1];
-    }
-    return true;
-  }
 
   // ─── Private helpers ──────────────────────────────────────────────
   static Set<String> _cropMask(Set<String> mask) {
@@ -578,90 +529,6 @@ class LevelGenerator {
     );
   }
 
-  // static LevelModel generateBoardLevel(int levelNumber, {int? seed}) {
-  //   final baseSeed = seed ?? (levelNumber * 103 + 51);
-  //   final type = AppConstants.levelTypeFor(levelNumber);
-  //
-  //   int baseGrid = AppConstants.gridSizeForLevel(levelNumber);
-  //   if (levelNumber == 213) baseGrid = 32;
-  //   if (levelNumber == 395) baseGrid = 35;
-  //   if (levelNumber == 437) baseGrid = 36;
-  //
-  //   final shapeRng = Random(baseSeed);
-  //   final maskShape = _shapeFor(type, shapeRng, levelNumber);
-  //
-  //   // Squares and pyramids are already dense enough at baseGrid.
-  //   final isDenseShape =
-  //       maskShape == MaskShape.square || maskShape == MaskShape.pyramid;
-  //
-  //   // ── Step 1: normalize cell count so difficulty starts equal ──
-  //   final targetCells = baseGrid * baseGrid;
-  //
-  //   int gridSize = baseGrid;
-  //   Set<String> mask = MaskGenerator.shapeByName(
-  //     maskShape.name, gridSize, Random(baseSeed + 1),
-  //   );
-  //
-  //   if (!isDenseShape) {
-  //     final maxGrid = (baseGrid * 1.6).round();
-  //     for (int i = 0; i < 30 && gridSize < maxGrid; i++) {
-  //       final ratio = mask.length / targetCells;
-  //       if (ratio >= 0.90) break;
-  //       gridSize++;
-  //       mask = MaskGenerator.shapeByName(
-  //         maskShape.name, gridSize, Random(baseSeed + 1),
-  //       );
-  //     }
-  //     debugPrint('📐 L$levelNumber ${maskShape.name}: '
-  //         'grid=${gridSize}x$gridSize cells=${mask.length} '
-  //         '(target=$targetCells '
-  //         '${(mask.length / targetCells * 100).toStringAsFixed(0)}%)');
-  //   }
-  //
-  //   // ── Step 2: reject geometric levels that open too freely ──
-  //   // A high countInitialMoves / arrowCount ratio = many arrows are
-  //   // trivially clearable from turn 1 = easy level.
-  //   LevelModel? last;
-  //   final maxAttempts = isDenseShape ? 1 : 3;
-  //   for (int attempt = 0; attempt < maxAttempts; attempt++) {
-  //     final level = generateLongFromMask(
-  //       levelNumber: levelNumber,
-  //       mask: mask,
-  //       gridSize: gridSize,
-  //       maskShape: maskShape,
-  //       seed: baseSeed + attempt * 997,
-  //     );
-  //     last = level;
-  //     if (isDenseShape) return level;
-  //
-  //     final moves = countInitialMoves(level);
-  //     final total = level.arrows.length;
-  //     // Squares/pyramids typically open with ~30% free moves.
-  //     // Geometric shapes often open with 60%+ → reject.
-  //     if (total <= 8 || moves <= (total * 0.50).round()) {
-  //       return level;
-  //     }
-  //     debugPrint('📐 L$levelNumber ${maskShape.name}: too easy '
-  //         '($moves/$total free) — retry $attempt');
-  //   }
-  //   return last!;
-  // }
-
-
-  /// Minimum arrow count per level.  L1–5 ramp softly, L6 jumps hard, then
-  /// a steady +1.5/level up to a 60-arrow ceiling.
-  static int _minArrowCount(int level) {
-    if (level <= 5) return 3 + level * 2;   // 5, 7, 9, 11, 13
-    return (28 + (level - 6) * 1.5).round().clamp(30, 60);
-  }
-
-  /// Predicted average arrow length for the current level.
-  /// Mirrors `BuilderStyle._maxLenForLevel` × ~0.70 (builder uses ~70%
-  /// of its cap on average).
-  static int _estArrowLen(int level) {
-    final baseMax = BuilderStyle.maxLenForLevel(level, 42);
-    return (baseMax * 0.70).round().clamp(4, 30);
-  }
 
   static LevelModel _generateReverse({
     required int levelNumber,
@@ -1980,20 +1847,34 @@ class LevelGenerator {
 
   static MaskShape _shapeFor(LevelType type, Random rng, int levelNumber) {
     if (type == LevelType.boss) {
-      const bossShapes = [MaskShape.cat, MaskShape.dog, MaskShape.frog, MaskShape.fox, MaskShape.tiger, MaskShape.panda, MaskShape.fish, MaskShape.bird, MaskShape.butterfly, MaskShape.guitar, MaskShape.tree, MaskShape.house, MaskShape.crown];
+      const bossShapes = [
+        MaskShape.cat, MaskShape.dog, MaskShape.frog, MaskShape.fox,
+        MaskShape.tiger, MaskShape.panda, MaskShape.fish, MaskShape.bird,
+        MaskShape.butterfly, MaskShape.guitar, MaskShape.tree,
+        MaskShape.house, MaskShape.crown,
+      ];
       return bossShapes[rng.nextInt(bossShapes.length)];
     }
     if (type == LevelType.god) {
-      const godShapes = [MaskShape.heart, MaskShape.star, MaskShape.diamond, MaskShape.hexagon, MaskShape.blob, MaskShape.circle];
+      const godShapes = [
+        MaskShape.heart, MaskShape.star, MaskShape.diamond,
+        MaskShape.hexagon, MaskShape.blob, MaskShape.circle,
+      ];
       return godShapes[rng.nextInt(godShapes.length)];
     }
 
-    final mod5 = levelNumber % 5;
+    // ── EVERY 5TH LEVEL FROM 10 ON: Silhouette ──
+    // (This is handled by LevelRepository, but we return square as a safe fallback)
+    if (levelNumber >= 10 && levelNumber % 5 == 0) {
+      return MaskShape.square;
+    }
 
-    // 1 and 2 are Mazes (Rectangles)
-    if (mod5 == 1 || mod5 == 2) return MaskShape.square;
+    // ── ODD LEVELS (1, 3, 5, 7, 9, 11, 13, 14...): VR (Square) ──
+    if (levelNumber % 2 != 0) {
+      return MaskShape.square;
+    }
 
-    // 3 and 4 are Geometric Shapes (Pyramid REMOVED)
+    // ── EVEN LEVELS (2, 4, 6, 8, 12, 14...): Geometric Shapes ──
     const varieties = [
       MaskShape.heart,
       MaskShape.star,
@@ -2006,11 +1887,9 @@ class LevelGenerator {
       MaskShape.bird
     ];
 
-    final cycle = levelNumber ~/ 5;
-    if (mod5 == 3) return varieties[cycle % varieties.length];
-    if (mod5 == 4) return varieties[(cycle + 3) % varieties.length];
-
-    return MaskShape.square;
+    // Divide by 2 so we cycle through the geometric shapes continuously
+    final geomIndex = (levelNumber ~/ 2) % varieties.length;
+    return varieties[geomIndex];
   }
 
   static LevelModel generateBoardLevel(int levelNumber, {int? seed}) {

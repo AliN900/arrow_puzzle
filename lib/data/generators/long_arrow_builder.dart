@@ -16,11 +16,17 @@ class BuilderStyle {
       this.maxLen, this.lenSpread, this.seedMode);
 
   static const all = [
-    // SeedMode.corner guarantees the arrows hug the walls and interlock perfectly.
+    // Normal levels (Maze / Geom): Max length 22
     BuilderStyle('maze', 0.85, 0.05, 22, 0.30, SeedMode.corner),
+    // Silhouette levels: Max length 11 (This doubles the number of arrows!)
+    BuilderStyle('silhouette', 0.85, 0.05, 11, 0.30, SeedMode.corner),
   ];
 
   static BuilderStyle forLevel(int level, {bool allowLong = false, bool isMaze = false}) {
+    // If it's a silhouette (allowLong is true), use the shorter arrow style
+    if (allowLong) {
+      return all[1];
+    }
     return all[0];
   }
 
@@ -36,7 +42,7 @@ class BuilderStyle {
       name,
       (straightBias + 0.02 * attempt).clamp(0.15, 0.95),
       biasJitter,
-      (maxLen - attempt).clamp(20, 35),
+      (maxLen - attempt).clamp(8, 22), // Adjusted for the shorter silhouette lengths
       lenSpread,
       seedMode);
 }

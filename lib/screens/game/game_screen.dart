@@ -249,11 +249,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   void _applyFitTransform({
     required Size viewportSize,
-    required double contentSize,
-    required double fitScale,
   }) {
-    final tx = (viewportSize.width - contentSize * fitScale) / 2.0;
-    final ty = (viewportSize.height - contentSize * fitScale) / 2.0;
+    final bounds = _getBoardBounds();
+    final cellPx = _cellPx;
+
+    final boardW = (bounds.maxC - bounds.minC + 1) * cellPx;
+    final boardH = (bounds.maxR - bounds.minR + 1) * cellPx;
+    final centerX = ((bounds.minC + bounds.maxC + 1) / 2.0) * cellPx;
+    final centerY = ((bounds.minR + bounds.maxR + 1) / 2.0) * cellPx;
+
+    final paddedW = (viewportSize.width - _kBoardPadding * 2.0).clamp(1.0, double.infinity);
+    final paddedH = (viewportSize.height - _kBoardPadding * 2.0).clamp(1.0, double.infinity);
+
+    // Calculate fitScale based on the actual board size, not the empty grid size
+    final fitScale = math.min(paddedW / boardW, paddedH / boardH);
+
+    final tx = viewportSize.width / 2.0 - centerX * fitScale;
+    final ty = viewportSize.height / 2.0 - centerY * fitScale;
 
     final target = Matrix4.identity()
       ..translateByDouble(tx, ty, 0.0, 1.0)
@@ -269,6 +281,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _fromFitMatrix = _transformationController.value;
     _toFitMatrix = target;
     _fitAnimController.forward(from: 0);
+  }
+
+  ({int minR, int maxR, int minC, int maxC}) _getBoardBounds() {
+    final level = _gameState?.level ?? _level;
+    if (level.mask.isEmpty) {
+      return (minR: 0, maxR: level.gridSize - 1, minC: 0, maxC: level.gridSize - 1);
+    }
+    int minR = 9999, maxR = -1, minC = 9999, maxC = -1;
+    for (final k in level.mask) {
+      final p = k.split(',');
+      final r = int.parse(p[0]), c = int.parse(p[1]);
+      if (r < minR) minR = r;
+      if (r > maxR) maxR = r;
+      if (c < minC) minC = c;
+      if (c > maxC) maxC = c;
+    }
+    return (minR: minR, maxR: maxR, minC: minC, maxC: maxC);
   }
 
   void _onFitAnimTick() {
@@ -2458,9 +2487,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               final paddedH =
                               (viewportSize.height - _kBoardPadding * 2.0)
                                   .clamp(1.0, double.infinity);
+
+                              // ── NEW: Use actual board bounds for min/max scale ──
+                              final bounds = _getBoardBounds();
+                              final boardW = (bounds.maxC - bounds.minC + 1) * _cellPx;
+                              final boardH = (bounds.maxR - bounds.minR + 1) * _cellPx;
                               final fitScale = min(
-                                paddedW / contentSize,
-                                paddedH / contentSize,
+                                paddedW / boardW,
+                                paddedH / boardH,
                               );
 
                               final minScale =
@@ -2481,11 +2515,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                 WidgetsBinding.instance
                                     .addPostFrameCallback((_) {
                                   if (!mounted) return;
-                                  _applyFitTransform(
-                                    viewportSize: viewportSize,
-                                    contentSize: contentSize,
-                                    fitScale: fitScale,
-                                  );
+                                  // ── NEW: Only pass viewportSize ──
+                                  _applyFitTransform(viewportSize: viewportSize);
                                 });
                               }
 
